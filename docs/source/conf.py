@@ -12,17 +12,19 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from recommonmark.transform import AutoStructify
+import sphinx_rtd_theme
+import nodeeditor
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
-import nodeeditor
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'NodeEditor'
-copyright = '2019, Pavel Křupala'
-author = 'Pavel Křupala'
+project = 'Node Editor'
+copyright = '2025, Azad Kshitij'
+author = 'Azad Kshitij'
 
 # The short X.Y version
 version = nodeeditor.__version__
@@ -39,7 +41,6 @@ release = nodeeditor.__version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-import sphinx_rtd_theme
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -55,14 +56,16 @@ autosectionlabel_prefix_document = True
 autodoc_member_order = 'bysource'
 autoclass_content = "both"
 
-from recommonmark.transform import AutoStructify
 github_doc_root = 'https://github.com/rtfd/recommonmark/tree/master/doc/'
+
+
 def setup(app):
     app.add_config_value('recommonmark_config', {
-            # 'url_resolver': lambda url: github_doc_root + url,
-            'auto_toc_tree_section': 'Contents',
-            }, True)
+        # 'url_resolver': lambda url: github_doc_root + url,
+        'auto_toc_tree_section': 'Contents',
+    }, True)
     app.add_transform(AutoStructify)
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

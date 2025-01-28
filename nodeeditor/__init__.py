@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-__name__ = 'NodeEditor'
-__author__ = 'Pavel Křupala'
-__version__ = '0.9.15'
+__name__ = 'Node Editor'
+__author__ = 'Azad Kshitij'
+__version__ = '0.1.0'
 
 
 _QT_API_NAME, _QT_API_VERSION = None, None

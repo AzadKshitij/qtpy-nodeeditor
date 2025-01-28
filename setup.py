@@ -21,10 +21,10 @@ test_requirements = []
 
 
 setup(
-    author="Pavel Křupala",
-    author_email='pavel.krupala@gmail.com',
+    author="Azad Kshitij",
+    author_email='azadkshitij08302001@gmail.com',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 1 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
@@ -52,7 +52,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://gitlab.com/pavel.krupala/pyqt-node-editor.git',
+    url='https://github.com/AzadKshitij/qtpy-nodeeditor.git'
     version=nodeeditor.__version__,
     zip_safe=False,
 )
