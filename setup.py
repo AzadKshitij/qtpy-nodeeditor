@@ -41,7 +41,7 @@ setup(
     description="Python Node Editor using PyQt5",
     install_requires=requirements,
     license="MIT license",
-    long_description=readme + '\n\n' + history,
+    long_description="provides full framework for creating customizable graph, nodes, sockets and edges. Full support for undo / redo and serialization into files in a VCS friendly way. Support for implementing evaluation logic. Hovering effects, dragging edges, cutting lines and a bunch more. Provided 2 examples on how node editor can be implemented",
     include_package_data=True,
     keywords='nodeeditor',
     name='nodeeditor',
