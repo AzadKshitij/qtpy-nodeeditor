@@ -1,3 +1,4 @@
+import examples.example_calculator.qss.nodeeditor_dark_resources
 import os
 from qtpy.QtGui import QIcon, QKeySequence
 from qtpy.QtWidgets import QMdiArea, QWidget, QDockWidget, QAction, QMessageBox, QFileDialog
@@ -23,7 +24,6 @@ Edge.registerEdgeValidator(edge_cannot_connect_input_and_output_of_same_node)
 
 
 # images for the dark skin
-import examples.example_calculator.qss.nodeeditor_dark_resources
 
 
 DEBUG = False
@@ -35,9 +35,10 @@ class CalculatorWindow(NodeEditorWindow):
         self.name_company = 'Blenderfreak'
         self.name_product = 'Calculator NodeEditor'
 
-        self.stylesheet_filename = os.path.join(os.path.dirname(__file__), "qss/nodeeditor.qss")
+        self.stylesheet_filename = os.path.join(
+            os.path.dirname(__file__), "qss/nodeeditor.qss")
         loadStylesheets(
-            os.path.join(os.path.dirname(__file__), "qss/nodeeditor-dark.qss"),
+            # os.path.join(os.path.dirname(__file__), "qss/nodeeditor-dark.qss"),
             self.stylesheet_filename
         )
 
@@ -47,10 +48,11 @@ class CalculatorWindow(NodeEditorWindow):
             print("Registered nodes:")
             pp(CALC_NODES)
 
-
         self.mdiArea = QMdiArea()
-        self.mdiArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.mdiArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.mdiArea.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.mdiArea.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.mdiArea.setViewMode(QMdiArea.ViewMode.TabbedView)
         self.mdiArea.setDocumentMode(True)
         self.mdiArea.setTabsClosable(True)
@@ -82,21 +84,27 @@ class CalculatorWindow(NodeEditorWindow):
             import sys
             sys.exit(0)
 
-
     def createActions(self):
         super().createActions()
 
-        self.actClose = QAction("Cl&ose", self, statusTip="Close the active window", triggered=self.mdiArea.closeActiveSubWindow)
-        self.actCloseAll = QAction("Close &All", self, statusTip="Close all the windows", triggered=self.mdiArea.closeAllSubWindows)
-        self.actTile = QAction("&Tile", self, statusTip="Tile the windows", triggered=self.mdiArea.tileSubWindows)
-        self.actCascade = QAction("&Cascade", self, statusTip="Cascade the windows", triggered=self.mdiArea.cascadeSubWindows)
-        self.actNext = QAction("Ne&xt", self, shortcut=QKeySequence.NextChild, statusTip="Move the focus to the next window", triggered=self.mdiArea.activateNextSubWindow)
-        self.actPrevious = QAction("Pre&vious", self, shortcut=QKeySequence.PreviousChild, statusTip="Move the focus to the previous window", triggered=self.mdiArea.activatePreviousSubWindow)
+        self.actClose = QAction("Cl&ose", self, statusTip="Close the active window",
+                                triggered=self.mdiArea.closeActiveSubWindow)
+        self.actCloseAll = QAction(
+            "Close &All", self, statusTip="Close all the windows", triggered=self.mdiArea.closeAllSubWindows)
+        self.actTile = QAction(
+            "&Tile", self, statusTip="Tile the windows", triggered=self.mdiArea.tileSubWindows)
+        self.actCascade = QAction(
+            "&Cascade", self, statusTip="Cascade the windows", triggered=self.mdiArea.cascadeSubWindows)
+        self.actNext = QAction("Ne&xt", self, shortcut=QKeySequence.NextChild,
+                               statusTip="Move the focus to the next window", triggered=self.mdiArea.activateNextSubWindow)
+        self.actPrevious = QAction("Pre&vious", self, shortcut=QKeySequence.PreviousChild,
+                                   statusTip="Move the focus to the previous window", triggered=self.mdiArea.activatePreviousSubWindow)
 
         self.actSeparator = QAction(self)
         self.actSeparator.setSeparator(True)
 
-        self.actAbout = QAction("&About", self, statusTip="Show the application's About box", triggered=self.about)
+        self.actAbout = QAction(
+            "&About", self, statusTip="Show the application's About box", triggered=self.about)
 
     def getCurrentNodeEditorWidget(self):
         """ we're returning NodeEditorWidget here... """
@@ -110,11 +118,12 @@ class CalculatorWindow(NodeEditorWindow):
             subwnd = self.createMdiChild()
             subwnd.widget().fileNew()
             subwnd.show()
-        except Exception as e: dumpException(e)
-
+        except Exception as e:
+            dumpException(e)
 
     def onFileOpen(self):
-        fnames, filter = QFileDialog.getOpenFileNames(self, 'Open graph from file', self.getFileDialogDirectory(), self.getFileDialogFilter())
+        fnames, filter = QFileDialog.getOpenFileNames(
+            self, 'Open graph from file', self.getFileDialogDirectory(), self.getFileDialogFilter())
 
         try:
             for fname in fnames:
@@ -132,14 +141,14 @@ class CalculatorWindow(NodeEditorWindow):
                             subwnd.show()
                         else:
                             nodeeditor.close()
-        except Exception as e: dumpException(e)
-
+        except Exception as e:
+            dumpException(e)
 
     def about(self):
         QMessageBox.about(self, "About Calculator NodeEditor Example",
-                "The <b>Calculator NodeEditor</b> example demonstrates how to write multiple "
-                "document interface applications using PyQt5 and NodeEditor. For more information visit: "
-                "<a href='https://www.blenderfreak.com/'>www.BlenderFreak.com</a>")
+                          "The <b>Calculator NodeEditor</b> example demonstrates how to write multiple "
+                          "document interface applications using PyQt5 and NodeEditor. For more information visit: "
+                          "<a href='https://www.blenderfreak.com/'>www.BlenderFreak.com</a>")
 
     def createMenus(self):
         super().createMenus()
@@ -182,13 +191,13 @@ class CalculatorWindow(NodeEditorWindow):
 
             self.actCut.setEnabled(hasMdiChild and active.hasSelectedItems())
             self.actCopy.setEnabled(hasMdiChild and active.hasSelectedItems())
-            self.actDelete.setEnabled(hasMdiChild and active.hasSelectedItems())
+            self.actDelete.setEnabled(
+                hasMdiChild and active.hasSelectedItems())
 
             self.actUndo.setEnabled(hasMdiChild and active.canUndo())
             self.actRedo.setEnabled(hasMdiChild and active.canRedo())
-        except Exception as e: dumpException(e)
-
-
+        except Exception as e:
+            dumpException(e)
 
     def updateWindowMenu(self):
         self.windowMenu.clear()
@@ -253,7 +262,8 @@ class CalculatorWindow(NodeEditorWindow):
         subwnd.setWindowIcon(self.empty_icon)
         # nodeeditor.scene.addItemSelectedListener(self.updateEditMenu)
         # nodeeditor.scene.addItemsDeselectedListener(self.updateEditMenu)
-        nodeeditor.scene.history.addHistoryModifiedListener(self.updateEditMenu)
+        nodeeditor.scene.history.addHistoryModifiedListener(
+            self.updateEditMenu)
         nodeeditor.addCloseEventListener(self.onSubWndClose)
         return subwnd
 
@@ -265,7 +275,6 @@ class CalculatorWindow(NodeEditorWindow):
             event.accept()
         else:
             event.ignore()
-
 
     def findMdiChild(self, filename):
         for window in self.mdiArea.subWindowList():

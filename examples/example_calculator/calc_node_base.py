@@ -1,19 +1,23 @@
-from qtpy.QtGui import QImage
+from qtpy.QtGui import QImage, QPixmap
 from qtpy.QtCore import QRectF
 from qtpy.QtWidgets import QLabel
 
 from nodeeditor.node_node import Node
 from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_graphics_node import QDMGraphicsNode
+
+from nodeeditor.node_icon_content_widget import QDMNodeIconContentWidget
+from nodeeditor.node_icon_graphics_node import QDMIconGraphicsNode
+
 from nodeeditor.node_socket import LEFT_CENTER, RIGHT_CENTER
 from nodeeditor.utils import dumpException
 
 
-class CalcGraphicsNode(QDMGraphicsNode):
+class CalcGraphicsNode(QDMIconGraphicsNode):
     def initSizes(self):
         super().initSizes()
-        self.width = 160
-        self.height = 74
+        self.width = 120
+        self.height = 120
         self.edge_roundness = 6
         self.edge_padding = 0
         self.title_horizontal_padding = 8
@@ -21,23 +25,39 @@ class CalcGraphicsNode(QDMGraphicsNode):
 
     def initAssets(self):
         super().initAssets()
-        self.icons = QImage("icons/status_icons.png")
+        # self.icons = QImage("icons/status_icons.png")
+        self.icons = QImage(
+            "examples/example_calculator/icons/status_icons.png")
 
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
         super().paint(painter, QStyleOptionGraphicsItem, widget)
 
         offset = 24.0
-        if self.node.isDirty(): offset = 0.0
-        if self.node.isInvalid(): offset = 48.0
+        if self.node.isDirty():
+            offset = 0.0
+        if self.node.isInvalid():
+            offset = 48.0
+
+        # Calculate the position for bottom center
+        icon_width = 24.0
+        icon_x = (self.width - icon_width) / 2
+        icon_y = self.height - 12  # 5 pixels padding from the bottom
+
+        # print(icon_x, icon_y, icon_width, icon_height)
+        # painter.drawImage(
+        #     QRectF(icon_x, icon_y, icon_width, icon_height),
+        #     self.icons,
+        #     QRectF(offset, 0, icon_width, icon_height)
+        # )
 
         painter.drawImage(
-            QRectF(-10, -10, 24.0, 24.0),
+            QRectF(icon_x, icon_y, 24.0, 24.0),
             self.icons,
             QRectF(offset, 0, 24.0, 24.0)
         )
 
 
-class CalcContent(QDMNodeContentWidget):
+class CalcContent(QDMNodeIconContentWidget):
     def initUI(self):
         lbl = QLabel(self.node.content_label, self)
         lbl.setObjectName(self.node.content_label_objname)
@@ -53,14 +73,13 @@ class CalcNode(Node):
     GraphicsNode_class = CalcGraphicsNode
     NodeContent_class = CalcContent
 
-    def __init__(self, scene, inputs=[2,2], outputs=[1]):
+    def __init__(self, scene, inputs=[2, 2], outputs=[1]):
         super().__init__(scene, self.__class__.op_title, inputs, outputs)
 
         self.value = None
 
         # it's really important to mark all nodes Dirty by default
         self.markDirty()
-
 
     def initSettings(self):
         super().initSettings()
@@ -94,11 +113,11 @@ class CalcNode(Node):
 
     def eval(self):
         if not self.isDirty() and not self.isInvalid():
-            print(" _> returning cached %s value:" % self.__class__.__name__, self.value)
+            print(" _> returning cached %s value:" %
+                  self.__class__.__name__, self.value)
             return self.value
 
         try:
-
             val = self.evalImplementation()
             return val
         except ValueError as e:
@@ -110,13 +129,10 @@ class CalcNode(Node):
             self.grNode.setToolTip(str(e))
             dumpException(e)
 
-
-
     def onInputChanged(self, socket=None):
         print("%s::__onInputChanged" % self.__class__.__name__)
         self.markDirty()
         self.eval()
-
 
     def serialize(self):
         res = super().serialize()
@@ -125,5 +141,6 @@ class CalcNode(Node):
 
     def deserialize(self, data, hashmap={}, restore_id=True):
         res = super().deserialize(data, hashmap, restore_id)
-        print("Deserialized CalcNode '%s'" % self.__class__.__name__, "res:", res)
+        print("Deserialized CalcNode '%s'" %
+              self.__class__.__name__, "res:", res)
         return res

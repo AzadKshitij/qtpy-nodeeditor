@@ -43,6 +43,54 @@ QDMNodeContentWidget QLineEdit#calc_node_input {
   margin-left: 5px;
   font-size: 28px;
 }
+/* ------------- */
+QDMNodeIconContentWidget {
+  background: transparent;
+}
+QDMNodeIconContentWidget QFrame {
+  background: transparent;
+}
+QDMNodeIconContentWidget QTextEdit,
+QDMNodeIconContentWidget QLineEdit {
+  background: #666;
+  color: #fff;
+}
+QDMNodeIconContentWidget QLabel {
+  color: #e0e0e0;
+}
+QDMNodeIconContentWidget QLabel#calc_node_bg,
+QDMNodeIconContentWidget QLabel#calc_node_mul,
+QDMNodeIconContentWidget QLabel#calc_node_div {
+  background: transparent;
+  height: 0px;
+  color: #373737;
+  font-size: 72px;
+  max-height: 49px;
+  min-height: 49px;
+  padding-left: 94px;
+}
+QDMNodeIconContentWidget QLabel#calc_node_mul,
+QDMNodeIconContentWidget QLabel#calc_node_div {
+  padding-top: 12px;
+}
+QDMNodeIconContentWidget QLabel#calc_node_output {
+  min-width: 150px;
+  max-width: 150px;
+  min-height: 45px;
+  max-height: 45px;
+  margin-left: 10px;
+  margin-top: 5px;
+  font-size: 28px;
+}
+QDMNodeIconContentWidget QLineEdit#calc_node_input {
+  width: 140px;
+  height: 36px;
+  margin-top: 5px;
+  margin-left: 5px;
+  font-size: 28px;
+}
+
+
 QGraphicsView {
   selection-background-color: #fff;
 }

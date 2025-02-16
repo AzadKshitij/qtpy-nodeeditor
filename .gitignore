@@ -26,5 +26,6 @@ wheels/
 .installed.cfg
 *.egg
 /venv/
+/.venv/
 
 NOTES.md
