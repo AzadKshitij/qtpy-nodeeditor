@@ -16,22 +16,9 @@ class CalcCheckContent(QDMNodeIconContentWidget):
     #     self.edit = QLineEdit("1", self)
     #     self.edit.setAlignment(Qt.AlignRight)
     #     self.edit.setObjectName(self.node.content_label_objname)
-
     def initUI(self):
-        """Sets up layouts and widgets to be rendered in :py:class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` class."""
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
-
-        # Add icon in the center
-        self.icon_label = QLabel(self)
-
-        # image = QImage("icons/in.png")
-        # if not image.isNull():
-        pixmap = QPixmap("examples/example_calculator/icons/File Output.png")
-        self.icon_label.setPixmap(pixmap)
-        self.icon_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.icon_label)
+        icon = QPixmap("examples/example_calculator/icons/File Output.png")
+        super().initUI(icon)
 
     def serialize(self):
         res = super().serialize()
@@ -58,7 +45,7 @@ class CalcCheck_Input(CalcNode):
 
     def __init__(self, scene):
         super().__init__(scene, inputs=[], outputs=[1, 1, 1, 1])
-        self.picon = QImage("icons/in.png")
+        # self.picon = QImage("icons/in.png")
         self.eval()
 
     def initInnerClasses(self):

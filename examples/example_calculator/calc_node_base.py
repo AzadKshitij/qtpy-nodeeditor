@@ -90,6 +90,7 @@ class CalcNode(Node):
         return 123
 
     def evalImplementation(self):
+        print(" _> evaluating %s" % self.__class__.__name__)
         i1 = self.getInput(0)
         i2 = self.getInput(1)
 

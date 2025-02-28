@@ -25,19 +25,38 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
         """
         self.node = node
         super().__init__(parent)
+        self.icon: QPixmap = None
 
         self.initUI()
 
-    def initUI(self):
+    def initUI(self, icon: QPixmap = None):
         """Sets up layouts and widgets to be rendered in :py:class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` class.
         """
+
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
-        self.wdg_label = QLabel("Some Title")
-        self.layout.addWidget(self.wdg_label)
-        self.layout.addWidget(QDMTextEdit("foo"))
+        # Add icon in the center
+        self.icon_label = QLabel(self)
+
+        # image = QImage("icons/in.png")
+        # if not image.isNull():
+        print("icon: ", icon)
+        print(type(icon))
+        if icon:
+            pixmap = icon
+            self.icon_label.setPixmap(pixmap)
+            self.icon_label.setAlignment(Qt.AlignCenter)
+            self.layout.addWidget(self.icon_label)
+
+        # self.layout = QVBoxLayout()
+        # self.layout.setContentsMargins(0, 0, 0, 0)
+        # self.setLayout(self.layout)
+
+        # self.wdg_label = QLabel("Some Title")
+        # self.layout.addWidget(self.wdg_label)
+        # self.layout.addWidget(QDMTextEdit("foo"))
 
         # Add icon in the center
         # self.icon_label = QLabel(self)
