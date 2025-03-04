@@ -31,18 +31,55 @@ class CalcNode_Output(CalcNode):
         if not input_node:
             self.grNode.setToolTip("Input is not connected")
             self.markInvalid()
-            return
+            return None
 
         val = input_node.eval()
-
         if val is None:
             self.grNode.setToolTip("Input is NaN")
             self.markInvalid()
-            return
+            return None
 
-        self.content.lbl.setText("%d" % val)
+        # Get value based on socket connection
+        socket_index = self.getSocketValue(input_node.outputs, self)
+        display_val = self.handleInputValue(val, socket_index)
+
+        # Get additional info if available
+        if isinstance(display_val, dict):
+            tooltip = f"Type: {display_val.get('type', 'unknown')}"
+            display_val = display_val.get('value', None)
+            self.grNode.setToolTip(tooltip)
+        else:
+            self.grNode.setToolTip("")
+
+        # Update display
+        self.content.lbl.setText(str(display_val))
         self.markInvalid(False)
         self.markDirty(False)
-        self.grNode.setToolTip("")
 
-        return val
+        return display_val
+
+    # def evalImplementation(self):
+    #     input_node = self.getInput(0)
+    #     if not input_node:
+    #         self.grNode.setToolTip("Input is not connected")
+    #         self.markInvalid()
+    #         return None
+
+    #     val = input_node.eval()
+
+    #     if val is None:
+    #         self.grNode.setToolTip("Input is NaN")
+    #         self.markInvalid()
+    #         return None
+
+    #     # Get value based on socket connection
+    #     socket_index = self.getSocketValue(input_node.outputs, self)
+    #     display_val = self.handleInputValue(val, socket_index)
+
+    #     # Update display
+    #     self.content.lbl.setText(str(display_val))
+    #     self.markInvalid(False)
+    #     self.markDirty(False)
+    #     self.grNode.setToolTip("")
+
+    #     return display_val

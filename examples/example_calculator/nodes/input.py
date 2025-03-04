@@ -46,16 +46,17 @@ class CalcNode_Input(CalcNode):
 
     def evalImplementation(self):
         u_value = self.content.edit.text()
-        s_value = int(u_value)
-        self.value = s_value
-        self.markDirty(False)
-        self.markInvalid(False)
-
-        self.markDescendantsInvalid(False)
-        self.markDescendantsDirty()
-
-        self.grNode.setToolTip("")
-
-        self.evalChildren()
-
-        return self.value
+        try:
+            s_value = int(u_value)
+            self.values = [s_value]  # Store value in list format
+            self.markDirty(False)
+            self.markInvalid(False)
+            self.markDescendantsInvalid(False)
+            self.markDescendantsDirty()
+            self.grNode.setToolTip("")
+            self.evalChildren()
+            return self.values
+        except ValueError:
+            self.markInvalid(True)
+            self.grNode.setToolTip("Invalid input value")
+            return [None]

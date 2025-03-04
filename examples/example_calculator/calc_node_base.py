@@ -76,7 +76,7 @@ class CalcNode(Node):
     def __init__(self, scene, inputs=[2, 2], outputs=[1]):
         super().__init__(scene, self.__class__.op_title, inputs, outputs)
 
-        self.value = None
+        self.values = [None] * len(outputs)
 
         # it's really important to mark all nodes Dirty by default
         self.markDirty()
@@ -85,6 +85,30 @@ class CalcNode(Node):
         super().initSettings()
         self.input_socket_position = LEFT_CENTER
         self.output_socket_position = RIGHT_CENTER
+
+    def getSocketValue(self, socket_list, target_node):
+        """Get value based on socket connection"""
+        socket_index = 0
+        for i, socket in enumerate(socket_list):
+            if socket.edges:
+                for edge in socket.edges:
+                    if edge.getOtherSocket(socket).node == target_node:
+                        socket_index = i
+                        break
+        return socket_index
+
+    def handleInputValue(self, val, socket_index=0):
+        """Extract correct value from input based on socket connection"""
+        if isinstance(val, list):
+            if socket_index < len(val):
+                value = val[socket_index]
+                if isinstance(value, list):
+                    value = value[0]
+                # Handle dictionary value
+                if isinstance(value, dict):
+                    return value.get('value', None)
+                return value
+        return val
 
     def evalOperation(self, input1, input2):
         return 123
@@ -98,11 +122,37 @@ class CalcNode(Node):
             self.markInvalid()
             self.markDescendantsDirty()
             self.grNode.setToolTip("Connect all inputs")
-            return None
+            return [None] * len(self.outputs)
 
-        else:
-            val = self.evalOperation(i1.eval(), i2.eval())
-            self.value = val
+        val1 = i1.eval()
+        val2 = i2.eval()
+
+        # Handle None values from input evaluations
+        if val1 is None or val2 is None:
+            self.markInvalid()
+            self.markDescendantsDirty()
+            self.grNode.setToolTip("Invalid input values")
+            return [None] * len(self.outputs)
+
+        # Extract first value from lists if necessary
+        input1 = val1[0] if isinstance(val1, list) else val1
+        input2 = val2[0] if isinstance(val2, list) else val2
+
+        try:
+            val = self.evalOperation(input1, input2)
+
+            # Handle multiple outputs
+            if isinstance(val, list):
+                if len(val) == len(self.outputs):
+                    # Wrap each value in a list
+                    self.values = [[v] for v in val]
+                else:
+                    # If lengths don't match, fill with None
+                    self.values = [[None]] * len(self.outputs)
+            else:
+                # Single value case - all outputs get the same value
+                self.values = [[val]] * len(self.outputs)
+
             self.markDirty(False)
             self.markInvalid(False)
             self.grNode.setToolTip("")
@@ -110,13 +160,19 @@ class CalcNode(Node):
             self.markDescendantsDirty()
             self.evalChildren()
 
-            return val
+            return self.values
+
+        except Exception as e:
+            self.markInvalid()
+            self.grNode.setToolTip(str(e))
+            self.markDescendantsDirty()
+            return [None] * len(self.outputs)
 
     def eval(self):
         if not self.isDirty() and not self.isInvalid():
             print(" _> returning cached %s value:" %
-                  self.__class__.__name__, self.value)
-            return self.value
+                  self.__class__.__name__, self.values)
+            return self.values
 
         try:
             val = self.evalImplementation()
