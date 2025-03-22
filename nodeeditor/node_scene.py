@@ -2,7 +2,9 @@
 """
 A module containing the representation of the NodeEditor's Scene
 """
-import os, sys, json
+import os
+import sys
+import orjson as json
 from collections import OrderedDict
 from nodeeditor.utils_no_qt import dumpException, pp
 from nodeeditor.node_serializable import Serializable
@@ -16,7 +18,8 @@ from nodeeditor.node_scene_clipboard import SceneClipboard
 DEBUG_REMOVE_WARNINGS = False
 
 
-class InvalidFile(Exception): pass
+class InvalidFile(Exception):
+    pass
 
 
 class Scene(Serializable):
@@ -84,7 +87,8 @@ class Scene(Serializable):
             self._has_been_modified = value
 
             # call all registered listeners
-            for callback in self._has_been_modified_listeners: callback()
+            for callback in self._has_been_modified_listeners:
+                callback()
 
         self._has_been_modified = value
 
@@ -106,19 +110,19 @@ class Scene(Serializable):
                 return node
         return None
 
-
-    def setSilentSelectionEvents(self, value: bool=True):
+    def setSilentSelectionEvents(self, value: bool = True):
         """Calling this can suppress onItemSelected events to be triggered. This is useful when working with clipboard"""
         self._silent_selection_events = value
 
-    def onItemSelected(self, silent: bool=False):
+    def onItemSelected(self, silent: bool = False):
         """
         Handle Item selection and trigger event `Item Selected`
 
         :param silent: If ``True`` scene's onItemSelected won't be called and history stamp not stored
         :type silent: ``bool``
         """
-        if self._silent_selection_events: return
+        if self._silent_selection_events:
+            return
 
         current_selected_items = self.getSelectedItems()
         if current_selected_items != self._last_selected_items:
@@ -126,11 +130,12 @@ class Scene(Serializable):
             if not silent:
                 # we could create some kind of UI which could be serialized,
                 # therefore first run all callbacks...
-                for callback in self._item_selected_listeners: callback()
+                for callback in self._item_selected_listeners:
+                    callback()
                 # and store history as a last step always
                 self.history.storeHistory("Selection Changed")
 
-    def onItemsDeselected(self, silent: bool=False):
+    def onItemsDeselected(self, silent: bool = False):
         """
         Handle Items deselection and trigger event `Items Deselected`
 
@@ -150,8 +155,8 @@ class Scene(Serializable):
             self._last_selected_items = []
             if not silent:
                 self.history.storeHistory("Deselected Everything")
-                for callback in self._items_deselected_listeners: callback()
-
+                for callback in self._items_deselected_listeners:
+                    callback()
 
     def isModified(self) -> bool:
         """Is this `Scene` dirty aka `has been modified` ?
@@ -170,7 +175,7 @@ class Scene(Serializable):
         """
         return self.grScene.selectedItems()
 
-    def doDeselectItems(self, silent: bool=False) -> None:
+    def doDeselectItems(self, silent: bool = False) -> None:
         """
         Deselects everything in scene
 
@@ -271,10 +276,12 @@ class Scene(Serializable):
         :param node: :class:`~nodeeditor.node_node.Node` to be removed from this `Scene`
         :type node: :class:`~nodeeditor.node_node.Node`
         """
-        if node in self.nodes: self.nodes.remove(node)
+        if node in self.nodes:
+            self.nodes.remove(node)
         else:
-            if DEBUG_REMOVE_WARNINGS: print("!W:", "Scene::removeNode", "wanna remove nodeeditor", node,
-                                            "from self.nodes but it's not in the list!")
+            if DEBUG_REMOVE_WARNINGS:
+                print("!W:", "Scene::removeNode", "wanna remove nodeeditor", node,
+                      "from self.nodes but it's not in the list!")
 
     def removeEdge(self, edge: Edge):
         """Remove :class:`~nodeeditor.node_edge.Edge` from this `Scene`
@@ -282,11 +289,12 @@ class Scene(Serializable):
         :param edge: :class:`~nodeeditor.node_edge.Edge` to be remove from this `Scene`
         :return: :class:`~nodeeditor.node_edge.Edge`
         """
-        if edge in self.edges: self.edges.remove(edge)
+        if edge in self.edges:
+            self.edges.remove(edge)
         else:
-            if DEBUG_REMOVE_WARNINGS: print("!W:", "Scene::removeEdge", "wanna remove edge", edge,
-                                            "from self.edges but it's not in the list!")
-
+            if DEBUG_REMOVE_WARNINGS:
+                print("!W:", "Scene::removeEdge", "wanna remove edge", edge,
+                      "from self.edges but it's not in the list!")
 
     def clear(self):
         """Remove all `Nodes` from this `Scene`. This causes also to remove all `Edges`"""
@@ -294,7 +302,6 @@ class Scene(Serializable):
             self.nodes[0].remove()
 
         self.has_been_modified = False
-
 
     def saveToFile(self, filename: str):
         """
@@ -304,7 +311,7 @@ class Scene(Serializable):
         :type filename: ``str``
         """
         with open(filename, "w") as file:
-            file.write( json.dumps( self.serialize(), indent=4 ) )
+            file.write(json.dumps(self.serialize(), indent=4))
             # print("saving to", filename, "was successfull.")
 
             self.has_been_modified = False
@@ -330,7 +337,8 @@ class Scene(Serializable):
                 self.deserialize(data)
                 self.has_been_modified = False
             except json.JSONDecodeError:
-                raise InvalidFile("%s is not a valid JSON file" % os.path.basename(filename))
+                raise InvalidFile("%s is not a valid JSON file" %
+                                  os.path.basename(filename))
             except Exception as e:
                 dumpException(e)
 
@@ -338,7 +346,7 @@ class Scene(Serializable):
         """Return the class representing Edge. Override me if needed"""
         return Edge
 
-    def setNodeClassSelector(self, class_selecting_function: 'functon') -> 'Node class type':
+    def setNodeClassSelector(self, class_selecting_function: 'functon') -> 'Node class type':  # noqa
         """
         Set the function which decides what `Node` class to instantiate when deserializing `Scene`.
         If not set, we will always instantiate :class:`~nodeeditor.node_node.Node` for each `Node` in the `Scene`
@@ -362,16 +370,15 @@ class Scene(Serializable):
         """
         return Node if self.node_class_selector is None else self.node_class_selector(data)
 
-
     def serialize(self) -> OrderedDict:
         nodes, edges = [], []
         for node in self.nodes:
             newnode = node.serialize()
-            if not any (newnode['id'] == a['id'] for a in nodes):
+            if not any(newnode['id'] == a['id'] for a in nodes):
                 nodes.append(newnode)
         for edge in self.edges:
             newedge = edge.serialize()
-            if not any (newedge['id'] == a['id'] for a in edges):
+            if not any(newedge['id'] == a['id'] for a in edges):
                 edges.append(newedge)
         return OrderedDict([
             ('id', self.id),
@@ -381,14 +388,15 @@ class Scene(Serializable):
             ('edges', edges),
         ])
 
-    def deserialize(self, data: dict, hashmap: dict={}, restore_id: bool=True, *args, **kwargs) -> bool:
+    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
         hashmap = {}
 
-        if restore_id: self.id = data['id']
+        if restore_id:
+            self.id = data['id']
 
         # -- deserialize NODES
 
-        ## Instead of recreating all the nodes, reuse existing ones...
+        # Instead of recreating all the nodes, reuse existing ones...
         # get list of all current nodes:
         all_nodes = self.nodes.copy()
 
@@ -404,18 +412,21 @@ class Scene(Serializable):
             if not found:
                 try:
                     new_node = self.getNodeClassFromData(node_data)(self)
-                    new_node.deserialize(node_data, hashmap, restore_id, *args, **kwargs)
+                    new_node.deserialize(
+                        node_data, hashmap, restore_id, *args, **kwargs)
                     new_node.onDeserialized(node_data)
                     # print("New node for", node_data['title'])
                 except:
                     dumpException()
             else:
                 try:
-                    found.deserialize(node_data, hashmap, restore_id, *args, **kwargs)
+                    found.deserialize(node_data, hashmap,
+                                      restore_id, *args, **kwargs)
                     found.onDeserialized(node_data)
                     all_nodes.remove(found)
                     # print("Reused", node_data['title'])
-                except: dumpException()
+                except:
+                    dumpException()
 
         # remove nodes which are left in the scene and were NOT in the serialized data!
         # that means they were not in the graph before...
@@ -423,11 +434,9 @@ class Scene(Serializable):
             node = all_nodes.pop()
             node.remove()
 
-
         # -- deserialize EDGES
 
-
-        ## Instead of recreating all the edges, reuse existing ones...
+        # Instead of recreating all the edges, reuse existing ones...
         # get list of all current edges:
         all_edges = self.edges.copy()
 
@@ -441,10 +450,12 @@ class Scene(Serializable):
                     break
 
             if not found:
-                new_edge = self.getEdgeClass()(self).deserialize(edge_data, hashmap, restore_id, *args, **kwargs)
+                new_edge = self.getEdgeClass()(self).deserialize(
+                    edge_data, hashmap, restore_id, *args, **kwargs)
                 # print("New edge for", edge_data)
             else:
-                found.deserialize(edge_data, hashmap, restore_id, *args, **kwargs)
+                found.deserialize(edge_data, hashmap,
+                                  restore_id, *args, **kwargs)
                 all_edges.remove(found)
 
         # remove nodes which are left in the scene and were NOT in the serialized data!
@@ -452,6 +463,5 @@ class Scene(Serializable):
         while all_edges != []:
             edge = all_edges.pop()
             edge.remove()
-
 
         return True
