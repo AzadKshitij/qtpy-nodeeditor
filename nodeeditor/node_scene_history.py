@@ -10,6 +10,7 @@ DEBUG_SELECTION = False
 
 class SceneHistory():
     """Class contains all the code for undo/redo operations"""
+
     def __init__(self, scene: 'Scene'):
         """
         :param scene: Reference to the :class:`~nodeeditor.node_scene.Scene`
@@ -26,6 +27,8 @@ class SceneHistory():
         self.history_limit = 32
 
         self.undo_selection_has_changed = False
+        self.is_restoring_history = False
+        self.if_undo = False
 
         # listeners
         self._history_modified_listeners = []
@@ -71,7 +74,8 @@ class SceneHistory():
 
         :param callback: callback function
         """
-        if callback in self._history_stored_listeners: self._history_stored_listeners.remove(callback)
+        if callback in self._history_stored_listeners:
+            self._history_stored_listeners.remove(callback)
 
     def removeHistoryRestoredListener(self, callback: 'function'):
         """
@@ -79,7 +83,8 @@ class SceneHistory():
 
         :param callback: callback function
         """
-        if callback in self._history_restored_listeners: self._history_restored_listeners.remove(callback)
+        if callback in self._history_restored_listeners:
+            self._history_restored_listeners.remove(callback)
 
     def canUndo(self) -> bool:
         """Return ``True`` if Undo is available for current `History Stack`
@@ -98,21 +103,24 @@ class SceneHistory():
 
     def undo(self):
         """Undo operation"""
-        if DEBUG: print("UNDO")
+        if DEBUG:
+            print("UNDO")
 
         if self.canUndo():
-            self.history_current_step -= 1
+            self.if_undo = True
             self.restoreHistory()
+            self.history_current_step -= 1
             self.scene.has_been_modified = True
 
     def redo(self):
         """Redo operation"""
-        if DEBUG: print("REDO")
+        if DEBUG:
+            print("REDO")
         if self.canRedo():
+            self.if_undo = False
             self.history_current_step += 1
             self.restoreHistory()
             self.scene.has_been_modified = True
-
 
     def restoreHistory(self):
         """
@@ -123,15 +131,28 @@ class SceneHistory():
         - `History Modified` event
         - `History Restored` event
         """
-        if DEBUG: print("Restoring history",
-                        ".... current_step: @%d" % self.history_current_step,
-                        "(%d)" % len(self.history_stack))
-        self.restoreHistoryStamp(self.history_stack[self.history_current_step])
-        for callback in self._history_modified_listeners: callback()
-        for callback in self._history_restored_listeners: callback()
+        if DEBUG:
+            print("Restoring history",
+                  ".... current_step: @%d" % self.history_current_step,
+                  "(%d)" % len(self.history_stack))
 
+        # Prevent storing history during restoration
+        self.is_restoring_history = True
+        history_stamp = self.history_stack[self.history_current_step]
+        self.restoreHistoryStamp(history_stamp)
 
-    def storeHistory(self, desc: str, setModified: bool=False):
+        if history_stamp.get('data', None):
+            history_stamp['data']['node'].content.history_stamp_callback(
+                history_stamp['data'], self.if_undo)
+
+        self.is_restoring_history = False  # Re-enable history storage
+
+        for callback in self._history_modified_listeners:
+            callback()
+        for callback in self._history_restored_listeners:
+            callback()
+
+    def storeHistory(self, desc: str, setModified: bool = False, data: dict = None, callback: 'function' = None):
         """
         Store History Stamp into History Stack
 
@@ -139,18 +160,27 @@ class SceneHistory():
         :type desc: ``str``
         :param setModified: if ``True`` marks :class:`~nodeeditor.node_scene.Scene` with `has_been_modified`
         :type setModified: ``bool``
+        :param data: Additional data to store with History Stamp
+        :type data: ``dict``
+        :param callback: Callback function to call after storing the History Stamp
+        :type callback: ``function``
 
         Triggers:
 
         - `History Modified`
         - `History Stored`
         """
+
+        if self.is_restoring_history:
+            return
+
         if setModified:
             self.scene.has_been_modified = True
 
-        if DEBUG: print("Storing history", '"%s"' % desc,
-                        ".... current_step: @%d" % self.history_current_step,
-                        "(%d)" % len(self.history_stack))
+        if DEBUG:
+            print("Storing history", '"%s"' % desc,
+                  ".... current_step: @%d" % self.history_current_step,
+                  "(%d)" % len(self.history_stack))
 
         # if the pointer (history_current_step) is not at the end of history_stack
         if self.history_current_step+1 < len(self.history_stack):
@@ -165,12 +195,14 @@ class SceneHistory():
 
         self.history_stack.append(hs)
         self.history_current_step += 1
-        if DEBUG: print("  -- setting step to:", self.history_current_step)
+        if DEBUG:
+            print("  -- setting step to:", self.history_current_step)
 
         # always trigger history modified (for i.e. updateEditMenu)
-        for callback in self._history_modified_listeners: callback()
-        for callback in self._history_stored_listeners: callback()
-
+        for callback in self._history_modified_listeners:
+            callback()
+        for callback in self._history_stored_listeners:
+            callback()
 
     def captureCurrentSelection(self) -> dict:
         """
@@ -183,8 +215,10 @@ class SceneHistory():
             'edges': [],
         }
         for item in self.scene.grScene.selectedItems():
-            if hasattr(item, 'node'): sel_obj['nodes'].append(item.node.id)
-            elif hasattr(item, 'edge'): sel_obj['edges'].append(item.edge.id)
+            if hasattr(item, 'node'):
+                sel_obj['nodes'].append(item.node.id)
+            elif hasattr(item, 'edge'):
+                sel_obj['edges'].append(item.edge.id)
         return sel_obj
 
     def createHistoryStamp(self, desc: str) -> dict:
@@ -210,19 +244,23 @@ class SceneHistory():
         :param history_stamp: History Stamp to restore
         :type history_stamp: ``dict``
         """
-        if DEBUG: print("RHS: ", history_stamp['desc'])
+        if DEBUG:
+            print("RHS: ", history_stamp['desc'])
 
         try:
             self.undo_selection_has_changed = False
             previous_selection = self.captureCurrentSelection()
-            if DEBUG_SELECTION: print("selected nodes before restore:", previous_selection['nodes'])
+            if DEBUG_SELECTION:
+                print("selected nodes before restore:",
+                      previous_selection['nodes'])
 
             self.scene.deserialize(history_stamp['snapshot'])
 
             # restore selection
 
             # first clear all selection on edges
-            for edge in self.scene.edges: edge.grEdge.setSelected(False)
+            for edge in self.scene.edges:
+                edge.grEdge.setSelected(False)
             # now restore selected edges from history_stamp
             for edge_id in history_stamp['selection']['edges']:
                 for edge in self.scene.edges:
@@ -231,7 +269,8 @@ class SceneHistory():
                         break
 
             # first clear all selection on nodes
-            for node in self.scene.nodes: node.grNode.setSelected(False)
+            for node in self.scene.nodes:
+                node.grNode.setSelected(False)
             # now restore selected nodes from history_stamp
             for node_id in history_stamp['selection']['nodes']:
                 for node in self.scene.nodes:
@@ -240,14 +279,18 @@ class SceneHistory():
                         break
 
             current_selection = self.captureCurrentSelection()
-            if DEBUG_SELECTION: print("selected nodes after restore:", current_selection['nodes'])
+            if DEBUG_SELECTION:
+                print("selected nodes after restore:",
+                      current_selection['nodes'])
 
             # reset the last_selected_items - since we're comparing change to the last_selected state
             self.scene._last_selected_items = self.scene.getSelectedItems()
 
             # if the selection of nodes differ before and after restoration, set flag
             if current_selection['nodes'] != previous_selection['nodes'] or current_selection['edges'] != previous_selection['edges']:
-                if DEBUG_SELECTION: print("\nSCENE: Selection has changed")
+                if DEBUG_SELECTION:
+                    print("\nSCENE: Selection has changed")
                 self.undo_selection_has_changed = True
 
-        except Exception as e: dumpException(e)
+        except Exception as e:
+            dumpException(e)

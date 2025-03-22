@@ -35,6 +35,7 @@ def loadStylesheets(*args):
         file.open(QFile.ReadOnly | QFile.Text)
         stylesheet = file.readAll()
         res += "\n" + str(stylesheet, encoding='utf-8')
+        file.close()
     QApplication.instance().setStyleSheet(res)
 
 def isCTRLPressed(event):
