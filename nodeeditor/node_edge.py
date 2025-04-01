@@ -7,11 +7,19 @@ from nodeeditor.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_scene import Scene
+
 
 EDGE_TYPE_DIRECT = 1        #:
 EDGE_TYPE_BEZIER = 2        #:
 EDGE_TYPE_SQUARE = 3        #:
-EDGE_TYPE_IMPROVED_SHARP  = 4       #:
+EDGE_TYPE_IMPROVED_SHARP = 4       #:
 EDGE_TYPE_IMPROVED_BEZIER = 5       #:
 EDGE_TYPE_DEFAULT = EDGE_TYPE_IMPROVED_BEZIER
 
@@ -23,9 +31,10 @@ class Edge(Serializable):
     Class for representing Edge in NodeEditor.
     """
 
-    edge_validators = []        #: class variable containing list of registered edge validators
+    #: class variable containing list of registered edge validators
+    edge_validators: List['function'] = []
 
-    def __init__(self, scene:'Scene', start_socket:'Socket'=None, end_socket:'Socket'=None, edge_type=EDGE_TYPE_DIRECT):
+    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT):
         """
 
         :param scene: Reference to the :py:class:`~nodeeditor.node_scene.Scene`
@@ -62,6 +71,7 @@ class Edge(Serializable):
             hex(id(self))[2:5], hex(id(self))[-3:],
             self.start_socket, self.end_socket
         )
+
     @property
     def start_socket(self):
         """
@@ -103,7 +113,7 @@ class Edge(Serializable):
             self._end_socket.removeEdge(self)
 
         # assign new end socket
-        self._end_socket= value
+        self._end_socket = value
         # addEdge to the Socket class
         if self.end_socket is not None:
             self.end_socket.addEdge(self)
@@ -183,7 +193,7 @@ class Edge(Serializable):
             self.updatePositions()
         return self.grEdge
 
-    def getOtherSocket(self, known_socket:'Socket'):
+    def getOtherSocket(self, known_socket: 'Socket'):
         """
         Returns the opposite socket on this ``Edge``
 
@@ -194,7 +204,7 @@ class Edge(Serializable):
         """
         return self.start_socket if known_socket == self.end_socket else self.end_socket
 
-    def doSelect(self, new_state:bool=True):
+    def doSelect(self, new_state: bool = True):
         """
         Provide the safe selecting/deselecting operation. In the background it takes care about the flags, notifications
         and storing history for undo/redo.
@@ -222,7 +232,6 @@ class Edge(Serializable):
             self.grEdge.setDestination(*source_pos)
         self.grEdge.update()
 
-
     def remove_from_sockets(self):
         """
         Helper function which sets start and end :class:`~nodeeditor.node_socket.Socket` to ``None``
@@ -230,8 +239,7 @@ class Edge(Serializable):
         self.end_socket = None
         self.start_socket = None
 
-
-    def remove(self, silent_for_socket:'Socket'=None, silent=False):
+    def remove(self, silent_for_socket: 'Socket' = None, silent=False):
         """
         Safely remove this Edge.
 
@@ -253,24 +261,31 @@ class Edge(Serializable):
 
         # ugly hack, since I noticed that even when you remove grEdge from scene,
         # sometimes it stays there! How dare you Qt!
-        if DEBUG: print(" - hide grEdge")
+        if DEBUG:
+            print(" - hide grEdge")
         self.grEdge.hide()
 
-        if DEBUG: print(" - remove grEdge", self.grEdge)
+        if DEBUG:
+            print(" - remove grEdge", self.grEdge)
         self.scene.grScene.removeItem(self.grEdge)
-        if DEBUG: print("   grEdge:", self.grEdge)
+        if DEBUG:
+            print("   grEdge:", self.grEdge)
 
         self.scene.grScene.update()
 
-        if DEBUG: print("# Removing Edge", self)
-        if DEBUG: print(" - remove edge from all sockets")
+        if DEBUG:
+            print("# Removing Edge", self)
+        if DEBUG:
+            print(" - remove edge from all sockets")
         self.remove_from_sockets()
-        if DEBUG: print(" - remove edge from scene")
+        if DEBUG:
+            print(" - remove edge from scene")
         try:
             self.scene.removeEdge(self)
         except ValueError:
             pass
-        if DEBUG: print(" - everything is done.")
+        if DEBUG:
+            print(" - everything is done.")
 
         try:
             # notify nodes from old sockets
@@ -284,10 +299,11 @@ class Edge(Serializable):
 
                     # notify Socket's Node
                     socket.node.onEdgeConnectionChanged(self)
-                    if socket.is_input: socket.node.onInputChanged(socket)
+                    if socket.is_input:
+                        socket.node.onInputChanged(socket)
 
-        except Exception as e: dumpException(e)
-
+        except Exception as e:
+            dumpException(e)
 
     def serialize(self) -> OrderedDict:
         return OrderedDict([
@@ -297,11 +313,14 @@ class Edge(Serializable):
             ('end', self.end_socket.id if self.end_socket is not None else None),
         ])
 
-    def deserialize(self, data:dict, hashmap:dict={}, restore_id:bool=True, *args, **kwargs) -> bool:
-        if restore_id: self.id = data['id']
+    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
+        if restore_id:
+            self.id = data['id']
         self.start_socket = hashmap[data['start']]
         self.end_socket = hashmap[data['end']]
         self.edge_type = data['edge_type']
+
+        return True
 
 
 # Example: using validators for Edge

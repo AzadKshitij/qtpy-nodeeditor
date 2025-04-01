@@ -6,6 +6,14 @@ from qtpy.QtWidgets import QGraphicsItem
 from qtpy.QtGui import QColor, QBrush, QPen
 from qtpy.QtCore import Qt, QRectF
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_socket import Socket
+
 SOCKET_COLORS = [
     QColor("#FFFF7700"),
     QColor("#FF52e220"),
@@ -23,9 +31,11 @@ SOCKET_COLORS = [
     QColor("#FF888888"),
 ]
 
+
 class QDMGraphicsSocket(QGraphicsItem):
     """Class representing Graphic `Socket` in ``QGraphicsScene``"""
-    def __init__(self, socket:'Socket'):
+
+    def __init__(self, socket: 'Socket'):
         """
         :param socket: reference to :class:`~nodeeditor.node_socket.Socket`
         :type socket: :class:`~nodeeditor.node_socket.Socket`
@@ -46,9 +56,11 @@ class QDMGraphicsSocket(QGraphicsItem):
 
     def getSocketColor(self, key):
         """Returns the ``QColor`` for this ``key``"""
-        if type(key) == int: return SOCKET_COLORS[key]
-        elif type(key) == str: return QColor(key)
-        return Qt.transparent
+        if type(key) == int:
+            return SOCKET_COLORS[key]
+        elif type(key) == str:
+            return QColor(key)
+        return Qt.GlobalColor.transparent
 
     def changeSocketType(self):
         """Change the Socket Type"""
@@ -74,8 +86,10 @@ class QDMGraphicsSocket(QGraphicsItem):
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
         """Painting a circle"""
         painter.setBrush(self._brush)
-        painter.setPen(self._pen if not self.isHighlighted else self._pen_highlight)
-        painter.drawEllipse(-self.radius, -self.radius, 2 * self.radius, 2 * self.radius)
+        painter.setPen(
+            self._pen if not self.isHighlighted else self._pen_highlight)
+        painter.drawEllipse(-self.radius, -self.radius,
+                            2 * self.radius, 2 * self.radius)
 
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle"""

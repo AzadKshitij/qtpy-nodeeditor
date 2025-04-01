@@ -2,11 +2,22 @@ import math
 from qtpy.QtCore import QPointF
 from qtpy.QtGui import QPainterPath
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+
 
 EDGE_CP_ROUNDNESS = 100     #: Bezier control point distance on the line
-WEIGHT_SOURCE = 0.2         #: factor for square edge to change the midpoint between start and end socket
+#: factor for square edge to change the midpoint between start and end socket
+WEIGHT_SOURCE = 0.2
 
-EDGE_IBCP_ROUNDNESS = 75     #: Scale EDGE_CURVATURE with distance of the edge endpoints
+#: Scale EDGE_CURVATURE with distance of the edge endpoints
+EDGE_IBCP_ROUNDNESS = 75
 NODE_DISTANCE = 12
 EDGE_CURVATURE = 2
 
@@ -29,19 +40,22 @@ class GraphicsEdgePathBase:
 
 class GraphicsEdgePathDirect(GraphicsEdgePathBase):
     """Direct line connection Graphics Edge"""
+
     def calcPath(self) -> QPainterPath:
         """Calculate the Direct line connection
 
         :returns: ``QPainterPath`` of the direct line
         :rtype: ``QPainterPath``
         """
-        path = QPainterPath(QPointF(self.owner.posSource[0], self.owner.posSource[1]))
+        path = QPainterPath(
+            QPointF(self.owner.posSource[0], self.owner.posSource[1]))
         path.lineTo(self.owner.posDestination[0], self.owner.posDestination[1])
         return path
 
 
 class GraphicsEdgePathBezier(GraphicsEdgePathBase):
     """Cubic line connection Graphics Edge"""
+
     def calcPath(self) -> QPainterPath:
         """Calculate the cubic Bezier line connection with 2 control points
 
@@ -52,10 +66,10 @@ class GraphicsEdgePathBezier(GraphicsEdgePathBase):
         d = self.owner.posDestination
         dist = (d[0] - s[0]) * 0.5
 
-        cpx_s = +dist
-        cpx_d = -dist
-        cpy_s = 0
-        cpy_d = 0
+        cpx_s: float = +dist
+        cpx_d: float = -dist
+        cpy_s: float = 0.0
+        cpy_d: float = 0.0
 
         if self.owner.edge.start_socket is not None:
             ssin = self.owner.edge.start_socket.is_input
@@ -76,14 +90,17 @@ class GraphicsEdgePathBezier(GraphicsEdgePathBase):
                     )
                 ) * EDGE_CP_ROUNDNESS
 
-        path = QPainterPath(QPointF(self.owner.posSource[0], self.owner.posSource[1]))
-        path.cubicTo( s[0] + cpx_s, s[1] + cpy_s, d[0] + cpx_d, d[1] + cpy_d, self.owner.posDestination[0], self.owner.posDestination[1])
+        path = QPainterPath(
+            QPointF(self.owner.posSource[0], self.owner.posSource[1]))
+        path.cubicTo(s[0] + cpx_s, s[1] + cpy_s, d[0] + cpx_d, d[1] + cpy_d,
+                     self.owner.posDestination[0], self.owner.posDestination[1])
 
         return path
 
 
 class GraphicsEdgePathSquare(GraphicsEdgePathBase):
     """Square line connection Graphics Edge"""
+
     def __init__(self, *args, handle_weight=0.5, **kwargs):
         super().__init__(*args, **kwargs)
         self.rand = None
@@ -141,7 +158,7 @@ class GraphicsEdgePathImprovedSharp(GraphicsEdgePathBase):
             path.lineTo(sx + node_sdist, sy)
             path.lineTo(dx + node_edist, dy)
 
-        path.lineTo( dx, dy)
+        path.lineTo(dx, dy)
 
         return path
 
@@ -169,11 +186,11 @@ class GraphicsEdgePathImprovedBezier(GraphicsEdgePathBase):
         if self.owner.edge.end_socket is not None:
             eleft = self.owner.edge.end_socket.position <= 3
 
-
         path = QPainterPath(QPointF(sx, sy))
 
         if abs(dist) > NODE_DISTANCE:
-            curvature = max(EDGE_CURVATURE, (EDGE_CURVATURE * abs(dist)) / EDGE_IBCP_ROUNDNESS)
+            curvature = max(EDGE_CURVATURE, (EDGE_CURVATURE *
+                            abs(dist)) / EDGE_IBCP_ROUNDNESS)
 
             node_sdist = (-NODE_DISTANCE) if sleft else NODE_DISTANCE
             node_edist = (-NODE_DISTANCE) if eleft else NODE_DISTANCE
@@ -188,6 +205,6 @@ class GraphicsEdgePathImprovedBezier(GraphicsEdgePathBase):
 
             path.lineTo(dx + node_edist, dy)
 
-        path.lineTo( dx, dy)
+        path.lineTo(dx, dy)
 
         return path

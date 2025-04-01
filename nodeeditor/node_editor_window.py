@@ -8,6 +8,14 @@ from qtpy.QtCore import QSize, QSettings, QPoint
 from qtpy.QtWidgets import QMainWindow, QLabel, QAction, QMessageBox, QFileDialog, QApplication
 from nodeeditor.node_editor_widget import NodeEditorWidget
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, cast
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_socket import Socket
+
 
 class NodeEditorWindow(QMainWindow):
     NodeEditorWidget_class = NodeEditorWidget
@@ -23,7 +31,7 @@ class NodeEditorWindow(QMainWindow):
         """
         super().__init__()
 
-        self.name_company = 'Blenderfreak'
+        self.name_company = 'Trigger'
         self.name_product = 'NodeEditor'
 
         self.initUI()
@@ -138,7 +146,7 @@ class NodeEditorWindow(QMainWindow):
         :return: get current :class:`~nodeeditor.node_editor_widget`
         :rtype: :class:`~nodeeditor.node_editor_widget`
         """
-        return self.centralWidget()
+        return cast(NodeEditorWidget, self.centralWidget())
 
     def maybeSave(self) -> bool:
         """If current `Scene` is modified, ask a dialog to save the changes. Used before
@@ -152,12 +160,12 @@ class NodeEditorWindow(QMainWindow):
 
         res = QMessageBox.warning(self, "About to loose your work?",
                                   "The document has been modified.\n Do you want to save your changes?",
-                                  QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+                                  QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
                                   )
 
-        if res == QMessageBox.Save:
+        if res == QMessageBox.StandardButton.Save:
             return self.onFileSave()
-        elif res == QMessageBox.Cancel:
+        elif res == QMessageBox.StandardButton.Cancel:
             return False
 
         return True

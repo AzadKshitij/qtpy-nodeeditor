@@ -4,12 +4,19 @@ an overridden Text Widget, which can pass a notification to it's parent about be
 from collections import OrderedDict
 from nodeeditor.node_serializable import Serializable
 from qtpy.QtWidgets import QWidget, QLabel, QVBoxLayout, QTextEdit
+from qtpy.QtGui import QFocusEvent
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nodeeditor.node_node import Node
 
 
 class QDMNodeContentWidget(QWidget, Serializable):
     """Base class for representation of the Node's graphics content. This class also provides layout
     for other widgets inside of a :py:class:`~nodeeditor.node_node.Node`"""
-    def __init__(self, node:'Node', parent:QWidget=None):
+
+    def __init__(self, node: 'Node', parent: QWidget = None):
         """
         :param node: reference to the :py:class:`~nodeeditor.node_node.Node`
         :type node: :py:class:`~nodeeditor.node_node.Node`
@@ -29,14 +36,14 @@ class QDMNodeContentWidget(QWidget, Serializable):
         """Sets up layouts and widgets to be rendered in :py:class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` class.
         """
         self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
         self.wdg_label = QLabel("Some Title")
         self.layout.addWidget(self.wdg_label)
         self.layout.addWidget(QDMTextEdit("foo"))
 
-    def setEditingFlag(self, value:bool):
+    def setEditingFlag(self, value: bool):
         """
         .. note::
 
@@ -56,8 +63,9 @@ class QDMNodeContentWidget(QWidget, Serializable):
         return OrderedDict([
         ])
 
-    def deserialize(self, data:dict, hashmap:dict={}, restore_id:bool=True) -> bool:
+    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
         return True
+
 
 class QDMTextEdit(QTextEdit):
     """
@@ -68,20 +76,27 @@ class QDMTextEdit(QTextEdit):
 
         Overridden ``QTextEdit`` which sends a notification about being edited to its parent's container :py:class:`QDMNodeContentWidget`
     """
-    def focusInEvent(self, event:'QFocusEvent'):
+
+    def focusInEvent(self, event: QFocusEvent | None):
         """Example of an overridden focusInEvent to mark the start of editing
 
         :param event: Qt's focus event
         :type event: QFocusEvent
         """
-        self.parentWidget().setEditingFlag(True)
+        parent = self.parentWidget()
+        if isinstance(parent, QDMNodeContentWidget):
+            parent.setEditingFlag(True)
+
         super().focusInEvent(event)
 
-    def focusOutEvent(self, event:'QFocusEvent'):
+    def focusOutEvent(self, event: QFocusEvent | None):
         """Example of an overridden focusOutEvent to mark the end of editing
 
         :param event: Qt's focus event
         :type event: QFocusEvent
         """
-        self.parentWidget().setEditingFlag(False)
+        parent = self.parentWidget()
+        if isinstance(parent, QDMNodeContentWidget):
+            parent.setEditingFlag(False)
+
         super().focusOutEvent(event)

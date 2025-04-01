@@ -2,9 +2,9 @@
 """
 A module containing `Graphics View` for NodeEditor
 """
-from qtpy.QtWidgets import QGraphicsView, QApplication
+from qtpy.QtWidgets import QGraphicsView, QApplication, QWidget
 from qtpy.QtCore import Signal, QPoint, Qt, QEvent, QPointF, QRectF
-from qtpy.QtGui import QPainter, QDragEnterEvent, QDropEvent, QMouseEvent, QKeyEvent, QWheelEvent
+from qtpy.QtGui import QPainter, QDragEnterEvent, QDropEvent, QMouseEvent, QKeyEvent, QWheelEvent, QInputEvent
 
 from nodeeditor import _QT_API_NAME as QT_API
 from nodeeditor.node_graphics_socket import QDMGraphicsSocket
@@ -15,6 +15,12 @@ from nodeeditor.node_edge_intersect import EdgeIntersect
 from nodeeditor.node_edge_snapping import EdgeSnapping
 from nodeeditor.node_graphics_cutline import QDMCutLine
 from nodeeditor.utils import dumpException, pp, isCTRLPressed, isSHIFTPressed, isALTPressed
+
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from nodeeditor.node_node import Node
+    from nodeeditor.node_graphics_scene import QDMGraphicsScene
 
 MODE_NOOP = 1               #: Mode representing ready state
 MODE_EDGE_DRAG = 2          #: Mode representing when we drag edge state
@@ -49,7 +55,7 @@ class QDMGraphicsView(QGraphicsView):
     #: pyqtSignal emitted when cursor position on the `Scene` has changed
     scenePosChanged = Signal(int, int)
 
-    def __init__(self, grScene: 'QDMGraphicsScene', parent: 'QWidget' = None):
+    def __init__(self, grScene: 'QDMGraphicsScene', parent: QWidget = None):
         """
         :param grScene: reference to the :class:`~nodeeditor.node_graphics_scene.QDMGraphicsScene`
         :type grScene: :class:`~nodeeditor.node_graphics_scene.QDMGraphicsScene`
@@ -103,8 +109,8 @@ class QDMGraphicsView(QGraphicsView):
         self.zoomRange = [0, 10]
 
         # listeners
-        self._drag_enter_listeners = []
-        self._drop_listeners = []
+        self._drag_enter_listeners: list = []
+        self._drop_listeners: list = []
 
     def initUI(self):
         """Set up this ``QGraphicsView``"""
@@ -131,12 +137,12 @@ class QDMGraphicsView(QGraphicsView):
         """Helper function to re-set the grView's State Machine state to the default"""
         self.mode = MODE_NOOP
 
-    def dragEnterEvent(self, event: QDragEnterEvent):
+    def dragEnterEvent(self, event: Optional[QDragEnterEvent]):
         """Trigger our registered `Drag Enter` events"""
         for callback in self._drag_enter_listeners:
             callback(event)
 
-    def dropEvent(self, event: QDropEvent):
+    def dropEvent(self, event: Optional[QDropEvent]):
         """Trigger our registered `Drop` events"""
         for callback in self._drop_listeners:
             callback(event)
@@ -157,24 +163,28 @@ class QDMGraphicsView(QGraphicsView):
         """
         self._drop_listeners.append(callback)
 
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event: Optional[QMouseEvent]):
         """Dispatch Qt's mousePress event to corresponding function below"""
-        if event.button() == Qt.MiddleButton:
+        if event is None:
+            return
+        if event.button() == Qt.MouseButton.MiddleButton:
             self.middleMouseButtonPress(event)
-        elif event.button() == Qt.LeftButton:
+        elif event.button() == Qt.MouseButton.LeftButton:
             self.leftMouseButtonPress(event)
-        elif event.button() == Qt.RightButton:
+        elif event.button() == Qt.MouseButton.RightButton:
             self.rightMouseButtonPress(event)
         else:
             super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, event: Optional[QMouseEvent]):
         """Dispatch Qt's mouseRelease event to corresponding function below"""
-        if event.button() == Qt.MiddleButton:
+        if event is None:
+            return
+        if event.button() == Qt.MouseButton.MiddleButton:
             self.middleMouseButtonRelease(event)
-        elif event.button() == Qt.LeftButton:
+        elif event.button() == Qt.MouseButton.LeftButton:
             self.leftMouseButtonRelease(event)
-        elif event.button() == Qt.RightButton:
+        elif event.button() == Qt.MouseButton.RightButton:
             self.rightMouseButtonRelease(event)
         else:
             super().mouseReleaseEvent(event)
@@ -221,31 +231,54 @@ class QDMGraphicsView(QGraphicsView):
 
         # faking events for enable MMB dragging the scene
         if QT_API in ("pyqt5", "pyside2"):
-            releaseEvent = QMouseEvent(QEvent.MouseButtonRelease, event.localPos(), event.screenPos(),
-                                       Qt.LeftButton, Qt.NoButton, event.modifiers())
+            releaseEvent = QMouseEvent(
+                QEvent.Type.MouseButtonRelease,
+                event.localPos(),
+                event.screenPos(),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.NoButton,
+                event.modifiers())
+
         elif QT_API in ("pyqt6", "pyside6"):
-            releaseEvent = QMouseEvent(QEvent.MouseButtonRelease, event.localPos(),
-                                       Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton, event.modifiers())
+            releaseEvent = QMouseEvent(
+                QEvent.Type.MouseButtonRelease,
+                # ----------------- Change it to localPos if dont work.----------------------
+                event.position(),
+                # ---------------------------------------
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.NoButton,
+                event.modifiers())
+
         super().mouseReleaseEvent(releaseEvent)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+
         if QT_API in ("pyqt5", "pyside2"):
-            fakeEvent = QMouseEvent(event.type(), event.localPos(), event.screenPos(),
-                                    Qt.LeftButton, event.buttons() | Qt.LeftButton, event.modifiers())
+            fakeEvent = QMouseEvent(
+                event.type(),
+                event.localPos(),
+                event.screenPos(),
+                Qt.MouseButton.LeftButton,
+                event.buttons() | Qt.MouseButton.LeftButton,
+                event.modifiers())
         elif QT_API in ("pyqt6", "pyside6"):
-            fakeEvent = QMouseEvent(event.type(), event.localPos(),
-                                    Qt.MouseButton.LeftButton, event.buttons() | Qt.MouseButton.LeftButton, event.modifiers())
+            fakeEvent = QMouseEvent(
+                event.type(),
+                event.position(),
+                Qt.MouseButton.LeftButton,
+                event.buttons() | Qt.MouseButton.LeftButton,
+                event.modifiers())
         super().mousePressEvent(fakeEvent)
 
     def middleMouseButtonRelease(self, event: QMouseEvent):
         """When Middle mouse button was released"""
         if QT_API in ("pyqt5", "pyside2"):
             fakeEvent = QMouseEvent(event.type(), event.localPos(), event.screenPos(),
-                                    Qt.LeftButton, event.buttons() & ~Qt.LeftButton, event.modifiers())
+                                    Qt.MouseButton.LeftButton, event.buttons() & ~Qt.LeftButton, event.modifiers())
         elif QT_API in ("pyqt6", "pyside6"):
             fakeEvent = QMouseEvent(event.type(), event.localPos(),
                                     Qt.MouseButton.LeftButton, event.buttons() & ~Qt.MouseButton.LeftButton, event.modifiers())
         super().mouseReleaseEvent(fakeEvent)
-        self.setDragMode(QGraphicsView.RubberBandDrag)
+        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
     def leftMouseButtonPress(self, event: QMouseEvent):
         """When Left  mouse button was pressed"""
@@ -376,7 +409,7 @@ class QDMGraphicsView(QGraphicsView):
                 self.cutIntersectingEdges()
                 self.cutline.line_points = []
                 self.cutline.update()
-                QApplication.setOverrideCursor(Qt.ArrowCursor)
+                QApplication.setOverrideCursor(Qt.CursorShape.ArrowCursor)
                 self.mode = MODE_NOOP
                 return
 

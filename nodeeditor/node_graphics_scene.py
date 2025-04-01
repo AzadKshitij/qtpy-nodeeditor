@@ -2,12 +2,23 @@
 """
 A module containing Graphic representation of :class:`~nodeeditor.node_scene.Scene`
 """
+from array import array
 import math
+from qtpy import PYSIDE2
 from qtpy.QtWidgets import QGraphicsScene, QWidget
-from qtpy.QtCore import Signal, QRect, QLine, Qt
+from qtpy.QtCore import Signal, QRectF, QLine, Qt
 from qtpy.QtGui import QColor, QPen, QFont, QPainter
 from nodeeditor.utils import dumpException
 from nodeeditor.node_graphics_view import STATE_STRING, DEBUG_STATE
+
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_scene import Scene
 
 
 class QDMGraphicsScene(QGraphicsScene):
@@ -26,7 +37,7 @@ class QDMGraphicsScene(QGraphicsScene):
         """
         super().__init__(parent)
 
-        self.scene = scene
+        self.scene: 'Scene' = scene
 
         # There is an issue when reconnecting edges -> mouseMove and trying to delete/remove them
         # the edges stayed in the scene in Qt, however python side was deleted
@@ -37,7 +48,7 @@ class QDMGraphicsScene(QGraphicsScene):
         # https://bugreports.qt.io/browse/QTBUG-18021
         # https://bugreports.qt.io/browse/QTBUG-50691
         # Affected versions: 4.7.1, 4.7.2, 4.8.0, 5.5.1, 5.7.0 - LOL!
-        self.setItemIndexMethod(QGraphicsScene.NoIndex)
+        self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
         # settings
         self.gridSize = 20
@@ -71,7 +82,7 @@ class QDMGraphicsScene(QGraphicsScene):
         """Set `width` and `height` of the `Graphics Scene`"""
         self.setSceneRect(-width // 2, -height // 2, width, height)
 
-    def drawBackground(self, painter: QPainter, rect: QRect):
+    def drawBackground(self, painter: Optional[QPainter], rect: QRectF):
         """Draw background scene grid"""
         super().drawBackground(painter, rect)
 
@@ -85,7 +96,9 @@ class QDMGraphicsScene(QGraphicsScene):
         first_top = top - (top % self.gridSize)
 
         # compute all lines to be drawn
-        lines_light, lines_dark = [], []
+        lines_light: List[QLine] = []
+        lines_dark: List[QLine] = []
+
         for x in range(first_left, right, self.gridSize):
             if (x % (self.gridSize*self.gridSquares) != 0):
                 lines_light.append(QLine(x, top, x, bottom))
@@ -97,31 +110,38 @@ class QDMGraphicsScene(QGraphicsScene):
                 lines_light.append(QLine(left, y, right, y))
             else:
                 lines_dark.append(QLine(left, y, right, y))
+        if painter is not None:
+            # draw the lines
+            painter.setPen(self._pen_light)
+            if PYSIDE2:
+                # supporting PySide2
+                painter.drawLines(lines_light)  # type: ignore
+            else:
+                # supporting PyQt5
+                painter.drawLines(*lines_light)
 
-        # draw the lines
-        painter.setPen(self._pen_light)
-        try:
-            # supporting PyQt5
-            painter.drawLines(*lines_light)
-        except TypeError:
-            painter.drawLines(lines_light)        # supporting PySide2
+            painter.setPen(self._pen_dark)
+            if PYSIDE2:
+                # supporting PySide2
+                painter.drawLines(lines_light)  # type: ignore
+            else:
+                # supporting PyQt5
+                painter.drawLines(*lines_dark)
 
-        painter.setPen(self._pen_dark)
-        try:
-            # supporting PyQt5
-            painter.drawLines(*lines_dark)
-        except TypeError:
-            painter.drawLines(lines_dark)         # supporting PySide2
-
-        if DEBUG_STATE:
-            try:
-                painter.setFont(self._font_state)
-                painter.setPen(self._pen_state)
-                painter.setRenderHint(QPainter.TextAntialiasing)
-                offset = 14
-                rect_state = QRect(rect.x()+offset, rect.y()+offset,
-                                   rect.width()-2*offset, rect.height()-2*offset)
-                painter.drawText(rect_state, Qt.AlignRight | Qt.AlignTop,
-                                 STATE_STRING[self.views()[0].mode].upper())
-            except:
-                dumpException()
+            if DEBUG_STATE:
+                try:
+                    view = self.views()[0]
+                    if not isinstance(view, QDMGraphicsView):
+                        return
+                    painter.setFont(self._font_state)
+                    painter.setPen(self._pen_state)
+                    painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+                    offset = 14
+                    rect_state = QRectF(rect.x()+offset,
+                                        rect.y()+offset,
+                                        rect.width()-2*offset,
+                                        rect.height()-2*offset)
+                    painter.drawText(rect_state, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop,
+                                     STATE_STRING[view.mode].upper())
+                except:
+                    dumpException()

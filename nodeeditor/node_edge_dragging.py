@@ -6,16 +6,23 @@ from nodeeditor.node_graphics_socket import QDMGraphicsSocket
 from nodeeditor.node_edge import EDGE_TYPE_DEFAULT
 from nodeeditor.utils import dumpException
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qtpy.QtWidgets import QGraphicsItem
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_graphics_view import QDMGraphicsView
 
 DEBUG = False
 
 
 class EdgeDragging:
-    def __init__(self, grView:'QGraphicsView'):
+    def __init__(self, grView: 'QDMGraphicsView'):
         self.grView = grView
         # initializing these variable to know we're using them in this class...
-        self.drag_edge = None
-        self.drag_start_socket = None
+        self.drag_edge: Edge | None = None
+        self.drag_start_socket: Socket | None = None
 
     def getEdgeClass(self):
         """Helper function to get the Edge class. Using what Scene class provides"""
@@ -29,26 +36,45 @@ class EdgeDragging:
         :param y: new Y scene position
         """
         # according to sentry: 'NoneType' object has no attribute 'grEdge'
-        if self.drag_edge is not None and self.drag_edge.grEdge is not None:
-            self.drag_edge.grEdge.setDestination(x, y)
-            self.drag_edge.grEdge.update()
-        else:
-            print(">>> Want to update self.drag_edge grEdge, but it's None!!!")
+        if self.drag_edge is None:
+            print(">>> Warning: drag_edge is None!")
+            return
 
+        if self.drag_edge.grEdge is None:
+            print(">>> Warning: drag_edge.grEdge is None!")
+            return
 
-    def edgeDragStart(self, item:'QGraphicsItem'):
+        self.drag_edge.grEdge.setDestination(x, y)
+        self.drag_edge.grEdge.update()
+
+    def edgeDragStart(self, item: QDMGraphicsSocket):
         """Code handling the start of a dragging an `Edge` operation"""
         try:
-            if DEBUG: print('View::edgeDragStart ~ Start dragging edge')
-            if DEBUG: print('View::edgeDragStart ~   assign Start Socket to:', item.socket)
+            if DEBUG:
+                print('View::edgeDragStart ~ Start dragging edge')
+            if DEBUG:
+                print('View::edgeDragStart ~   assign Start Socket to:', item.socket)
             self.drag_start_socket = item.socket
-            self.drag_edge = self.getEdgeClass()(item.socket.node.scene, item.socket, None, EDGE_TYPE_DEFAULT)
+            self.drag_edge = self.getEdgeClass()(
+                item.socket.node.scene, item.socket, None, EDGE_TYPE_DEFAULT)
+
+            if self.drag_edge is None:
+                print(">>> Warning: Failed to create drag_edge")
+                return
+
+            if self.drag_edge.grEdge is None:
+                print(">>> Warning: drag_edge.grEdge is None")
+                return
+
             self.drag_edge.grEdge.makeUnselectable()
-            if DEBUG: print('View::edgeDragStart ~   dragEdge:', self.drag_edge)
-        except Exception as e: dumpException(e)
 
+            if DEBUG:
+                print('View::edgeDragStart ~   dragEdge:', self.drag_edge)
 
-    def edgeDragEnd(self, item:'QGraphicsItem'):
+        except Exception as e:
+            dumpException(e)
+
+    def edgeDragEnd(self, item: 'QGraphicsItem'):
         """Code handling the end of the dragging an `Edge` operation. If this code returns True then skip the
         rest of the mouse event processing. Can be called with ``None`` to cancel the edge dragging mode
 
@@ -59,13 +85,19 @@ class EdgeDragging:
         # early out - clicked on something else than Socket
         if not isinstance(item, QDMGraphicsSocket):
             self.grView.resetMode()
-            if DEBUG: print('View::edgeDragEnd ~ End dragging edge early')
-            self.drag_edge.remove(silent=True)      # don't notify sockets about removing drag_edge
-            self.drag_edge = None
+            if DEBUG:
+                print('View::edgeDragEnd ~ End dragging edge early')
 
+            # don't notify sockets about removing drag_edge
+            if self.drag_edge is not None:
+                self.drag_edge.remove(silent=True)
+            self.drag_edge = None
+            return
 
         # clicked on socket
         if isinstance(item, QDMGraphicsSocket):
+            if self.drag_edge is None:
+                return False
 
             # check if edge would be valid
             if not self.drag_edge.validateEdge(self.drag_start_socket, item.socket):
@@ -75,39 +107,51 @@ class EdgeDragging:
             # regular processing of drag edge
             self.grView.resetMode()
 
-            if DEBUG: print('View::edgeDragEnd ~ End dragging edge')
-            self.drag_edge.remove(silent=True)      # don't notify sockets about removing drag_edge
+            if DEBUG:
+                print('View::edgeDragEnd ~ End dragging edge')
+            # don't notify sockets about removing drag_edge
+            self.drag_edge.remove(silent=True)
             self.drag_edge = None
 
             try:
                 if item.socket != self.drag_start_socket:
-                    # if we released dragging on a socket (other then the beginning socket)
+                    # First verify both sockets exist
+                    if self.drag_start_socket is None:
+                        print(">>> Warning: drag_start_socket is None!")
+                        return False
 
-                    ## First remove old edges / send notifications
+                    # First remove old edges / send notifications
                     for socket in (item.socket, self.drag_start_socket):
+                        if socket is None:
+                            print(">>> Warning: socket is None!")
+                            continue
+
                         if not socket.is_multi_edges:
                             if socket.is_input:
-                                # print("removing SILENTLY edges from input socket (is_input and !is_multi_edges) [DragStart]:", item.socket.edges)
                                 socket.removeAllEdges(silent=True)
                             else:
                                 socket.removeAllEdges(silent=False)
 
+                    # Create new Edge
+                    new_edge = self.getEdgeClass()(item.socket.node.scene, self.drag_start_socket,
+                                                   item.socket, edge_type=EDGE_TYPE_DEFAULT)
+                    if DEBUG:
+                        print("View::edgeDragEnd ~  created new edge:", new_edge,
+                              "connecting", new_edge.start_socket, "<-->", new_edge.end_socket)
 
-                    ## Create new Edge
-                    new_edge = self.getEdgeClass()(item.socket.node.scene, self.drag_start_socket, item.socket, edge_type=EDGE_TYPE_DEFAULT)
-                    if DEBUG: print("View::edgeDragEnd ~  created new edge:", new_edge, "connecting", new_edge.start_socket, "<-->", new_edge.end_socket)
-
-                    ## Send notifications for the new edge
+                    # Send notifications for the new edge
                     for socket in [self.drag_start_socket, item.socket]:
                         # @TODO: Add possibility (ie when an input edge was replaced) to be silent and don't trigger change
                         socket.node.onEdgeConnectionChanged(new_edge)
-                        if socket.is_input: socket.node.onInputChanged(socket)
+                        if socket.is_input:
+                            socket.node.onInputChanged(socket)
 
-                    self.grView.grScene.scene.history.storeHistory("Created new edge by dragging", setModified=True)
+                    self.grView.grScene.scene.history.storeHistory(
+                        "Created new edge by dragging", setModified=True)
                     return True
-            except Exception as e: dumpException(e)
+            except Exception as e:
+                dumpException(e)
 
-
-        if DEBUG: print('View::edgeDragEnd ~ everything done.')
+        if DEBUG:
+            print('View::edgeDragEnd ~ everything done.')
         return False
-

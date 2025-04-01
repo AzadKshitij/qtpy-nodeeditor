@@ -3,20 +3,32 @@
 A module containing the intersecting nodes functionality. If a node gets dragged and dropped on an existing edge
 it will intersect that edge.
 """
-from qtpy.QtWidgets import QGraphicsView
-from qtpy.QtCore import QRectF
+from qtpy.QtWidgets import QGraphicsView, QGraphicsItem
+from qtpy.QtCore import QRectF, QPointF
 from nodeeditor.node_edge import Edge
+
+from typing import TYPE_CHECKING, Union, List
+
+from nodeeditor.node_socket import Socket
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_node import Node
+    from nodeeditor.node_graphics_scene import QDMGraphicsScene
+    from nodeeditor.node_graphics_edge import QDMGraphicsEdge
 
 
 class EdgeIntersect:
 
-    def __init__(self, grView: "QGraphicsView"):
-        self.grScene = grView.grScene
+    def __init__(self, grView: 'QDMGraphicsView'):
         self.grView = grView
-        self.draggedNode = None
-        self.hoveredList = []
+        self.grScene: 'QDMGraphicsScene' = grView.grScene
+        self.draggedNode: Node | None = None
+        self.hoveredList: List[Union['QDMGraphicsEdge',
+                                     'QGraphicsItem', 'QGraphicsView', 'Socket', 'Node']] = []
 
-    def enterState(self, node: "Node"):
+    def enterState(self, node: 'Node'):
         """
         Initialize when we enter the state
 
@@ -35,6 +47,10 @@ class EdgeIntersect:
         :param scene_pos_y: scene position y
         :type scene_pos_y: `float`
         """
+        if self.draggedNode is None:
+            print(">>> Warning: self.draggedNode is None")
+            return
+
         self.dropNode(self.draggedNode, scene_pos_x, scene_pos_y)
         self.draggedNode = None
         self.hoveredList = []
@@ -53,9 +69,11 @@ class EdgeIntersect:
 
         # check if the node is dropped on an existing edge
         edge = self.intersect(node_box)
-        if edge is None: return
+        if edge is None:
+            return
 
-        if self.isConnected(node): return
+        if self.isConnected(node):
+            return
 
         # determine the order of start and end
         if edge.start_socket.is_output:
@@ -68,15 +86,18 @@ class EdgeIntersect:
         # The new edges will have the same edge_type as the intersected edge
         edge_type = edge.edge_type
         edge.remove()
-        self.grView.grScene.scene.history.storeHistory('Delete existing edge', setModified=True)
+        self.grView.grScene.scene.history.storeHistory(
+            'Delete existing edge', setModified=True)
 
         new_node_socket_in = node.inputs[0]
-        Edge(self.grScene.scene, socket_start, new_node_socket_in, edge_type=edge_type)
+        Edge(self.grScene.scene, socket_start,
+             new_node_socket_in, edge_type=edge_type)
         new_node_socket_out = node.outputs[0]
-        Edge(self.grScene.scene, new_node_socket_out, socket_end, edge_type=edge_type)
+        Edge(self.grScene.scene, new_node_socket_out,
+             socket_end, edge_type=edge_type)
 
-        self.grView.grScene.scene.history.storeHistory('Created new edges by dropping node', setModified=True)
-
+        self.grView.grScene.scene.history.storeHistory(
+            'Created new edges by dropping node', setModified=True)
 
     def hotZoneRect(self, node: 'Node') -> 'QRectF':
         """
@@ -87,13 +108,16 @@ class EdgeIntersect:
         :return: `QRectF` describing node's position and area
         :rtype: `QRectF`
         """
-        nodePos = node.grNode.scenePos()
+        if node.grNode is None:
+            print(">>> Warning: node is None")
+            return QRectF()
+
+        nodePos: QPointF = node.grNode.scenePos()
         x = nodePos.x()
         y = nodePos.y()
         w = node.grNode.width
         h = node.grNode.height
         return QRectF(x, y, w, h)
-
 
     def update(self, scene_pos_x: float, scene_pos_y: float):
         """
@@ -104,16 +128,26 @@ class EdgeIntersect:
         :param scene_pos_y: scene position y
         :type scene_pos_y: `float`
         """
+        if self.draggedNode is None:
+            print(">>> Warning: self.draggedNode is None")
+            return
+
         rect = self.hotZoneRect(self.draggedNode)
         grItems = self.grScene.items(rect)
-        for grEdge in self.hoveredList: grEdge.hovered = False
+
+        for grEdge in self.hoveredList:
+            if isinstance(grEdge, QDMGraphicsEdge):
+                grEdge.hovered = False
+
         self.hoveredList = []
+
         for grItem in grItems:
             if hasattr(grItem, 'edge') and not self.draggedNode.hasConnectedEdge(grItem.edge):
                 self.hoveredList.append(grItem)
-                grItem.hovered = True
+                if hasattr(grItem, 'hovered'):
+                    grItem.hovered = True
 
-    def intersect(self, node_box: 'QRectF') -> 'Edge':
+    def intersect(self, node_box: 'QRectF') -> Union['Edge', None]:
         """
         Checking for intersection of a rectangle (usually a `Node`) with edges in the scene
 
@@ -122,6 +156,11 @@ class EdgeIntersect:
         :return: :class:`~nodeeditor.node_edge.Edge` or `None` if the node is being cut by an `Edge`
         :rtype: :class:`~nodeeditor.node_edge.Edge`
         """
+
+        if self.draggedNode is None:
+            print(">>> Warning: self.draggedNode is None")
+            return None
+
         # returns the first edge that intersects with the dropped node, ignores the rest
         grItems = self.grScene.items(node_box)
         for grItem in grItems:
@@ -138,7 +177,8 @@ class EdgeIntersect:
         :return:
         """
         # Nodes with only inputs or outputs are excluded
-        if node.inputs == [] or node.outputs == []: return True
+        if node.inputs == [] or node.outputs == []:
+            return True
 
         # Check if the node has edges connected
         return node.getInput() or node.getOutputs()
