@@ -42,7 +42,7 @@ setup(
     # packages=find_packages(include=['_template']),
     packages=find_packages(
         include=['nodeeditor*'], exclude=['examples*', 'tests*']),
-    package_data={'': ['qss/*']},
+    package_data={"nodeeditor": ["py.typed"], '': ['qss/*']},
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
