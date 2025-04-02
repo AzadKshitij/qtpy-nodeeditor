@@ -296,7 +296,28 @@ class QDMGraphicsView(QGraphicsView):
         item = self.getItemAtClick(event)
 
         if item is None:
-            return
+            if isCTRLPressed(event):
+                self.mode = MODE_EDGE_CUT
+                if QT_API in ("pyqt5", "pyside2"):
+                    fakeEvent = QMouseEvent(
+                        QEvent.Type.MouseButtonRelease,
+                        event.localPos(),  # type: ignore
+                        event.screenPos(),  # type: ignore
+                        Qt.MouseButton.LeftButton,
+                        Qt.MouseButton.NoButton,
+                        event.modifiers())
+                elif QT_API in ("pyqt6", "pyside6"):
+                    fakeEvent = QMouseEvent(
+                        QEvent.Type.MouseButtonRelease,
+                        event.position(),
+                        Qt.MouseButton.LeftButton,
+                        Qt.MouseButton.NoButton,
+                        event.modifiers())
+                super().mouseReleaseEvent(fakeEvent)
+                QApplication.setOverrideCursor(Qt.CursorShape.CrossCursor)
+                return
+            else:
+                self.rubberBandDraggingRectangle = True
 
         # we store the position of last LMB click
         self.last_lmb_click_scene_pos = self.mapToScene(event.pos())
@@ -356,30 +377,6 @@ class QDMGraphicsView(QGraphicsView):
             res = self.dragging.edgeDragEnd(item)
             if res:
                 return
-
-        if item is None:
-            if isCTRLPressed(event):
-                self.mode = MODE_EDGE_CUT
-                if QT_API in ("pyqt5", "pyside2"):
-                    fakeEvent = QMouseEvent(
-                        QEvent.Type.MouseButtonRelease,
-                        event.localPos(),  # type: ignore
-                        event.screenPos(),  # type: ignore
-                        Qt.MouseButton.LeftButton,
-                        Qt.MouseButton.NoButton,
-                        event.modifiers())
-                elif QT_API in ("pyqt6", "pyside6"):
-                    fakeEvent = QMouseEvent(
-                        QEvent.Type.MouseButtonRelease,
-                        event.position(),
-                        Qt.MouseButton.LeftButton,
-                        Qt.MouseButton.NoButton,
-                        event.modifiers())
-                super().mouseReleaseEvent(fakeEvent)
-                QApplication.setOverrideCursor(Qt.CursorShape.CrossCursor)
-                return
-            else:
-                self.rubberBandDraggingRectangle = True
 
         super().mousePressEvent(event)
 
