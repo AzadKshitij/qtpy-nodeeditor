@@ -6,6 +6,15 @@ from collections import OrderedDict
 from nodeeditor.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_edge import Edge
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_scene import Scene
+    from nodeeditor.node_node import Node
+
 
 DEBUG = False
 DEBUG_PASTING = False
@@ -15,6 +24,7 @@ class SceneClipboard():
     """
     Class contains all the code for serialization/deserialization from Clipboard
     """
+
     def __init__(self, scene: 'Scene'):
         """
         :param scene: Reference to the :class:`~nodeeditor.node_scene.Scene`
@@ -26,7 +36,7 @@ class SceneClipboard():
         """
         self.scene = scene
 
-    def serializeSelected(self, delete: bool=False) -> OrderedDict:
+    def serializeSelected(self, delete: bool = False) -> OrderedDict:
         """
         Serializes selected items in the Scene into ``OrderedDict``
 
@@ -34,7 +44,8 @@ class SceneClipboard():
         :type delete: ``bool``
         :return: Serialized data of current selection in NodeEditor :class:`~nodeeditor.node_scene.Scene`
         """
-        if DEBUG: print("-- COPY TO CLIPBOARD ---")
+        if DEBUG:
+            print("-- COPY TO CLIPBOARD ---")
 
         sel_nodes, sel_edges, sel_sockets = [], [], {}
 
@@ -47,13 +58,11 @@ class SceneClipboard():
             elif isinstance(item, QDMGraphicsEdge):
                 sel_edges.append(item.edge)
 
-
         # debug
         if DEBUG:
             print("  NODES\n      ", sel_nodes)
             print("  EDGES\n      ", sel_edges)
             print("  SOCKETS\n     ", sel_sockets)
-
 
         # remove all edges which are not connected to a nodeeditor in our list
         edges_to_remove = []
@@ -62,7 +71,8 @@ class SceneClipboard():
                 # if DEBUG: print(" edge is ok, connected with both sides")
                 pass
             else:
-                if DEBUG: print("edge", edge, "is not connected with both sides")
+                if DEBUG:
+                    print("edge", edge, "is not connected with both sides")
                 edges_to_remove.append(edge)
         for edge in edges_to_remove:
             sel_edges.remove(edge)
@@ -72,24 +82,24 @@ class SceneClipboard():
         for edge in sel_edges:
             edges_final.append(edge.serialize())
 
-        if DEBUG: print("our final edge list:", edges_final)
-
+        if DEBUG:
+            print("our final edge list:", edges_final)
 
         data = OrderedDict([
             ('nodes', sel_nodes),
             ('edges', edges_final),
         ])
 
-
         # if CUT (aka delete) remove selected items
         if delete:
             self.scene.getView().deleteSelected()
             # store our history
-            self.scene.history.storeHistory("Cut out elements from scene", setModified=True)
+            self.scene.history.storeHistory(
+                "Cut out elements from scene", setModified=True)
 
         return data
 
-    def deserializeFromClipboard(self, data: dict, *args, **kwargs):
+    def deserializeFromClipboard(self, data: dict, *args, **kwargs) -> List['Node']:
         """
         Deserializes data from Clipboard.
 
@@ -97,42 +107,47 @@ class SceneClipboard():
         :type data: ``dict``
         """
 
-        hashmap = {}
+        hashmap: dict = {}
 
         # calculate mouse pointer - scene position
         view = self.scene.getView()
         mouse_scene_pos = view.last_scene_mouse_position
 
         # calculate selected objects bbox and center
-        minx, maxx, miny, maxy = 10000000,-10000000, 10000000,-10000000
+        minx, max_x, min_y, max_y = 10000000, -10000000, 10000000, -10000000
         for node_data in data['nodes']:
             if 'pos_x' in node_data and 'pos_y' in node_data:
                 x, y = node_data['pos_x'], node_data['pos_y']
             else:
                 # added support if node pos serializes into `pos` instead of `pos_x` and `pos_y`
                 x, y = node_data['pos']
-            if x < minx: minx = x
-            if x > maxx: maxx = x
-            if y < miny: miny = y
-            if y > maxy: maxy = y
+            if x < minx:
+                minx = x
+            if x > max_x:
+                max_x = x
+            if y < min_y:
+                min_y = y
+            if y > max_y:
+                max_y = y
 
         # add width and height of a node
-        maxx -= 180
-        maxy += 100
+        max_x -= 180
+        max_y += 100
 
-        relbboxcenterx = (minx + maxx) / 2 - minx
-        relbboxcentery = (miny + maxy) / 2 - miny
+        relbboxcenterx = (minx + max_x) / 2 - minx
+        relbboxcentery = (min_y + max_y) / 2 - min_y
 
         if DEBUG_PASTING:
-            print (" *** PASTA:")
-            print("Copied boudaries:\n\tX:", minx, maxx, "   Y:", miny, maxy)
+            print(" *** PASTA:")
+            print("Copied boudaries:\n\tX:", minx,
+                  max_x, "   Y:", min_y, max_y)
             print("\tbbox_center:", relbboxcenterx, relbboxcentery)
 
         # calculate the offset of the newly creating nodes
-        mousex, mousey = mouse_scene_pos.x(), mouse_scene_pos.y()
+        mouse_x, mouse_y = mouse_scene_pos.x(), mouse_scene_pos.y()
 
         # create each node
-        created_nodes = []
+        created_nodes: List['Node'] = []
 
         self.scene.setSilentSelectionEvents()
 
@@ -140,35 +155,39 @@ class SceneClipboard():
 
         for node_data in data['nodes']:
             new_node = self.scene.getNodeClassFromData(node_data)(self.scene)
-            new_node.deserialize(node_data, hashmap, restore_id=False, *args, **kwargs)
+            new_node.deserialize(node_data, hashmap, False, *args, **kwargs)
             created_nodes.append(new_node)
 
             # readjust the new nodeeditor's position
 
             # new node's current position
-            posx, posy = new_node.pos.x(), new_node.pos.y()
-            newx, newy = mousex + posx - minx, mousey + posy - miny
+            pos_x, pos_y = new_node.pos.x(), new_node.pos.y()
+            new_x, new_y = mouse_x + pos_x - minx, mouse_y + pos_y - min_y
 
-            new_node.setPos(newx, newy)
+            new_node.setPos(new_x, new_y)
 
             new_node.doSelect()
 
             if DEBUG_PASTING:
                 print("** PASTA SUM:")
-                print("\tMouse pos:", mousex, mousey)
-                print("\tnew node pos:", posx, posy)
-                print("\tFINAL:", newx, newy)
+                print("\tMouse pos:", mouse_x, mouse_y)
+                print("\tnew node pos:", pos_x, pos_y)
+                print("\tFINAL:", new_x, new_y)
 
         # create each edge
         if 'edges' in data:
             for edge_data in data['edges']:
                 new_edge = Edge(self.scene)
-                new_edge.deserialize(edge_data, hashmap, restore_id=False, *args, **kwargs)
-
+                # kwargs_copy = kwargs.copy()
+                # if 'restore_id' in kwargs_copy:
+                #     del kwargs_copy['restore_id']
+                new_edge.deserialize(edge_data, hashmap,
+                                     False, *args, **kwargs)
 
         self.scene.setSilentSelectionEvents(False)
 
         # store history
-        self.scene.history.storeHistory("Pasted elements in scene", setModified=True)
+        self.scene.history.storeHistory(
+            "Pasted elements in scene", setModified=True)
 
         return created_nodes

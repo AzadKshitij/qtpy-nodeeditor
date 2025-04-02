@@ -3,8 +3,10 @@
         "calcpos",
         "grsock",
         "nodeeditor",
+        "nodepos",
         "qpdist",
         "scanrect",
-        "scenepos"
+        "scenepos",
+        "socketpos"
     ]
 }

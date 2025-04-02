@@ -2,7 +2,7 @@
 """
 A module containing `Graphics View` for NodeEditor
 """
-from qtpy.QtWidgets import QGraphicsView, QApplication, QWidget
+from qtpy.QtWidgets import QGraphicsView, QApplication, QWidget, QGraphicsItem
 from qtpy.QtCore import Signal, QPoint, Qt, QEvent, QPointF, QRectF
 from qtpy.QtGui import QPainter, QDragEnterEvent, QDropEvent, QMouseEvent, QKeyEvent, QWheelEvent, QInputEvent
 
@@ -16,7 +16,7 @@ from nodeeditor.node_edge_snapping import EdgeSnapping
 from nodeeditor.node_graphics_cutline import QDMCutLine
 from nodeeditor.utils import dumpException, pp, isCTRLPressed, isSHIFTPressed, isALTPressed
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from nodeeditor.node_node import Node
@@ -101,7 +101,7 @@ class QDMGraphicsView(QGraphicsView):
         self.cutline = QDMCutLine()
         self.grScene.addItem(self.cutline)
 
-        self.last_scene_mouse_position = QPoint(0, 0)
+        self.last_scene_mouse_position = QPointF(0, 0)
         self.zoomInFactor = 1.25
         self.zoomClamp = True
         self.zoom = 10
@@ -233,8 +233,8 @@ class QDMGraphicsView(QGraphicsView):
         if QT_API in ("pyqt5", "pyside2"):
             releaseEvent = QMouseEvent(
                 QEvent.Type.MouseButtonRelease,
-                event.localPos(),
-                event.screenPos(),
+                event.localPos(),  # type: ignore
+                event.screenPos(),  # type: ignore
                 Qt.MouseButton.LeftButton,
                 Qt.MouseButton.NoButton,
                 event.modifiers())
@@ -255,8 +255,8 @@ class QDMGraphicsView(QGraphicsView):
         if QT_API in ("pyqt5", "pyside2"):
             fakeEvent = QMouseEvent(
                 event.type(),
-                event.localPos(),
-                event.screenPos(),
+                event.localPos(),  # type: ignore
+                event.screenPos(),  # type: ignore
                 Qt.MouseButton.LeftButton,
                 event.buttons() | Qt.MouseButton.LeftButton,
                 event.modifiers())
@@ -272,19 +272,31 @@ class QDMGraphicsView(QGraphicsView):
     def middleMouseButtonRelease(self, event: QMouseEvent):
         """When Middle mouse button was released"""
         if QT_API in ("pyqt5", "pyside2"):
-            fakeEvent = QMouseEvent(event.type(), event.localPos(), event.screenPos(),
-                                    Qt.MouseButton.LeftButton, event.buttons() & ~Qt.LeftButton, event.modifiers())
+            fakeEvent = QMouseEvent(
+                event.type(),
+                event.localPos(),  # type: ignore
+                event.screenPos(),  # type: ignore
+                Qt.MouseButton.LeftButton,
+                event.buttons() & ~Qt.MouseButton.LeftButton,
+                event.modifiers())
         elif QT_API in ("pyqt6", "pyside6"):
-            fakeEvent = QMouseEvent(event.type(), event.localPos(),
-                                    Qt.MouseButton.LeftButton, event.buttons() & ~Qt.MouseButton.LeftButton, event.modifiers())
+            fakeEvent = QMouseEvent(
+                event.type(),
+                event.position(),
+                Qt.MouseButton.LeftButton,
+                event.buttons() & ~Qt.MouseButton.LeftButton,
+                event.modifiers())
         super().mouseReleaseEvent(fakeEvent)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
-    def leftMouseButtonPress(self, event: QMouseEvent):
+    def leftMouseButtonPress(self, event: QMouseEvent) -> None:
         """When Left  mouse button was pressed"""
 
         # get the item we clicked on
         item = self.getItemAtClick(event)
+
+        if item is None:
+            return
 
         # we store the position of last LMB click
         self.last_lmb_click_scene_pos = self.mapToScene(event.pos())
@@ -296,13 +308,20 @@ class QDMGraphicsView(QGraphicsView):
             if isSHIFTPressed(event):
                 event.ignore()
                 if QT_API in ("pyqt5", "pyside2"):
-                    fakeEvent = QMouseEvent(QEvent.MouseButtonPress, event.localPos(), event.screenPos(),
-                                            Qt.LeftButton, event.buttons() | Qt.LeftButton,
-                                            event.modifiers() | Qt.ControlModifier)
+                    fakeEvent = QMouseEvent(
+                        QEvent.Type.MouseButtonPress,
+                        event.localPos(),  # type: ignore
+                        event.screenPos(),  # type: ignore
+                        Qt.MouseButton.LeftButton,
+                        event.buttons() | Qt.MouseButton.LeftButton,
+                        event.modifiers() | Qt.KeyboardModifier.ControlModifier)
                 elif QT_API in ("pyqt6", "pyside6"):
-                    fakeEvent = QMouseEvent(QEvent.MouseButtonPress, event.localPos(),
-                                            Qt.MouseButton.LeftButton, event.buttons() | Qt.MouseButton.LeftButton,
-                                            event.modifiers() | Qt.KeyboardModifier.ControlModifier)
+                    fakeEvent = QMouseEvent(
+                        QEvent.Type.MouseButtonPress,
+                        event.position(),
+                        Qt.MouseButton.LeftButton,
+                        event.buttons() | Qt.MouseButton.LeftButton,
+                        event.modifiers() | Qt.KeyboardModifier.ControlModifier)
                 super().mousePressEvent(fakeEvent)
                 return
 
@@ -333,7 +352,7 @@ class QDMGraphicsView(QGraphicsView):
                 self.dragging.edgeDragStart(item)
                 return
 
-        if self.mode == MODE_EDGE_DRAG:
+        if self.mode == MODE_EDGE_DRAG and item is not None:
             res = self.dragging.edgeDragEnd(item)
             if res:
                 return
@@ -342,13 +361,22 @@ class QDMGraphicsView(QGraphicsView):
             if isCTRLPressed(event):
                 self.mode = MODE_EDGE_CUT
                 if QT_API in ("pyqt5", "pyside2"):
-                    fakeEvent = QMouseEvent(QEvent.MouseButtonRelease, event.localPos(), event.screenPos(),
-                                            Qt.LeftButton, Qt.NoButton, event.modifiers())
+                    fakeEvent = QMouseEvent(
+                        QEvent.Type.MouseButtonRelease,
+                        event.localPos(),  # type: ignore
+                        event.screenPos(),  # type: ignore
+                        Qt.MouseButton.LeftButton,
+                        Qt.MouseButton.NoButton,
+                        event.modifiers())
                 elif QT_API in ("pyqt6", "pyside6"):
-                    fakeEvent = QMouseEvent(QEvent.MouseButtonRelease, event.localPos(),
-                                            Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton, event.modifiers())
+                    fakeEvent = QMouseEvent(
+                        QEvent.Type.MouseButtonRelease,
+                        event.position(),
+                        Qt.MouseButton.LeftButton,
+                        Qt.MouseButton.NoButton,
+                        event.modifiers())
                 super().mouseReleaseEvent(fakeEvent)
-                QApplication.setOverrideCursor(Qt.CrossCursor)
+                QApplication.setOverrideCursor(Qt.CursorShape.CrossCursor)
                 return
             else:
                 self.rubberBandDraggingRectangle = True
@@ -367,13 +395,21 @@ class QDMGraphicsView(QGraphicsView):
                 if isSHIFTPressed(event):
                     event.ignore()
                     if QT_API in ("pyqt5", "pyside2"):
-                        fakeEvent = QMouseEvent(event.type(), event.localPos(), event.screenPos(),
-                                                Qt.LeftButton, Qt.NoButton,
-                                                event.modifiers() | Qt.ControlModifier)
+                        fakeEvent = QMouseEvent(
+                            event.type(),
+                            event.localPos(),  # type: ignore
+                            event.screenPos(),  # type: ignore
+                            Qt.LeftButton,  # type: ignore
+                            Qt.NoButton,  # type: ignore
+                            event.modifiers() | Qt.ControlModifier  # type: ignore
+                        )
                     elif QT_API in ("pyqt6", "pyside6"):
-                        fakeEvent = QMouseEvent(event.type(), event.localPos(),
-                                                Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton,
-                                                event.modifiers() | Qt.KeyboardModifier.ControlModifier)
+                        fakeEvent = QMouseEvent(
+                            event.type(),
+                            event.position(),
+                            Qt.MouseButton.LeftButton,
+                            Qt.MouseButton.NoButton,
+                            event.modifiers() | Qt.KeyboardModifier.ControlModifier)
                     super().mouseReleaseEvent(fakeEvent)
                     return
 
@@ -381,10 +417,10 @@ class QDMGraphicsView(QGraphicsView):
                 if self.distanceBetweenClickAndReleaseIsOff(event):
                     if self.isSnappingEnabled(event):
                         item = self.snapping.getSnappedSocketItem(event)
-
-                    res = self.dragging.edgeDragEnd(item)
-                    if res:
-                        return
+                    if item is not None:
+                        res = self.dragging.edgeDragEnd(item)
+                        if res:
+                            return
 
             if self.mode == MODE_EDGES_REROUTING:
                 if self.isSnappingEnabled(event):
@@ -458,9 +494,13 @@ class QDMGraphicsView(QGraphicsView):
 
         super().mouseReleaseEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, event: Optional[QMouseEvent]):
         """Overriden Qt's ``mouseMoveEvent`` handling Scene/View logic"""
-        scenepos = self.mapToScene(event.pos())
+
+        if event is None:
+            return
+
+        scenepos: QPointF = self.mapToScene(event.pos())
 
         try:
             modified = self.setSocketHighlights(
@@ -493,7 +533,7 @@ class QDMGraphicsView(QGraphicsView):
 
         super().mouseMoveEvent(event)
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, event: Optional[QKeyEvent]):
         """
         .. note::
             This overridden Qt's method was used for handling key shortcuts, before we implemented proper
@@ -549,13 +589,23 @@ class QDMGraphicsView(QGraphicsView):
 
     def setSocketHighlights(self, scenepos: QPointF, highlighted: bool = True, radius: float = 50):
         """Set/disable socket highlights in Scene area defined by `scenepos` and `radius`"""
-        scanrect = QRectF(scenepos.x() - radius,
-                          scenepos.y() - radius, radius * 2, radius * 2)
-        items = self.grScene.items(scanrect)
-        items = list(filter(lambda x: isinstance(x, QDMGraphicsSocket), items))
-        for grSocket in items:
+        scanrect = QRectF(
+            scenepos.x() - radius,
+            scenepos.y() - radius,
+            radius * 2,
+            radius * 2
+        )
+        # Get all items and filter for sockets
+        scene_items = self.grScene.items(scanrect)
+        socket_items: List[QDMGraphicsSocket] = [
+            item for item in scene_items if isinstance(item, QDMGraphicsSocket)
+        ]
+
+        # Set highlight state
+        for grSocket in socket_items:
             grSocket.isHighlighted = highlighted
-        return items
+
+        return socket_items
 
     def deleteSelected(self):
         """Shortcut for safe deleting every object selected in the `Scene`."""
@@ -578,7 +628,7 @@ class QDMGraphicsView(QGraphicsView):
             out += "ALT "
         return out
 
-    def getItemAtClick(self, event: QEvent) -> 'QGraphicsItem':
+    def getItemAtClick(self, event: QMouseEvent) -> Optional['QGraphicsItem']:
         """Return the object on which we've clicked/release mouse button
 
         :param event: Qt's mouse or key event
@@ -622,8 +672,11 @@ class QDMGraphicsView(QGraphicsView):
         if not clamped or self.zoomClamp is False:
             self.scale(zoomFactor, zoomFactor)
 
-    def wheelEvent(self, event: QWheelEvent):
+    def wheelEvent(self, event: Optional[QWheelEvent]):
         """overridden Qt's ``wheelEvent``. This handles zooming"""
+        if event is None:
+            return
+
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # calculate our zoom Factor
             zoomOutFactor = 1 / self.zoomInFactor
@@ -639,8 +692,11 @@ class QDMGraphicsView(QGraphicsView):
         elif event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
             # Redirect vertical scrolling to horizontal scrolling
             scroll_amount = event.angleDelta().y()  # Get the vertical delta
-            self.horizontalScrollBar().setValue(
-                self.horizontalScrollBar().value() - scroll_amount)
+            scroll_bar = self.horizontalScrollBar()
+            if scroll_bar is not None:
+                scroll_bar.setValue(scroll_bar.value() - scroll_amount)
+            # self.horizontalScrollBar().setValue(
+            #     self.horizontalScrollBar().value() - scroll_amount)
             # self.horizontalScrollBar().setValue(2)
 
         else:

@@ -4,8 +4,22 @@ A module containing all code for working with History (Undo/Redo)
 """
 from nodeeditor.utils import dumpException
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, TypedDict
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_scene import Scene
+
 DEBUG = False
 DEBUG_SELECTION = False
+
+
+class SelectionDict(TypedDict):
+    """Define the TypedDict for selection objects"""
+    nodes: List[str]  # list of node IDs
+    edges: List[str]  # list of edge IDs
 
 
 class SceneHistory():
@@ -31,9 +45,9 @@ class SceneHistory():
         self.if_undo = False
 
         # listeners
-        self._history_modified_listeners = []
-        self._history_stored_listeners = []
-        self._history_restored_listeners = []
+        self._history_modified_listeners: List[Callable[[], None]] = []
+        self._history_stored_listeners: List[Callable[[], None]] = []
+        self._history_restored_listeners: List[Callable[[], None]] = []
 
     def clear(self):
         """Reset the history stack"""
@@ -44,7 +58,7 @@ class SceneHistory():
         """Helper function usually used when new or open file requested"""
         self.storeHistory("Initial History Stamp")
 
-    def addHistoryModifiedListener(self, callback: 'function'):
+    def addHistoryModifiedListener(self, callback: Callable[[], None]):
         """
         Register callback for `HistoryModified` event
 
@@ -52,7 +66,7 @@ class SceneHistory():
         """
         self._history_modified_listeners.append(callback)
 
-    def addHistoryStoredListener(self, callback: 'function'):
+    def addHistoryStoredListener(self, callback: Callable[[], None]):
         """
         Register callback for `HistoryStored` event
 
@@ -60,7 +74,7 @@ class SceneHistory():
         """
         self._history_stored_listeners.append(callback)
 
-    def addHistoryRestoredListener(self, callback: 'function'):
+    def addHistoryRestoredListener(self, callback: Callable[[], None]):
         """
         Register callback for `HistoryRestored` event
 
@@ -68,7 +82,7 @@ class SceneHistory():
         """
         self._history_restored_listeners.append(callback)
 
-    def removeHistoryStoredListener(self, callback: 'function'):
+    def removeHistoryStoredListener(self, callback: Callable[[], None]):
         """
         Remove registered callback for `HistoryStored` event
 
@@ -77,7 +91,7 @@ class SceneHistory():
         if callback in self._history_stored_listeners:
             self._history_stored_listeners.remove(callback)
 
-    def removeHistoryRestoredListener(self, callback: 'function'):
+    def removeHistoryRestoredListener(self, callback: Callable[[], None]):
         """
         Remove registered callback for `HistoryRestored` event
 
@@ -204,13 +218,13 @@ class SceneHistory():
         for callback in self._history_stored_listeners:
             callback()
 
-    def captureCurrentSelection(self) -> dict:
+    def captureCurrentSelection(self) -> SelectionDict:
         """
         Create dictionary with a list of selected nodes and a list of selected edges
         :return: ``dict`` 'nodes' - list of selected nodes, 'edges' - list of selected edges
         :rtype: ``dict``
         """
-        sel_obj = {
+        sel_obj: SelectionDict = {
             'nodes': [],
             'edges': [],
         }

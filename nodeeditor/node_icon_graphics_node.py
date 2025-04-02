@@ -2,15 +2,24 @@
 """
 A module containing Graphics representation of :class:`~nodeeditor.node_node.Node`
 """
-from qtpy.QtWidgets import QGraphicsItem, QWidget, QGraphicsTextItem, QGraphicsPixmapItem
+from qtpy.QtWidgets import QGraphicsItem, QWidget, QGraphicsTextItem, QGraphicsPixmapItem, QGraphicsSceneHoverEvent
 from qtpy.QtGui import QFont, QColor, QPen, QBrush, QPainterPath, QPixmap
 from qtpy.QtCore import Qt, QRectF
+
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_node import Node
 
 
 class QDMIconGraphicsNode(QGraphicsItem):
     """Class describing Graphics representation of :class:`~nodeeditor.node_node.Node`"""
 
-    def __init__(self, node: 'Node', parent: QWidget = None, icon_path: QPixmap = None):
+    def __init__(self, node: 'Node', parent: QGraphicsItem = None, icon_path: QPixmap = None):
         """
         :param node: reference to :class:`~nodeeditor.node_node.Node`
         :type node: :class:`~nodeeditor.node_node.Node`
@@ -152,12 +161,12 @@ class QDMIconGraphicsNode(QGraphicsItem):
         """Overriden event for doubleclick. Resend to `Node::onDoubleClicked`"""
         self.node.onDoubleClicked(event)
 
-    def hoverEnterEvent(self, event: 'QGraphicsSceneHoverEvent') -> None:
+    def hoverEnterEvent(self, event: Optional['QGraphicsSceneHoverEvent']) -> None:
         """Handle hover effect"""
         self.hovered = True
         self.update()
 
-    def hoverLeaveEvent(self, event: 'QGraphicsSceneHoverEvent') -> None:
+    def hoverLeaveEvent(self, event: Optional['QGraphicsSceneHoverEvent']) -> None:
         """Handle hover effect"""
         self.hovered = False
         self.update()

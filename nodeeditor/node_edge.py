@@ -62,7 +62,7 @@ class Edge(Serializable):
         self._edge_type = edge_type
 
         # create Graphics Edge instance
-        self.grEdge = self.createEdgeClassInstance()
+        self.grEdge: QDMGraphicsEdge = self.createEdgeClassInstance()
 
         self.scene.addEdge(self)
 

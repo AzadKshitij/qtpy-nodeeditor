@@ -9,6 +9,15 @@ from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_socket import Socket, LEFT_BOTTOM, LEFT_CENTER, LEFT_TOP, RIGHT_BOTTOM, RIGHT_CENTER, RIGHT_TOP
 from nodeeditor.utils_no_qt import dumpException, pp
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Union
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_scene import Scene
+
 DEBUG = False
 
 
@@ -44,8 +53,8 @@ class Node(Serializable):
         self.scene = scene
 
         # just to be sure, init these variables
-        self.content = None
-        self.grNode = None
+        self.content: QDMNodeContentWidget
+        self.grNode: QDMGraphicsNode
 
         self.initInnerClasses()
         self.initSettings()
@@ -56,8 +65,8 @@ class Node(Serializable):
         self.scene.grScene.addItem(self.grNode)
 
         # create socket for inputs and outputs
-        self.inputs = []
-        self.outputs = []
+        self.inputs: List['Socket'] = []
+        self.outputs: List['Socket'] = []
         self.initSockets(inputs, outputs)
 
         # dirty and evaluation
@@ -232,7 +241,7 @@ class Node(Serializable):
                 return True
         return False
 
-    def getSocketPosition(self, index: int, position: int, num_out_of: int = 1) -> '(x, y)':
+    def getSocketPosition(self, index: int, position: int, num_out_of: int = 1) -> List[float]:
         """
         Get the relative `x, y` position of a :class:`~nodeeditor.node_socket.Socket`. This is used for placing
         the `Graphics Sockets` on `Graphics Node`.
@@ -279,7 +288,7 @@ class Node(Serializable):
 
         return [x, y]
 
-    def getSocketScenePosition(self, socket: 'Socket') -> '(x, y)':
+    def getSocketScenePosition(self, socket: 'Socket') -> Tuple[float, float]:
         """
         Get absolute Socket position in the Scene
 
@@ -435,7 +444,7 @@ class Node(Serializable):
                 other_nodes.append(other_node)
         return other_nodes
 
-    def getInput(self, index: int = 0) -> ['Node', None]:
+    def getInput(self, index: int = 0) -> Optional['Node']:
         """
         Get the **first**  `Node` connected to the  Input specified by `index`
 
@@ -456,7 +465,7 @@ class Node(Serializable):
             dumpException(e)
             return None
 
-    def getInputWithSocket(self, index: int = 0) -> [('Node', 'Socket'), (None, None)]:
+    def getInputWithSocket(self, index: int = 0) -> Union[Tuple['Node', 'Socket'], Tuple[None, None]]:
         """
         Get the **first**  `Node` connected to the Input specified by `index` and the connection `Socket`
 
@@ -477,7 +486,7 @@ class Node(Serializable):
             dumpException(e)
             return None, None
 
-    def getInputWithSocketIndex(self, index: int = 0) -> ('Node', int):
+    def getInputWithSocketIndex(self, index: int = 0) -> Union[Tuple['Node', int], Tuple[None, None]]:
         """
         Get the **first**  `Node` connected to the Input specified by `index` and the connection `Socket`
 

@@ -7,8 +7,18 @@ from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_graphics_socket import QDMGraphicsSocket
 
 
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, TypedDict
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_scene import Scene
+    from nodeeditor.node_edge import Edge
+    from nodeeditor.node_node import Node
+
+
 LEFT_TOP = 1        #:
-LEFT_CENTER =2      #:
+LEFT_CENTER = 2      #:
 LEFT_BOTTOM = 3     #:
 RIGHT_TOP = 4       #:
 RIGHT_CENTER = 5    #:
@@ -24,8 +34,8 @@ class Socket(Serializable):
 
     """Class representing Socket."""
 
-    def __init__(self, node: 'Node', index: int=0, position: int=LEFT_TOP, socket_type: int=1, multi_edges: bool=True,
-                 count_on_this_node_side: int=1, is_input: bool=False):
+    def __init__(self, node: 'Node', index: int = 0, position: int = LEFT_TOP, socket_type: int = 1, multi_edges: bool = True,
+                 count_on_this_node_side: int = 1, is_input: bool = False):
         """
         :param node: reference to the :class:`~nodeeditor.node_node.Node` containing this `Socket`
         :type node: :class:`~nodeeditor.node_node.Node`
@@ -64,19 +74,20 @@ class Socket(Serializable):
         self.is_input = is_input
         self.is_output = not self.is_input
 
-
-        if DEBUG: print("Socket -- creating with", self.index, self.position, "for nodeeditor", self.node)
-
+        if DEBUG:
+            print("Socket -- creating with", self.index,
+                  self.position, "for nodeeditor", self.node)
 
         self.grSocket = self.__class__.Socket_GR_Class(self)
 
         self.setSocketPosition()
 
-        self.edges = []
+        self.edges: List['Edge'] = []
 
     def __str__(self):
         return "<Socket #%d %s %s..%s>" % (
-            self.index, "ME" if self.is_multi_edges else "SE", hex(id(self))[2:5], hex(id(self))[-3:]
+            self.index, "ME" if self.is_multi_edges else "SE", hex(id(self))[
+                2:5], hex(id(self))[-3:]
         )
 
     def delete(self):
@@ -103,7 +114,8 @@ class Socket(Serializable):
     def setSocketPosition(self):
         """Helper function to set `Graphics Socket` position. Exact socket position is calculated
         inside :class:`~nodeeditor.node_node.Node`."""
-        self.grSocket.setPos(*self.node.getSocketPosition(self.index, self.position, self.count_on_this_node_side))
+        self.grSocket.setPos(*self.node.getSocketPosition(self.index,
+                             self.position, self.count_on_this_node_side))
 
     def getSocketPosition(self):
         """
@@ -111,11 +123,13 @@ class Socket(Serializable):
             :class:`~nodeeditor.node_node.Node`
         :rtype: ``x, y`` position
         """
-        if DEBUG: print("  GSP: ", self.index, self.position, "nodeeditor:", self.node)
-        res = self.node.getSocketPosition(self.index, self.position, self.count_on_this_node_side)
-        if DEBUG: print("  res", res)
+        if DEBUG:
+            print("  GSP: ", self.index, self.position, "nodeeditor:", self.node)
+        res = self.node.getSocketPosition(
+            self.index, self.position, self.count_on_this_node_side)
+        if DEBUG:
+            print("  res", res)
         return res
-
 
     def hasAnyEdge(self) -> bool:
         """
@@ -152,13 +166,14 @@ class Socket(Serializable):
         :param edge: :class:`~nodeeditor.node_edge.Edge` to disconnect
         :type edge: :class:`~nodeeditor.node_edge.Edge`
         """
-        if edge in self.edges: self.edges.remove(edge)
+        if edge in self.edges:
+            self.edges.remove(edge)
         else:
             if DEBUG_REMOVE_WARNINGS:
                 print("!W:", "Socket::removeEdge", "wanna remove edge", edge,
                       "from self.edges but it's not in the list!")
 
-    def removeAllEdges(self, silent: bool=False):
+    def removeAllEdges(self, silent: bool = False):
         """Disconnect all `Edges` from this `Socket`"""
         while self.edges:
             edge = self.edges.pop(0)
@@ -193,8 +208,9 @@ class Socket(Serializable):
             ('socket_type', self.socket_type),
         ])
 
-    def deserialize(self, data: dict, hashmap: dict={}, restore_id: bool=True) -> bool:
-        if restore_id: self.id = data['id']
+    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
+        if restore_id:
+            self.id = data['id']
         self.is_multi_edges = self.determineMultiEdges(data)
         self.changeSocketType(data['socket_type'])
         hashmap[data['id']] = self

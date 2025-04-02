@@ -21,9 +21,9 @@ class Serializable():
         :return: data serialized in ``OrderedDict``
         :rtype: ``OrderedDict``
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
-    def deserialize(self, data: dict, hashmap: dict={}, restore_id: bool=True) -> bool:
+    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
         """
         Deserialization method which take data in python ``dict`` format with helping `hashmap` containing
         references to existing entities.
@@ -38,4 +38,4 @@ class Serializable():
         :return: ``True`` if deserialization was successful, otherwise ``False``
         :rtype: ``bool``
         """
-        raise NotImplemented()
+        raise NotImplementedError()

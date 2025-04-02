@@ -96,7 +96,7 @@ class EdgeDragging:
 
         # clicked on socket
         if isinstance(item, QDMGraphicsSocket):
-            if self.drag_edge is None:
+            if self.drag_edge is None or self.drag_start_socket is None:
                 return False
 
             # check if edge would be valid

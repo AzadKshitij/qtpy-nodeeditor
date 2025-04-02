@@ -2,10 +2,20 @@
 """A module containing the base class for the Node's content graphical representation. It also contains an example of
 an overridden Text Widget, which can pass a notification to it's parent about being modified."""
 from collections import OrderedDict
+from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
 from qtpy.QtWidgets import QWidget, QLabel, QVBoxLayout, QTextEdit
-from qtpy.QtGui import QPixmap, QImage
+from qtpy.QtGui import QPixmap, QImage, QFocusEvent
 from qtpy.QtCore import Qt
+
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_scene import Scene
+    from nodeeditor.node_node import Node
 
 
 class QDMNodeIconContentWidget(QWidget, Serializable):
@@ -25,7 +35,7 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
         """
         self.node = node
         super().__init__(parent)
-        self.icon: QPixmap = None
+        self.icon: QPixmap
 
         self.initUI()
 
@@ -33,9 +43,9 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
         """Sets up layouts and widgets to be rendered in :py:class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` class.
         """
 
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
+        self.v_layout = QVBoxLayout()
+        self.v_layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.v_layout)
 
         # Add icon in the center
         self.icon_label = QLabel(self)
@@ -47,8 +57,8 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
         if icon:
             pixmap = icon
             self.icon_label.setPixmap(pixmap)
-            self.icon_label.setAlignment(Qt.AlignCenter)
-            self.layout.addWidget(self.icon_label)
+            self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.v_layout.addWidget(self.icon_label)
 
         # self.layout = QVBoxLayout()
         # self.layout.setContentsMargins(0, 0, 0, 0)
@@ -116,20 +126,26 @@ class QDMTextEdit(QTextEdit):
         Overridden ``QTextEdit`` which sends a notification about being edited to its parent's container :py:class:`QDMNodeContentWidget`
     """
 
-    def focusInEvent(self, event: 'QFocusEvent'):
+    def focusInEvent(self, event: QFocusEvent | None):
         """Example of an overridden focusInEvent to mark the start of editing
 
         :param event: Qt's focus event
         :type event: QFocusEvent
         """
-        self.parentWidget().setEditingFlag(True)
+        parent = self.parentWidget()
+        if isinstance(parent, QDMNodeContentWidget):
+            parent.setEditingFlag(True)
+
         super().focusInEvent(event)
 
-    def focusOutEvent(self, event: 'QFocusEvent'):
+    def focusOutEvent(self, event: QFocusEvent | None):
         """Example of an overridden focusOutEvent to mark the end of editing
 
         :param event: Qt's focus event
         :type event: QFocusEvent
         """
-        self.parentWidget().setEditingFlag(False)
+        parent = self.parentWidget()
+        if isinstance(parent, QDMNodeContentWidget):
+            parent.setEditingFlag(False)
+
         super().focusOutEvent(event)
