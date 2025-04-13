@@ -34,7 +34,7 @@ class Edge(Serializable):
     #: class variable containing list of registered edge validators
     edge_validators: List['function'] = []
 
-    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT):
+    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT) -> None:
         """
 
         :param scene: Reference to the :py:class:`~nodeeditor.node_scene.Scene`
@@ -66,7 +66,7 @@ class Edge(Serializable):
 
         self.scene.addEdge(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<Edge %s..%s -- S:%s E:%s>" % (
             hex(id(self))[2:5], hex(id(self))[-3:],
             self.start_socket, self.end_socket
@@ -84,7 +84,7 @@ class Edge(Serializable):
         return self._start_socket
 
     @start_socket.setter
-    def start_socket(self, value):
+    def start_socket(self, value) -> None:
         # if we were assigned to some socket before, delete us from the socket
         if self._start_socket is not None:
             self._start_socket.removeEdge(self)
@@ -107,7 +107,7 @@ class Edge(Serializable):
         return self._end_socket
 
     @end_socket.setter
-    def end_socket(self, value):
+    def end_socket(self, value) -> None:
         # if we were assigned to some socket before, delete us from the socket
         if self._end_socket is not None:
             self._end_socket.removeEdge(self)
@@ -131,7 +131,7 @@ class Edge(Serializable):
         return self._edge_type
 
     @edge_type.setter
-    def edge_type(self, value):
+    def edge_type(self, value) -> None:
         # assign new value
         self._edge_type = value
 
@@ -147,7 +147,7 @@ class Edge(Serializable):
         return cls.edge_validators
 
     @classmethod
-    def registerEdgeValidator(cls, validator_callback: 'function'):
+    def registerEdgeValidator(cls, validator_callback: 'function') -> None:
         """Register Edge Validator Callback
 
         :param validator_callback: A function handle to validate Edge
@@ -171,7 +171,7 @@ class Edge(Serializable):
                 return False
         return True
 
-    def reconnect(self, from_socket: 'Socket', to_socket: 'Socket'):
+    def reconnect(self, from_socket: 'Socket', to_socket: 'Socket') -> None:
         """Helper function which reconnects edge `from_socket` to `to_socket`"""
         if self.start_socket == from_socket:
             self.start_socket = to_socket
@@ -204,7 +204,7 @@ class Edge(Serializable):
         """
         return self.start_socket if known_socket == self.end_socket else self.end_socket
 
-    def doSelect(self, new_state: bool = True):
+    def doSelect(self, new_state: bool = True) -> None:
         """
         Provide the safe selecting/deselecting operation. In the background it takes care about the flags, notifications
         and storing history for undo/redo.
@@ -214,7 +214,7 @@ class Edge(Serializable):
         """
         self.grEdge.doSelect(new_state)
 
-    def updatePositions(self):
+    def updatePositions(self) -> None:
         """
         Updates the internal `Graphics Edge` positions according to the start and end :class:`~nodeeditor.node_socket.Socket`.
         This should be called if you update ``Edge`` positions.
@@ -232,14 +232,14 @@ class Edge(Serializable):
             self.grEdge.setDestination(*source_pos)
         self.grEdge.update()
 
-    def remove_from_sockets(self):
+    def remove_from_sockets(self) -> None:
         """
         Helper function which sets start and end :class:`~nodeeditor.node_socket.Socket` to ``None``
         """
         self.end_socket = None
         self.start_socket = None
 
-    def remove(self, silent_for_socket: 'Socket' = None, silent=False):
+    def remove(self, silent_for_socket: 'Socket' = None, silent: bool=False) -> None:
         """
         Safely remove this Edge.
 

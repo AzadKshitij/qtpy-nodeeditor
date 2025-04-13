@@ -29,7 +29,7 @@ class Node(Serializable):
     NodeContent_class = QDMNodeContentWidget
     Socket_class = Socket
 
-    def __init__(self, scene: 'Scene', title: str = "Undefined Node", inputs: list = [], outputs: list = []):
+    def __init__(self, scene: 'Scene', title: str = "Undefined Node", inputs: list = [], outputs: list = []) -> None:
         """
 
         :param scene: reference to the :class:`~nodeeditor.node_scene.Scene`
@@ -73,7 +73,7 @@ class Node(Serializable):
         self._is_dirty = False
         self._is_invalid = False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<%s:%s %s..%s>" % (self.title, self.__class__.__name__, hex(id(self))[2:5], hex(id(self))[-3:])
 
     @property
@@ -88,7 +88,7 @@ class Node(Serializable):
         return self._title
 
     @title.setter
-    def title(self, value):
+    def title(self, value) -> None:
         self._title = value
         self.grNode.title = self._title
 
@@ -102,7 +102,7 @@ class Node(Serializable):
         """
         return self.grNode.pos()        # QPointF
 
-    def setPos(self, x: float, y: float):
+    def setPos(self, x: float, y: float) -> None:
         """
         Sets position of the Graphics Node
 
@@ -119,7 +119,7 @@ class Node(Serializable):
                 edge.grEdge.calcPath()
                 edge.updatePositions()
 
-    def initInnerClasses(self):
+    def initInnerClasses(self) -> None:
         """Sets up graphics Node (PyQt) and Content Widget"""
         node_content_class = self.getNodeContentClass()
         graphics_node_class = self.getGraphicsNodeClass()
@@ -135,7 +135,7 @@ class Node(Serializable):
     def getGraphicsNodeClass(self):
         return self.__class__.GraphicsNode_class
 
-    def initSettings(self):
+    def initSettings(self) -> None:
         """Initialize properties and socket information"""
         self.socket_spacing = 22
 
@@ -152,7 +152,7 @@ class Node(Serializable):
             RIGHT_TOP: 1,
         }
 
-    def initSockets(self, inputs: list, outputs: list, reset: bool = True):
+    def initSockets(self, inputs: list, outputs: list, reset: bool = True) -> None:
         """
         Create sockets for inputs and outputs
 
@@ -194,7 +194,7 @@ class Node(Serializable):
             counter += 1
             self.outputs.append(socket)
 
-    def onEdgeConnectionChanged(self, new_edge: 'Edge'):
+    def onEdgeConnectionChanged(self, new_edge: 'Edge') -> None:
         """
         Event handling that any connection (`Edge`) has changed. Currently not used...
 
@@ -203,7 +203,7 @@ class Node(Serializable):
         """
         pass
 
-    def onInputChanged(self, socket: 'Socket'):
+    def onInputChanged(self, socket: 'Socket') -> None:
         """Event handling when Node's input Edge has changed. We auto-mark this `Node` to be `Dirty` with all it's
         descendants
 
@@ -213,16 +213,16 @@ class Node(Serializable):
         self.markDirty()
         self.markDescendantsDirty()
 
-    def onDeserialized(self, data: dict):
+    def onDeserialized(self, data: dict) -> None:
         """Event manually called when this node was deserialized. Currently called when node is deserialized from scene
         Passing `data` containing the data which have been deserialized """
         pass
 
-    def onDoubleClicked(self, event):
+    def onDoubleClicked(self, event) -> None:
         """Event handling double click on Graphics Node in `Scene`"""
         pass
 
-    def doSelect(self, new_state: bool = True):
+    def doSelect(self, new_state: bool = True) -> None:
         """Shortcut method for selecting/deselecting the `Node`
 
         :param new_state: ``True`` if you want to select the `Node`. ``False`` if you want to deselect the `Node`
@@ -234,7 +234,7 @@ class Node(Serializable):
         """Returns ``True`` if current `Node` is selected"""
         return self.grNode.isSelected()
 
-    def hasConnectedEdge(self, edge: 'Edge'):
+    def hasConnectedEdge(self, edge: 'Edge') -> bool:
         """Returns ``True`` if edge is connected to any :class:`~nodeeditor.node_socket.Socket` of this `Node`"""
         for socket in (self.inputs + self.outputs):
             if socket.isConnected(edge):
@@ -300,14 +300,14 @@ class Node(Serializable):
             socket.index, socket.position, socket.count_on_this_node_side)
         return (nodepos.x() + socketpos[0], nodepos.y() + socketpos[1])
 
-    def updateConnectedEdges(self):
+    def updateConnectedEdges(self) -> None:
         """Recalculate (Refresh) positions of all connected `Edges`. Used for updating Graphics Edges"""
         for socket in self.inputs + self.outputs:
             # if socket.hasEdge():
             for edge in socket.edges:
                 edge.updatePositions()
 
-    def remove(self):
+    def remove(self) -> None:
         """
         Safely remove this Node
         """
@@ -341,7 +341,7 @@ class Node(Serializable):
         """
         return self._is_dirty
 
-    def markDirty(self, new_value: bool = True):
+    def markDirty(self, new_value: bool = True) -> None:
         """Mark this `Node` as `Dirty`. See :ref:`evaluation` for more
 
         :param new_value: ``True`` if this `Node` should be `Dirty`. ``False`` if you want to un-dirty this `Node`
@@ -351,11 +351,11 @@ class Node(Serializable):
         if self._is_dirty:
             self.onMarkedDirty()
 
-    def onMarkedDirty(self):
+    def onMarkedDirty(self) -> None:
         """Called when this `Node` has been marked as `Dirty`. This method is supposed to be overridden"""
         pass
 
-    def markChildrenDirty(self, new_value: bool = True):
+    def markChildrenDirty(self, new_value: bool = True) -> None:
         """Mark all first level children of this `Node` to be `Dirty`. Not this `Node` it self. Not other descendants
 
         :param new_value: ``True`` if children should be `Dirty`. ``False`` if you want to un-dirty children
@@ -364,7 +364,7 @@ class Node(Serializable):
         for other_node in self.getChildrenNodes():
             other_node.markDirty(new_value)
 
-    def markDescendantsDirty(self, new_value: bool = True):
+    def markDescendantsDirty(self, new_value: bool = True) -> None:
         """Mark all children and descendants of this `Node` to be `Dirty`. Not this `Node` it self
 
         :param new_value: ``True`` if children and descendants should be `Dirty`. ``False`` if you want to un-dirty children and descendants
@@ -382,7 +382,7 @@ class Node(Serializable):
         """
         return self._is_invalid
 
-    def markInvalid(self, new_value: bool = True):
+    def markInvalid(self, new_value: bool = True) -> None:
         """Mark this `Node` as `Invalid`. See :ref:`evaluation` for more
 
         :param new_value: ``True`` if this `Node` should be `Invalid`. ``False`` if you want to make this `Node` valid
@@ -392,11 +392,11 @@ class Node(Serializable):
         if self._is_invalid:
             self.onMarkedInvalid()
 
-    def onMarkedInvalid(self):
+    def onMarkedInvalid(self) -> None:
         """Called when this `Node` has been marked as `Invalid`. This method is supposed to be overridden"""
         pass
 
-    def markChildrenInvalid(self, new_value: bool = True):
+    def markChildrenInvalid(self, new_value: bool = True) -> None:
         """Mark all first level children of this `Node` to be `Invalid`. Not this `Node` it self. Not other descendants
 
         :param new_value: ``True`` if children should be `Invalid`. ``False`` if you want to make children valid
@@ -405,7 +405,7 @@ class Node(Serializable):
         for other_node in self.getChildrenNodes():
             other_node.markInvalid(new_value)
 
-    def markDescendantsInvalid(self, new_value: bool = True):
+    def markDescendantsInvalid(self, new_value: bool = True) -> None:
         """Mark all children and descendants of this `Node` to be `Invalid`. Not this `Node` it self
 
         :param new_value: ``True`` if children and descendants should be `Invalid`. ``False`` if you want to make children and descendants valid
@@ -415,13 +415,13 @@ class Node(Serializable):
             other_node.markInvalid(new_value)
             other_node.markDescendantsInvalid(new_value)
 
-    def eval(self, index=0):
+    def eval(self, index: int=0) -> int:
         """Evaluate this `Node`. This is supposed to be overridden. See :ref:`evaluation` for more"""
         self.markDirty(False)
         self.markInvalid(False)
         return 0
 
-    def evalChildren(self):
+    def evalChildren(self) -> None:
         """Evaluate all children of this `Node`"""
         for node in self.getChildrenNodes():
             node.eval()

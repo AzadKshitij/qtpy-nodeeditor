@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class QDMGraphicsEdge(QGraphicsPathItem):
     """Base class for Graphics Edge"""
 
-    def __init__(self, edge: 'Edge', parent: QGraphicsPathItem = None):
+    def __init__(self, edge: 'Edge', parent: QGraphicsPathItem = None) -> None:
         """
         :param edge: reference to :class:`~nodeeditor.node_edge.Edge`
         :type edge: :class:`~nodeeditor.node_edge.Edge`
@@ -51,13 +51,13 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.initAssets()
         self.initUI()
 
-    def initUI(self):
+    def initUI(self) -> None:
         """Set up this ``QGraphicsPathItem``"""
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self.setZValue(-1)
 
-    def initAssets(self):
+    def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
         self._color = self._default_color = QColor("#001000")
         self._color_selected = QColor("#00ff00")
@@ -94,12 +94,12 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         else:
             return GraphicsEdgePathImprovedBezier
 
-    def makeUnselectable(self):
+    def makeUnselectable(self) -> None:
         """Used for drag edge to disable click detection over this graphics item"""
         self.setFlag(QGraphicsItem.ItemIsSelectable, False)
         self.setAcceptHoverEvents(False)
 
-    def changeColor(self, color):
+    def changeColor(self, color) -> None:
         """Change color of the edge from string hex value '#00ff00'"""
         # print("^Called change color to:", color.red(), color.green(), color.blue(), "on edge:", self.edge)
         self._color = QColor(color) if type(color) == str else color
@@ -117,11 +117,11 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
         return True
 
-    def onSelected(self):
+    def onSelected(self) -> None:
         """Our event handling when the edge was selected"""
         self.edge.scene.grScene.itemSelected.emit()
 
-    def doSelect(self, new_state: bool = True):
+    def doSelect(self, new_state: bool = True) -> None:
         """Safe version of selecting the `Graphics Node`. Takes care about the selection state flag used internally
 
         :param new_state: ``True`` to select, ``False`` to deselect
@@ -132,7 +132,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         if new_state:
             self.onSelected()
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
         """Overridden Qt's method to handle selecting and deselecting this `Graphics Edge`"""
         super().mouseReleaseEvent(event)
         if self._last_selected_state != self.isSelected():
@@ -158,7 +158,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.hovered = False
         self.update()
 
-    def setSource(self, x: float, y: float):
+    def setSource(self, x: float, y: float) -> None:
         """ Set source point
 
         :param x: x position
@@ -168,7 +168,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """
         self.posSource = [x, y]
 
-    def setDestination(self, x: float, y: float):
+    def setDestination(self, x: float, y: float) -> None:
         """ Set destination point
 
         :param x: x position
@@ -190,7 +190,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """
         return self.calcPath()
 
-    def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
+    def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Qt's overridden method to paint this Graphics Edge. Path calculated
             in :func:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge.calcPath` method"""
         self.setPath(self.calcPath())

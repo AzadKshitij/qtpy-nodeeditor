@@ -25,7 +25,7 @@ EDGE_CURVATURE = 2
 class GraphicsEdgePathBase:
     """Base Class for calculating the graphics path to draw for an graphics Edge"""
 
-    def __init__(self, owner: 'QDMGraphicsEdge'):
+    def __init__(self, owner: 'QDMGraphicsEdge') -> None:
         # keep the reference to owner GraphicsEdge class
         self.owner = owner
 
@@ -101,7 +101,7 @@ class GraphicsEdgePathBezier(GraphicsEdgePathBase):
 class GraphicsEdgePathSquare(GraphicsEdgePathBase):
     """Square line connection Graphics Edge"""
 
-    def __init__(self, *args, handle_weight=0.5, **kwargs):
+    def __init__(self, *args, handle_weight: float=0.5, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.rand = None
         self.handle_weight = handle_weight

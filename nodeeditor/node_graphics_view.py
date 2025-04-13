@@ -55,7 +55,7 @@ class QDMGraphicsView(QGraphicsView):
     #: pyqtSignal emitted when cursor position on the `Scene` has changed
     scenePosChanged = Signal(int, int)
 
-    def __init__(self, grScene: 'QDMGraphicsScene', parent: QWidget = None):
+    def __init__(self, grScene: 'QDMGraphicsScene', parent: QWidget = None) -> None:
         """
         :param grScene: reference to the :class:`~nodeeditor.node_graphics_scene.QDMGraphicsScene`
         :type grScene: :class:`~nodeeditor.node_graphics_scene.QDMGraphicsScene`
@@ -112,7 +112,7 @@ class QDMGraphicsView(QGraphicsView):
         self._drag_enter_listeners: list = []
         self._drop_listeners: list = []
 
-    def initUI(self):
+    def initUI(self) -> None:
         """Set up this ``QGraphicsView``"""
         # self.setRenderHints(QPainter.Antialiasing | QPainter.HighQualityAntialiasing | QPainter.TextAntialiasing | QPainter.SmoothPixmapTransform)
         self.setRenderHints(
@@ -133,21 +133,21 @@ class QDMGraphicsView(QGraphicsView):
         """Returns ``True`` if snapping is currently enabled"""
         return EDGE_SNAPPING and isCTRLPressed(event) if event else True
 
-    def resetMode(self):
+    def resetMode(self) -> None:
         """Helper function to re-set the grView's State Machine state to the default"""
         self.mode = MODE_NOOP
 
-    def dragEnterEvent(self, event: Optional[QDragEnterEvent]):
+    def dragEnterEvent(self, event: Optional[QDragEnterEvent]) -> None:
         """Trigger our registered `Drag Enter` events"""
         for callback in self._drag_enter_listeners:
             callback(event)
 
-    def dropEvent(self, event: Optional[QDropEvent]):
+    def dropEvent(self, event: Optional[QDropEvent]) -> None:
         """Trigger our registered `Drop` events"""
         for callback in self._drop_listeners:
             callback(event)
 
-    def addDragEnterListener(self, callback: 'function'):
+    def addDragEnterListener(self, callback: 'function') -> None:
         """
         Register callback for `Drag Enter` event
 
@@ -155,7 +155,7 @@ class QDMGraphicsView(QGraphicsView):
         """
         self._drag_enter_listeners.append(callback)
 
-    def addDropListener(self, callback: 'function'):
+    def addDropListener(self, callback: 'function') -> None:
         """
         Register callback for `Drop` event
 
@@ -163,7 +163,7 @@ class QDMGraphicsView(QGraphicsView):
         """
         self._drop_listeners.append(callback)
 
-    def mousePressEvent(self, event: Optional[QMouseEvent]):
+    def mousePressEvent(self, event: Optional[QMouseEvent]) -> None:
         """Dispatch Qt's mousePress event to corresponding function below"""
         if event is None:
             return
@@ -176,7 +176,7 @@ class QDMGraphicsView(QGraphicsView):
         else:
             super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event: Optional[QMouseEvent]):
+    def mouseReleaseEvent(self, event: Optional[QMouseEvent]) -> None:
         """Dispatch Qt's mouseRelease event to corresponding function below"""
         if event is None:
             return
@@ -189,7 +189,7 @@ class QDMGraphicsView(QGraphicsView):
         else:
             super().mouseReleaseEvent(event)
 
-    def middleMouseButtonPress(self, event: QMouseEvent):
+    def middleMouseButtonPress(self, event: QMouseEvent) -> None:
         """When Middle mouse button was pressed"""
 
         item = self.getItemAtClick(event)
@@ -269,7 +269,7 @@ class QDMGraphicsView(QGraphicsView):
                 event.modifiers())
         super().mousePressEvent(fakeEvent)
 
-    def middleMouseButtonRelease(self, event: QMouseEvent):
+    def middleMouseButtonRelease(self, event: QMouseEvent) -> None:
         """When Middle mouse button was released"""
         if QT_API in ("pyqt5", "pyside2"):
             fakeEvent = QMouseEvent(
@@ -380,7 +380,7 @@ class QDMGraphicsView(QGraphicsView):
 
         super().mousePressEvent(event)
 
-    def leftMouseButtonRelease(self, event: QMouseEvent):
+    def leftMouseButtonRelease(self, event: QMouseEvent) -> None:
         """When Left  mouse button was released"""
 
         # get the item on which we release the mouse button on
@@ -476,11 +476,11 @@ class QDMGraphicsView(QGraphicsView):
 
         super().mouseReleaseEvent(event)
 
-    def rightMouseButtonPress(self, event: QMouseEvent):
+    def rightMouseButtonPress(self, event: QMouseEvent) -> None:
         """When Right mouse button was pressed"""
         super().mousePressEvent(event)
 
-    def rightMouseButtonRelease(self, event: QMouseEvent):
+    def rightMouseButtonRelease(self, event: QMouseEvent) -> None:
         """When Right mouse button was release"""
 
         # cannot be because with dragging RMB we spawn Create New Node Context Menu
@@ -491,7 +491,7 @@ class QDMGraphicsView(QGraphicsView):
 
         super().mouseReleaseEvent(event)
 
-    def mouseMoveEvent(self, event: Optional[QMouseEvent]):
+    def mouseMoveEvent(self, event: Optional[QMouseEvent]) -> None:
         """Overriden Qt's ``mouseMoveEvent`` handling Scene/View logic"""
 
         if event is None:
@@ -530,7 +530,7 @@ class QDMGraphicsView(QGraphicsView):
 
         super().mouseMoveEvent(event)
 
-    def keyPressEvent(self, event: Optional[QKeyEvent]):
+    def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
         """
         .. note::
             This overridden Qt's method was used for handling key shortcuts, before we implemented proper
@@ -569,7 +569,7 @@ class QDMGraphicsView(QGraphicsView):
         # else:
         super().keyPressEvent(event)
 
-    def cutIntersectingEdges(self):
+    def cutIntersectingEdges(self) -> None:
         """Compare which `Edges` intersect with current `Cut line` and delete them safely"""
         for ix in range(len(self.cutline.line_points) - 1):
             p1 = self.cutline.line_points[ix]
@@ -604,7 +604,7 @@ class QDMGraphicsView(QGraphicsView):
 
         return socket_items
 
-    def deleteSelected(self):
+    def deleteSelected(self) -> None:
         """Shortcut for safe deleting every object selected in the `Scene`."""
         for item in self.grScene.selectedItems():
             if isinstance(item, QDMGraphicsEdge):
@@ -659,7 +659,7 @@ class QDMGraphicsView(QGraphicsView):
         self.zoom -= self.zoomStep
         return 1 / self.zoomInFactor
 
-    def applyZoom(self, zoomFactor: float):
+    def applyZoom(self, zoomFactor: float) -> None:
         clamped = False
         if self.zoom < self.zoomRange[0]:
             self.zoom, clamped = self.zoomRange[0], True
@@ -669,7 +669,7 @@ class QDMGraphicsView(QGraphicsView):
         if not clamped or self.zoomClamp is False:
             self.scale(zoomFactor, zoomFactor)
 
-    def wheelEvent(self, event: Optional[QWheelEvent]):
+    def wheelEvent(self, event: Optional[QWheelEvent]) -> None:
         """overridden Qt's ``wheelEvent``. This handles zooming"""
         if event is None:
             return

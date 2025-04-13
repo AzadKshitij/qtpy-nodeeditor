@@ -16,7 +16,7 @@ class QDMNodeContentWidget(QWidget, Serializable):
     """Base class for representation of the Node's graphics content. This class also provides layout
     for other widgets inside of a :py:class:`~nodeeditor.node_node.Node`"""
 
-    def __init__(self, node: 'Node', parent: QWidget = None):
+    def __init__(self, node: 'Node', parent: QWidget = None) -> None:
         """
         :param node: reference to the :py:class:`~nodeeditor.node_node.Node`
         :type node: :py:class:`~nodeeditor.node_node.Node`
@@ -32,7 +32,7 @@ class QDMNodeContentWidget(QWidget, Serializable):
 
         self.initUI()
 
-    def initUI(self):
+    def initUI(self) -> None:
         """Sets up layouts and widgets to be rendered in :py:class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` class.
         """
         self.layout = QVBoxLayout()
@@ -43,7 +43,7 @@ class QDMNodeContentWidget(QWidget, Serializable):
         self.layout.addWidget(self.wdg_label)
         self.layout.addWidget(QDMTextEdit("foo"))
 
-    def setEditingFlag(self, value: bool):
+    def setEditingFlag(self, value: bool) -> None:
         """
         .. note::
 
@@ -77,7 +77,7 @@ class QDMTextEdit(QTextEdit):
         Overridden ``QTextEdit`` which sends a notification about being edited to its parent's container :py:class:`QDMNodeContentWidget`
     """
 
-    def focusInEvent(self, event: QFocusEvent | None):
+    def focusInEvent(self, event: QFocusEvent | None) -> None:
         """Example of an overridden focusInEvent to mark the start of editing
 
         :param event: Qt's focus event
@@ -89,7 +89,7 @@ class QDMTextEdit(QTextEdit):
 
         super().focusInEvent(event)
 
-    def focusOutEvent(self, event: QFocusEvent | None):
+    def focusOutEvent(self, event: QFocusEvent | None) -> None:
         """Example of an overridden focusOutEvent to mark the end of editing
 
         :param event: Qt's focus event

@@ -21,14 +21,14 @@ if TYPE_CHECKING:
 
 class EdgeIntersect:
 
-    def __init__(self, grView: 'QDMGraphicsView'):
+    def __init__(self, grView: 'QDMGraphicsView') -> None:
         self.grView = grView
         self.grScene: 'QDMGraphicsScene' = grView.grScene
         self.draggedNode: Node | None = None
         self.hoveredList: List[Union['QDMGraphicsEdge',
                                      'QGraphicsItem', 'QGraphicsView', 'Socket', 'Node']] = []
 
-    def enterState(self, node: 'Node'):
+    def enterState(self, node: 'Node') -> None:
         """
         Initialize when we enter the state
 
@@ -38,7 +38,7 @@ class EdgeIntersect:
         self.hoveredList = []
         self.draggedNode = node
 
-    def leaveState(self, scene_pos_x: float, scene_pos_y: float):
+    def leaveState(self, scene_pos_x: float, scene_pos_y: float) -> None:
         """
         Deinit when we leave this state
 
@@ -55,7 +55,7 @@ class EdgeIntersect:
         self.draggedNode = None
         self.hoveredList = []
 
-    def dropNode(self, node: "Node", scene_pos_x: float, scene_pos_y: float):
+    def dropNode(self, node: "Node", scene_pos_x: float, scene_pos_y: float) -> None:
         """
         Code handling the dropping of a node on an existing edge.
 
@@ -119,7 +119,7 @@ class EdgeIntersect:
         h = node.grNode.height
         return QRectF(x, y, w, h)
 
-    def update(self, scene_pos_x: float, scene_pos_y: float):
+    def update(self, scene_pos_x: float, scene_pos_y: float) -> None:
         """
         Updating during mouse move when grView is in this state
 

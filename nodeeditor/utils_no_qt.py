@@ -2,7 +2,7 @@ import traceback
 from pprint import PrettyPrinter
 
 
-def dumpException(e=None):
+def dumpException(e=None) -> None:
     """
     Prints out an Exception message with a traceback to the console
 

@@ -25,7 +25,7 @@ class SceneClipboard():
     Class contains all the code for serialization/deserialization from Clipboard
     """
 
-    def __init__(self, scene: 'Scene'):
+    def __init__(self, scene: 'Scene') -> None:
         """
         :param scene: Reference to the :class:`~nodeeditor.node_scene.Scene`
         :type scene: :class:`~nodeeditor.node_scene.Scene`

@@ -25,7 +25,7 @@ class SelectionDict(TypedDict):
 class SceneHistory():
     """Class contains all the code for undo/redo operations"""
 
-    def __init__(self, scene: 'Scene'):
+    def __init__(self, scene: 'Scene') -> None:
         """
         :param scene: Reference to the :class:`~nodeeditor.node_scene.Scene`
         :type scene: :class:`~nodeeditor.node_scene.Scene`
@@ -49,16 +49,16 @@ class SceneHistory():
         self._history_stored_listeners: List[Callable[[], None]] = []
         self._history_restored_listeners: List[Callable[[], None]] = []
 
-    def clear(self):
+    def clear(self) -> None:
         """Reset the history stack"""
         self.history_stack = []
         self.history_current_step = -1
 
-    def storeInitialHistoryStamp(self):
+    def storeInitialHistoryStamp(self) -> None:
         """Helper function usually used when new or open file requested"""
         self.storeHistory("Initial History Stamp")
 
-    def addHistoryModifiedListener(self, callback: Callable[[], None]):
+    def addHistoryModifiedListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `HistoryModified` event
 
@@ -66,7 +66,7 @@ class SceneHistory():
         """
         self._history_modified_listeners.append(callback)
 
-    def addHistoryStoredListener(self, callback: Callable[[], None]):
+    def addHistoryStoredListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `HistoryStored` event
 
@@ -74,7 +74,7 @@ class SceneHistory():
         """
         self._history_stored_listeners.append(callback)
 
-    def addHistoryRestoredListener(self, callback: Callable[[], None]):
+    def addHistoryRestoredListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `HistoryRestored` event
 
@@ -82,7 +82,7 @@ class SceneHistory():
         """
         self._history_restored_listeners.append(callback)
 
-    def removeHistoryStoredListener(self, callback: Callable[[], None]):
+    def removeHistoryStoredListener(self, callback: Callable[[], None]) -> None:
         """
         Remove registered callback for `HistoryStored` event
 
@@ -91,7 +91,7 @@ class SceneHistory():
         if callback in self._history_stored_listeners:
             self._history_stored_listeners.remove(callback)
 
-    def removeHistoryRestoredListener(self, callback: Callable[[], None]):
+    def removeHistoryRestoredListener(self, callback: Callable[[], None]) -> None:
         """
         Remove registered callback for `HistoryRestored` event
 
@@ -115,7 +115,7 @@ class SceneHistory():
         """
         return self.history_current_step + 1 < len(self.history_stack)
 
-    def undo(self):
+    def undo(self) -> None:
         """Undo operation"""
         if DEBUG:
             print("UNDO")
@@ -126,7 +126,7 @@ class SceneHistory():
             self.history_current_step -= 1
             self.scene.has_been_modified = True
 
-    def redo(self):
+    def redo(self) -> None:
         """Redo operation"""
         if DEBUG:
             print("REDO")
@@ -136,7 +136,7 @@ class SceneHistory():
             self.restoreHistory()
             self.scene.has_been_modified = True
 
-    def restoreHistory(self):
+    def restoreHistory(self) -> None:
         """
         Restore `History Stamp` from `History stack`.
 
@@ -166,7 +166,7 @@ class SceneHistory():
         for callback in self._history_restored_listeners:
             callback()
 
-    def storeHistory(self, desc: str, setModified: bool = False, data: dict = None, callback: 'function' = None):
+    def storeHistory(self, desc: str, setModified: bool = False, data: dict = None, callback: 'function' = None) -> None:
         """
         Store History Stamp into History Stack
 
@@ -251,7 +251,7 @@ class SceneHistory():
 
         return history_stamp
 
-    def restoreHistoryStamp(self, history_stamp: dict):
+    def restoreHistoryStamp(self, history_stamp: dict) -> None:
         """
         Restore History Stamp to current `Scene` with selection of items included
 

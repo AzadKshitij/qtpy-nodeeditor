@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 class QDMGraphicsNode(QGraphicsItem):
     """Class describing Graphics representation of :class:`~nodeeditor.node_node.Node`"""
 
-    def __init__(self, node: 'Node', parent: QGraphicsItem = None):
+    def __init__(self, node: 'Node', parent: QGraphicsItem = None) -> None:
         """
         :param node: reference to :class:`~nodeeditor.node_node.Node`
         :type node: :class:`~nodeeditor.node_node.Node`
@@ -58,11 +58,11 @@ class QDMGraphicsNode(QGraphicsItem):
         return self._title
 
     @title.setter
-    def title(self, value):
+    def title(self, value) -> None:
         self._title = value
         self.title_item.setPlainText(self._title)
 
-    def initUI(self):
+    def initUI(self) -> None:
         """Set up this ``QGraphicsItem``"""
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
@@ -74,7 +74,7 @@ class QDMGraphicsNode(QGraphicsItem):
 
         self.initContent()
 
-    def initSizes(self):
+    def initSizes(self) -> None:
         """Set up internal attributes like `width`, `height`, etc."""
         self.width = 180
         self.height = 240
@@ -84,7 +84,7 @@ class QDMGraphicsNode(QGraphicsItem):
         self.title_horizontal_padding = 4.0
         self.title_vertical_padding = 4.0
 
-    def initAssets(self):
+    def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
         self._title_color = Qt.GlobalColor.white
         self._title_font = QFont("Ubuntu", 10)
@@ -103,11 +103,11 @@ class QDMGraphicsNode(QGraphicsItem):
         self._brush_title = QBrush(QColor("#FF313131"))
         self._brush_background = QBrush(QColor("#E3212121"))
 
-    def onSelected(self):
+    def onSelected(self) -> None:
         """Our event handling when the node was selected"""
         self.node.scene.grScene.itemSelected.emit()
 
-    def doSelect(self, new_state=True):
+    def doSelect(self, new_state: bool = True) -> None:
         """Safe version of selecting the `Graphics Node`. Takes care about the selection state flag used internally
 
         :param new_state: ``True`` to select, ``False`` to deselect
@@ -118,17 +118,18 @@ class QDMGraphicsNode(QGraphicsItem):
         if new_state:
             self.onSelected()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event) -> None:
         """Overridden event to detect that we moved with this `Node`"""
         super().mouseMoveEvent(event)
-
+        if self.scene() is None:
+            return
         # optimize me! just update the selected nodes
         for node in self.scene().scene.nodes:
             if node.grNode.isSelected():
                 node.updateConnectedEdges()
         self._was_moved = True
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
         """Overriden event to handle when we moved, selected or deselected this `Node`"""
         super().mouseReleaseEvent(event)
 
@@ -153,7 +154,7 @@ class QDMGraphicsNode(QGraphicsItem):
             self._last_selected_state = self.isSelected()
             self.onSelected()
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event) -> None:
         """Overriden event for doubleclick. Resend to `Node::onDoubleClicked`"""
         self.node.onDoubleClicked(event)
 
@@ -176,7 +177,7 @@ class QDMGraphicsNode(QGraphicsItem):
             self.height
         ).normalized()
 
-    def initTitle(self):
+    def initTitle(self) -> None:
         """Set up the title Graphics representation: font, color, position, etc."""
         self.title_item = QGraphicsTextItem(self)
         self.title = self.node.title
@@ -192,7 +193,7 @@ class QDMGraphicsNode(QGraphicsItem):
 
         self.title_item.setPos(horizontal_center, vertical_center)
 
-    def initContent(self):
+    def initContent(self) -> None:
         """Set up the `grContent` - ``QGraphicsProxyWidget`` to have a container for `Graphics Content`"""
         if self.content is not None:
             self.content.setGeometry(self.edge_padding, self.title_height + self.edge_padding,
@@ -203,7 +204,7 @@ class QDMGraphicsNode(QGraphicsItem):
         self.grContent.node = self.node
         self.grContent.setParentItem(self)
 
-    def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
+    def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting the rounded rectanglar `Node`"""
         # title
         path_title = QPainterPath()

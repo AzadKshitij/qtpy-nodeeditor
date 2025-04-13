@@ -35,7 +35,7 @@ class Socket(Serializable):
     """Class representing Socket."""
 
     def __init__(self, node: 'Node', index: int = 0, position: int = LEFT_TOP, socket_type: int = 1, multi_edges: bool = True,
-                 count_on_this_node_side: int = 1, is_input: bool = False):
+                 count_on_this_node_side: int = 1, is_input: bool = False) -> None:
         """
         :param node: reference to the :class:`~nodeeditor.node_node.Node` containing this `Socket`
         :type node: :class:`~nodeeditor.node_node.Node`
@@ -84,13 +84,13 @@ class Socket(Serializable):
 
         self.edges: List['Edge'] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<Socket #%d %s %s..%s>" % (
             self.index, "ME" if self.is_multi_edges else "SE", hex(id(self))[
                 2:5], hex(id(self))[-3:]
         )
 
-    def delete(self):
+    def delete(self) -> None:
         """Delete this `Socket` from graphics scene for sure"""
         self.grSocket.setParentItem(None)
         self.node.scene.grScene.removeItem(self.grSocket)
@@ -111,7 +111,7 @@ class Socket(Serializable):
             return True
         return False
 
-    def setSocketPosition(self):
+    def setSocketPosition(self) -> None:
         """Helper function to set `Graphics Socket` position. Exact socket position is calculated
         inside :class:`~nodeeditor.node_node.Node`."""
         self.grSocket.setPos(*self.node.getSocketPosition(self.index,
@@ -151,7 +151,7 @@ class Socket(Serializable):
         """
         return edge in self.edges
 
-    def addEdge(self, edge: 'Edge'):
+    def addEdge(self, edge: 'Edge') -> None:
         """
         Append an Edge to the list of connected Edges
 
@@ -160,7 +160,7 @@ class Socket(Serializable):
         """
         self.edges.append(edge)
 
-    def removeEdge(self, edge: 'Edge'):
+    def removeEdge(self, edge: 'Edge') -> None:
         """
         Disconnect passed :class:`~nodeeditor.node_edge.Edge` from this `Socket`
         :param edge: :class:`~nodeeditor.node_edge.Edge` to disconnect
@@ -173,7 +173,7 @@ class Socket(Serializable):
                 print("!W:", "Socket::removeEdge", "wanna remove edge", edge,
                       "from self.edges but it's not in the list!")
 
-    def removeAllEdges(self, silent: bool = False):
+    def removeAllEdges(self, silent: bool = False) -> None:
         """Disconnect all `Edges` from this `Socket`"""
         while self.edges:
             edge = self.edges.pop(0)

@@ -17,7 +17,7 @@ DEBUG_REROUTING = True
 
 
 class EdgeRerouting:
-    def __init__(self, grView: 'QDMGraphicsView'):
+    def __init__(self, grView: 'QDMGraphicsView') -> None:
         self.grView = grView
         # store where we started re-routing the edges
         self.start_socket: Optional['Socket'] = None
@@ -27,7 +27,7 @@ class EdgeRerouting:
         # flag for detecting if we already clicked with the rerouting LMB release
         self.first_mb_release: bool = False
 
-    def print(self, *args):
+    def print(self, *args) -> None:
         """Helper function to better control debug printing to console for this feature"""
         if DEBUG_REROUTING:
             print("REROUTING:", *args)
@@ -48,7 +48,7 @@ class EdgeRerouting:
         # return edges connected to the socket
         return self.start_socket.edges.copy()
 
-    def setAffectedEdgesVisible(self, visibility: bool = True):
+    def setAffectedEdgesVisible(self, visibility: bool = True) -> None:
         """
         Show/Hide all edges connected to the `self.start_socket` where we started the re-routing
 
@@ -61,7 +61,7 @@ class EdgeRerouting:
             else:
                 edge.grEdge.hide()
 
-    def resetRerouting(self):
+    def resetRerouting(self) -> None:
         """Reset to default state. Init this feature internal variables"""
         self.is_rerouting = False
         self.start_socket = None
@@ -69,7 +69,7 @@ class EdgeRerouting:
         # holding all rerouting edges should be empty at this point...
         # self.rerouting_edges = []
 
-    def clearReroutingEdges(self):
+    def clearReroutingEdges(self) -> None:
         """Remove the helping dashed edges from the :class:`~nodeeditor.node_scene.Scene`"""
         self.print("clean called")
         while self.rerouting_edges != []:
@@ -77,7 +77,7 @@ class EdgeRerouting:
             self.print("\twant to clean:", edge)
             edge.remove()
 
-    def updateScenePos(self, x: float, y: float):
+    def updateScenePos(self, x: float, y: float) -> None:
         """
         Update position of all the rerouting edges (dashed ones). Called from mouseMove event to update to new mouse position
 
@@ -92,7 +92,7 @@ class EdgeRerouting:
                     edge.grEdge.setDestination(x, y)
                     edge.grEdge.update()
 
-    def startRerouting(self, socket: 'Socket'):
+    def startRerouting(self, socket: 'Socket') -> None:
         """
         Method to start the re-routing. Called from the grView's state machine.
 
@@ -121,7 +121,7 @@ class EdgeRerouting:
             new_edge.grEdge.update()
             self.rerouting_edges.append(new_edge)
 
-    def stopRerouting(self, target: 'Socket' = None):
+    def stopRerouting(self, target: 'Socket' = None) -> None:
         """
         Method for stopping the re-routing
 

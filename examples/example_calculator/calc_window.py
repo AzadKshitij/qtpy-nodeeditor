@@ -4,6 +4,7 @@ from qtpy.QtGui import QIcon, QKeySequence
 from qtpy.QtWidgets import QMdiArea, QWidget, QDockWidget, QAction, QMessageBox, QFileDialog
 from qtpy.QtCore import Qt, QSignalMapper
 
+from nodeeditor.node_editor_widget import NodeEditorWidget
 from nodeeditor.utils import loadStylesheets
 from nodeeditor.node_editor_window import NodeEditorWindow
 from examples.example_calculator.calc_sub_window import CalculatorSubWindow
@@ -34,6 +35,7 @@ class CalculatorWindow(NodeEditorWindow):
     def initUI(self):
         self.name_company = 'Blenderfreak'
         self.name_product = 'Calculator NodeEditor'
+        self.windowMapper = QSignalMapper(self)
 
         self.stylesheet_filename = os.path.join(
             os.path.dirname(__file__), "qss/nodeeditor.qss")
@@ -153,6 +155,12 @@ class CalculatorWindow(NodeEditorWindow):
     def createMenus(self):
         super().createMenus()
 
+        self.viewMenu = self.menuBar().addMenu("&View")
+        self.updateViewMenu()
+        self.viewMenu.aboutToShow.connect(self.updateViewMenu)
+
+        self.menuBar().addSeparator()
+
         self.windowMenu = self.menuBar().addMenu("&Window")
         self.updateWindowMenu()
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
@@ -198,6 +206,32 @@ class CalculatorWindow(NodeEditorWindow):
             self.actRedo.setEnabled(hasMdiChild and active.canRedo())
         except Exception as e:
             dumpException(e)
+
+    def updateViewMenu(self) -> None:
+        self.viewMenu.clear()
+
+        # option to show grids.
+        gridAct = self.viewMenu.addAction("Show &Grid")
+        gridAct.setCheckable(True)
+
+        active: 'NodeEditorWidget' = self.getCurrentNodeEditorWidget()
+        if active:
+            gridAct.setChecked(active.scene.grScene.showGrid)
+            gridAct.triggered.connect(self.onShowGrid)
+        # gridAct.setChecked(self.scene.grScene.showGrid)
+        # gridAct.triggered.connect(self.onShowGrid)
+
+    def onShowGrid(self, checked: bool) -> None:
+        """
+        Toggle the grid visibility for all subwindows
+
+        Args:
+            checked: True to show grid, False to hide
+        """
+        # Apply to all subwindows
+        for window in self.mdiArea.subWindowList():
+            if window and window.widget():
+                window.widget().scene.grScene.showGrid = checked
 
     def updateWindowMenu(self):
         self.windowMenu.clear()

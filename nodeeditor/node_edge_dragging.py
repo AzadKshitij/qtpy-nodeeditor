@@ -18,7 +18,7 @@ DEBUG = False
 
 
 class EdgeDragging:
-    def __init__(self, grView: 'QDMGraphicsView'):
+    def __init__(self, grView: 'QDMGraphicsView') -> None:
         self.grView = grView
         # initializing these variable to know we're using them in this class...
         self.drag_edge: Edge | None = None
@@ -28,7 +28,7 @@ class EdgeDragging:
         """Helper function to get the Edge class. Using what Scene class provides"""
         return self.grView.grScene.scene.getEdgeClass()
 
-    def updateDestination(self, x: float, y: float):
+    def updateDestination(self, x: float, y: float) -> None:
         """
         Update the end point of our dragging edge
 
@@ -47,7 +47,7 @@ class EdgeDragging:
         self.drag_edge.grEdge.setDestination(x, y)
         self.drag_edge.grEdge.update()
 
-    def edgeDragStart(self, item: QDMGraphicsSocket):
+    def edgeDragStart(self, item: QDMGraphicsSocket) -> None:
         """Code handling the start of a dragging an `Edge` operation"""
         try:
             if DEBUG:

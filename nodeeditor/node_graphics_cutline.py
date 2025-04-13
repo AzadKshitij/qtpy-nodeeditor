@@ -10,7 +10,7 @@ from qtpy.QtCore import Qt, QRectF, QPointF
 class QDMCutLine(QGraphicsItem):
     """Class representing Cutting Line used for cutting multiple `Edges` with one stroke"""
 
-    def __init__(self, parent: QGraphicsItem = None):
+    def __init__(self, parent: QGraphicsItem = None) -> None:
         """
         :param parent: parent widget
         :type parent: ``QWidget``
@@ -47,10 +47,10 @@ class QDMCutLine(QGraphicsItem):
 
         return path
 
-    def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
+    def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Paint the Cutting Line"""
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(Qt.NoBrush)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(self._pen)
 
         poly = QPolygonF(self.line_points)

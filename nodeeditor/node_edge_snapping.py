@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class EdgeSnapping():
-    def __init__(self, grView: 'QDMGraphicsView', snapping_radius: float = 24):
+    def __init__(self, grView: 'QDMGraphicsView', snapping_radius: float = 24) -> None:
         self.grView = grView
         self.grScene = self.grView.grScene
         self.edge_snapping_radius = snapping_radius

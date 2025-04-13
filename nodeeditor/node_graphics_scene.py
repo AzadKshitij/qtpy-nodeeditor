@@ -28,7 +28,7 @@ class QDMGraphicsScene(QGraphicsScene):
     #: pyqtSignal emitted when items are deselected in the `Scene`
     itemsDeselected = Signal()
 
-    def __init__(self, scene: 'Scene', parent: QWidget = None):
+    def __init__(self, scene: 'Scene', parent: QWidget = None) -> None:
         """
         :param scene: reference to the :class:`~nodeeditor.node_scene.Scene`
         :type scene: :class:`~nodeeditor.node_scene.Scene`
@@ -53,11 +53,12 @@ class QDMGraphicsScene(QGraphicsScene):
         # settings
         self.gridSize = 20
         self.gridSquares = 5
+        self._show_grid = True
 
         self.initAssets()
         self.setBackgroundBrush(self._color_background)
 
-    def initAssets(self):
+    def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
         self._color_background = QColor("#393939")
         self._color_light = QColor("#2f2f2f")
@@ -74,17 +75,41 @@ class QDMGraphicsScene(QGraphicsScene):
 
     # the drag events won't be allowed until dragMoveEvent is overriden
 
-    def dragMoveEvent(self, event):
+    @property
+    def showGrid(self) -> bool:
+        """
+        Get grid visibility state
+
+        Returns:
+            bool: True if grid is visible, False otherwise
+        """
+        return self._show_grid
+
+    @showGrid.setter
+    def showGrid(self, value: bool) -> None:
+        """
+        Set grid visibility state and update the scene
+
+        Args:
+            value: True to show grid, False to hide
+        """
+        self._show_grid = value
+        self.update()  # Refresh the scene when grid visibility changes
+
+    def dragMoveEvent(self, event) -> None:
         """Overriden Qt's dragMoveEvent to enable Qt's Drag Events"""
         pass
 
-    def setGrScene(self, width: int, height: int):
+    def setGrScene(self, width: int, height: int) -> None:
         """Set `width` and `height` of the `Graphics Scene`"""
         self.setSceneRect(-width // 2, -height // 2, width, height)
 
-    def drawBackground(self, painter: Optional[QPainter], rect: QRectF):
+    def drawBackground(self, painter: Optional[QPainter], rect: QRectF) -> None:
         """Draw background scene grid"""
         super().drawBackground(painter, rect)
+
+        if self.showGrid is False:
+            return
 
         # here we create our grid
         left = int(math.floor(rect.left()))

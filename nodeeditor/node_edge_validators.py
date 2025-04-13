@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 DEBUG = False
 
 
-def print_error(*args):
+def print_error(*args) -> None:
     """Helper method which prints to console if `DEBUG` is set to `True`"""
     if DEBUG:
         print("Edge Validation Error:", *args)

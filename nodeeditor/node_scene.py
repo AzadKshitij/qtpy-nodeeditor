@@ -92,7 +92,7 @@ class Scene(Serializable):
         return self._has_been_modified
 
     @has_been_modified.setter
-    def has_been_modified(self, value):
+    def has_been_modified(self, value) -> None:
         if not self._has_been_modified and value:
             # set it now, because we will be reading it soon
             self._has_been_modified = value
@@ -103,7 +103,7 @@ class Scene(Serializable):
 
         self._has_been_modified = value
 
-    def initUI(self):
+    def initUI(self) -> None:
         """Set up Graphics Scene Instance"""
         self.grScene = QDMGraphicsScene(self)
         self.grScene.setGrScene(self.scene_width, self.scene_height)
@@ -121,11 +121,11 @@ class Scene(Serializable):
                 return node
         return None
 
-    def setSilentSelectionEvents(self, value: bool = True):
+    def setSilentSelectionEvents(self, value: bool = True) -> None:
         """Calling this can suppress onItemSelected events to be triggered. This is useful when working with clipboard"""
         self._silent_selection_events = value
 
-    def onItemSelected(self, silent: bool = False):
+    def onItemSelected(self, silent: bool = False) -> None:
         """
         Handle Item selection and trigger event `Item Selected`
 
@@ -146,7 +146,7 @@ class Scene(Serializable):
                 # and store history as a last step always
                 self.history.storeHistory("Selection Changed")
 
-    def onItemsDeselected(self, silent: bool = False):
+    def onItemsDeselected(self, silent: bool = False) -> None:
         """
         Handle Items deselection and trigger event `Items Deselected`
 
@@ -199,7 +199,7 @@ class Scene(Serializable):
             self.onItemsDeselected()
 
     # our helper listener functions
-    def addHasBeenModifiedListener(self, callback: Callable[[], None]):
+    def addHasBeenModifiedListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `Has Been Modified` event
 
@@ -207,7 +207,7 @@ class Scene(Serializable):
         """
         self._has_been_modified_listeners.append(callback)
 
-    def addItemSelectedListener(self, callback: Callable[[], None]):
+    def addItemSelectedListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `Item Selected` event
 
@@ -215,7 +215,7 @@ class Scene(Serializable):
         """
         self._item_selected_listeners.append(callback)
 
-    def addItemsDeselectedListener(self, callback: Callable[[], None]):
+    def addItemsDeselectedListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `Items Deselected` event
 
@@ -223,7 +223,7 @@ class Scene(Serializable):
         """
         self._items_deselected_listeners.append(callback)
 
-    def addDragEnterListener(self, callback: Callable[[], None]):
+    def addDragEnterListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `Drag Enter` event
 
@@ -231,7 +231,7 @@ class Scene(Serializable):
         """
         self.getView().addDragEnterListener(callback)
 
-    def addDropListener(self, callback: Callable[[], None]):
+    def addDropListener(self, callback: Callable[[], None]) -> None:
         """
         Register callback for `Drop` event
 
@@ -240,7 +240,7 @@ class Scene(Serializable):
         self.getView().addDropListener(callback)
 
     # custom flag to detect node or edge has been selected....
-    def resetLastSelectedStates(self):
+    def resetLastSelectedStates(self) -> None:
         """Resets internal `selected flags` in all `Nodes` and `Edges` in the `Scene`"""
         for node in self.nodes:
             node.grNode._last_selected_state = False
@@ -265,7 +265,7 @@ class Scene(Serializable):
         """
         return self.getView().itemAt(pos)
 
-    def addNode(self, node: Node):
+    def addNode(self, node: Node) -> None:
         """Add :class:`~nodeeditor.node_node.Node` to this `Scene`
 
         :param node: :class:`~nodeeditor.node_node.Node` to be added to this `Scene`
@@ -273,7 +273,7 @@ class Scene(Serializable):
         """
         self.nodes.append(node)
 
-    def addEdge(self, edge: Edge):
+    def addEdge(self, edge: Edge) -> None:
         """Add :class:`~nodeeditor.node_edge.Edge` to this `Scene`
 
         :param edge: :class:`~nodeeditor.node_edge.Edge` to be added to this `Scene`
@@ -281,7 +281,7 @@ class Scene(Serializable):
         """
         self.edges.append(edge)
 
-    def removeNode(self, node: Node):
+    def removeNode(self, node: Node) -> None:
         """Remove :class:`~nodeeditor.node_node.Node` from this `Scene`
 
         :param node: :class:`~nodeeditor.node_node.Node` to be removed from this `Scene`
@@ -294,7 +294,7 @@ class Scene(Serializable):
                 print("!W:", "Scene::removeNode", "wanna remove nodeeditor", node,
                       "from self.nodes but it's not in the list!")
 
-    def removeEdge(self, edge: Edge):
+    def removeEdge(self, edge: Edge) -> None:
         """Remove :class:`~nodeeditor.node_edge.Edge` from this `Scene`
 
         :param edge: :class:`~nodeeditor.node_edge.Edge` to be remove from this `Scene`
@@ -307,14 +307,14 @@ class Scene(Serializable):
                 print("!W:", "Scene::removeEdge", "wanna remove edge", edge,
                       "from self.edges but it's not in the list!")
 
-    def clear(self):
+    def clear(self) -> None:
         """Remove all `Nodes` from this `Scene`. This causes also to remove all `Edges`"""
         while len(self.nodes) > 0:
             self.nodes[0].remove()
 
         self.has_been_modified = False
 
-    def saveToFile(self, filename: str):
+    def saveToFile(self, filename: str) -> None:
         """
         Save this `Scene` to the file on disk.
 

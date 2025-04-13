@@ -35,7 +35,7 @@ SOCKET_COLORS = [
 class QDMGraphicsSocket(QGraphicsItem):
     """Class representing Graphic `Socket` in ``QGraphicsScene``"""
 
-    def __init__(self, socket: 'Socket'):
+    def __init__(self, socket: 'Socket') -> None:
         """
         :param socket: reference to :class:`~nodeeditor.node_socket.Socket`
         :type socket: :class:`~nodeeditor.node_socket.Socket`
@@ -62,14 +62,14 @@ class QDMGraphicsSocket(QGraphicsItem):
             return QColor(key)
         return Qt.GlobalColor.transparent
 
-    def changeSocketType(self):
+    def changeSocketType(self) -> None:
         """Change the Socket Type"""
         self._color_background = self.getSocketColor(self.socket_type)
         self._brush = QBrush(self._color_background)
         # print("Socket changed to:", self._color_background.getRgbF())
         self.update()
 
-    def initAssets(self):
+    def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
 
         # determine socket color
@@ -83,7 +83,7 @@ class QDMGraphicsSocket(QGraphicsItem):
         self._pen_highlight.setWidthF(2.0)
         self._brush = QBrush(self._color_background)
 
-    def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
+    def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting a circle"""
         painter.setBrush(self._brush)
         painter.setPen(

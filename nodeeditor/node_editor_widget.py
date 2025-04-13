@@ -39,7 +39,7 @@ class NodeEditorWidget(QWidget):
         """
         super().__init__(parent)
 
-        self.filename = ""
+        self.filename: Optional[str] = None
 
         self.initUI()
 
@@ -111,6 +111,9 @@ class NodeEditorWidget(QWidget):
         :return: just a base name of the file or `'New Graph'`
         :rtype: ``str``
         """
+        if self.filename is None:
+            return "New Graph"
+
         name = os.path.basename(
             self.filename) if self.isFilenameSet() else "New Graph"
         return name + ("*" if self.isModified() else "")
@@ -118,7 +121,7 @@ class NodeEditorWidget(QWidget):
     def fileNew(self):
         """Empty the scene (create new file)"""
         self.scene.clear()
-        self.filename = ""
+        self.filename = None
         self.scene.history.clear()
         self.scene.history.storeInitialHistoryStamp()
 
@@ -149,18 +152,30 @@ class NodeEditorWidget(QWidget):
         finally:
             QApplication.restoreOverrideCursor()
 
-    def fileSave(self, filename: str = None):
+    def fileSave(self, filename: str = None) -> bool:
         """Save serialized graph to JSON file. When called with an empty parameter, we won't store/remember the filename.
 
         :param filename: file to store the graph
-        :type filename: ``str``
+        :type filename: ``str``     
+        :return: ``True`` if the file was saved successfully, ``False`` otherwise
         """
-        if filename is not None:
+        # Check if we have a valid filename
+        if not self.filename and not filename:
+            return False
+
+        # Update filename if provided
+        if filename:
             self.filename = filename
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        self.scene.saveToFile(self.filename)
-        QApplication.restoreOverrideCursor()
-        return True
+
+        try:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            self.scene.saveToFile(self.filename)
+            return True
+        except Exception as e:
+            dumpException(e)
+            return False
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def addNodes(self):
         """Testing method to create 3 `Nodes` with 3 `Edges` connecting them"""
