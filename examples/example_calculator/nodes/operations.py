@@ -49,7 +49,8 @@ class CalcNode_Div(CalcNode):
 
     def __init__(self, scene):
         # Two inputs, two outputs (quotient and remainder)
-        super().__init__(scene, inputs=[2, 2], outputs=[1, 1])
+        super().__init__(scene, inputs=[2, 2], outputs=[1, 1],
+                         input_text=["a", "b"], output_text=["q", "r"])
 
     def evalOperation(self, input1, input2):
         if input1 is None or input2 is None:

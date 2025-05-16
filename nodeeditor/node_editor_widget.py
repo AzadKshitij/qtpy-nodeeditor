@@ -114,8 +114,13 @@ class NodeEditorWidget(QWidget):
         if self.filename is None:
             return "New Graph"
 
+        print("filename:", self.filename)
+
         name = os.path.basename(
             self.filename) if self.isFilenameSet() else "New Graph"
+
+        print("name:", name)
+
         return name + ("*" if self.isModified() else "")
 
     def fileNew(self):

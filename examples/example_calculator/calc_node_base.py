@@ -73,8 +73,9 @@ class CalcNode(Node):
     GraphicsNode_class = CalcGraphicsNode
     NodeContent_class = CalcContent
 
-    def __init__(self, scene, inputs=[2, 2], outputs=[1]):
-        super().__init__(scene, self.__class__.op_title, inputs, outputs)
+    def __init__(self, scene, inputs=[2, 2], outputs=[1], input_text=[], output_text=[]):
+        super().__init__(scene, self.__class__.op_title, inputs,
+                         outputs, input_text=input_text, output_text=output_text)
 
         self.values = [None] * len(outputs)
 

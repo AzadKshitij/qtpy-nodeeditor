@@ -36,7 +36,7 @@ class CalcNode_Input(CalcNode):
     content_label_objname = "calc_node_input"
 
     def __init__(self, scene):
-        super().__init__(scene, inputs=[], outputs=[3])
+        super().__init__(scene, inputs=[], outputs=[3], output_text=["o"])
         self.eval()
 
     def initInnerClasses(self):

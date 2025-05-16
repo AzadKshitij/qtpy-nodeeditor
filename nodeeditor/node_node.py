@@ -29,7 +29,7 @@ class Node(Serializable):
     NodeContent_class = QDMNodeContentWidget
     Socket_class = Socket
 
-    def __init__(self, scene: 'Scene', title: str = "Undefined Node", inputs: list = [], outputs: list = []) -> None:
+    def __init__(self, scene: 'Scene', title: str = "Undefined Node", inputs: list = [], outputs: list = [], input_text: list = [], output_text: list = []) -> None:
         """
 
         :param scene: reference to the :class:`~nodeeditor.node_scene.Scene`
@@ -67,7 +67,7 @@ class Node(Serializable):
         # create socket for inputs and outputs
         self.inputs: List['Socket'] = []
         self.outputs: List['Socket'] = []
-        self.initSockets(inputs, outputs)
+        self.initSockets(inputs, outputs, input_text, output_text)
 
         # dirty and evaluation
         self._is_dirty = False
@@ -138,7 +138,7 @@ class Node(Serializable):
     def initSettings(self) -> None:
         """Initialize properties and socket information"""
         self.socket_spacing = 22
-
+        # Todo: set input_multi_edged option.
         self.input_socket_position = LEFT_BOTTOM
         self.output_socket_position = RIGHT_TOP
         self.input_multi_edged = False
@@ -152,7 +152,9 @@ class Node(Serializable):
             RIGHT_TOP: 1,
         }
 
-    def initSockets(self, inputs: list, outputs: list, reset: bool = True) -> None:
+    def initSockets(self, inputs: list, outputs: list,
+                    input_text: list = [], output_text: list = [],
+                    reset: bool = True) -> None:
         """
         Create sockets for inputs and outputs
 
@@ -160,38 +162,56 @@ class Node(Serializable):
         :type inputs: ``list``
         :param outputs: list of Socket Types (int)
         :type outputs: ``list``
+        :param input_text: list of Socket Types (int)
+        :type input_text: ``list``
+        :param output_text: list of Socket Types (int)
+        :type output_text: ``list``
         :param reset: if ``True`` destroys and removes old `Sockets`
         :type reset: ``bool``
         """
+
+        # Initialize empty lists if None provided
+        input_text = input_text or []
+        output_text = output_text or []
 
         if reset:
             # clear old sockets
             if hasattr(self, 'inputs') and hasattr(self, 'outputs'):
                 # remove grSockets from scene
-                for socket in (self.inputs+self.outputs):
+                for socket in (self.inputs + self.outputs):
                     self.scene.grScene.removeItem(socket.grSocket)
                 self.inputs = []
                 self.outputs = []
 
         # create new sockets
-        counter = 0
-        for item in inputs:
+        for i, item in enumerate(inputs):
+            # Get text if available, otherwise empty string
+            text = input_text[i] if i < len(input_text) else ""
             socket = self.__class__.Socket_class(
-                node=self, index=counter, position=self.input_socket_position,
-                socket_type=item, multi_edges=self.input_multi_edged,
-                count_on_this_node_side=len(inputs), is_input=True
+                node=self,
+                index=i,
+                position=self.input_socket_position,
+                socket_type=item,
+                multi_edges=self.input_multi_edged,
+                count_on_this_node_side=len(inputs),
+                is_input=True
             )
-            counter += 1
+            socket.grSocket.setText(text)
             self.inputs.append(socket)
 
-        counter = 0
-        for item in outputs:
+        for i, item in enumerate(outputs):
+            # Get text if available, otherwise empty string
+            text = output_text[i] if i < len(output_text) else ""
             socket = self.__class__.Socket_class(
-                node=self, index=counter, position=self.output_socket_position,
-                socket_type=item, multi_edges=self.output_multi_edged,
-                count_on_this_node_side=len(outputs), is_input=False
+                node=self,
+                index=i,
+                position=self.output_socket_position,
+                socket_type=item,
+                multi_edges=self.output_multi_edged,
+                count_on_this_node_side=len(outputs),
+                is_input=False
             )
-            counter += 1
+            socket.grSocket.setText(text)
             self.outputs.append(socket)
 
     def onEdgeConnectionChanged(self, new_edge: 'Edge') -> None:
@@ -415,7 +435,7 @@ class Node(Serializable):
             other_node.markInvalid(new_value)
             other_node.markDescendantsInvalid(new_value)
 
-    def eval(self, index: int=0) -> int:
+    def eval(self, index: int = 0) -> int:
         """Evaluate this `Node`. This is supposed to be overridden. See :ref:`evaluation` for more"""
         self.markDirty(False)
         self.markInvalid(False)

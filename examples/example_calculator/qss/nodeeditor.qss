@@ -45,7 +45,7 @@ QDMNodeContentWidget QLineEdit#calc_node_input {
 }
 /* ------------- */
 QDMNodeIconContentWidget {
-  background: transparent;
+  background: "#ffffff";
 }
 QDMNodeIconContentWidget QFrame {
   background: transparent;
@@ -93,4 +93,11 @@ QDMNodeIconContentWidget QLineEdit#calc_node_input {
 
 QGraphicsView {
   selection-background-color: #fff;
+}
+
+
+QDMGraphicsScene {
+    qproperty-gridColorLight: #fefefe;
+    qproperty-gridColorDark: #f3f3f3;
+    qproperty-backgroundColor: #ffffff;
 }

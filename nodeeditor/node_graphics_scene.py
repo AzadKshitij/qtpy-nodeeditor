@@ -6,7 +6,7 @@ from array import array
 import math
 from qtpy import PYSIDE2
 from qtpy.QtWidgets import QGraphicsScene, QWidget
-from qtpy.QtCore import Signal, QRectF, QLine, Qt
+from qtpy.QtCore import Signal, QRectF, QLine, Qt, Property
 from qtpy.QtGui import QColor, QPen, QFont, QPainter
 from nodeeditor.utils import dumpException
 from nodeeditor.node_graphics_view import STATE_STRING, DEBUG_STATE
@@ -27,6 +27,10 @@ class QDMGraphicsScene(QGraphicsScene):
     itemSelected = Signal()
     #: pyqtSignal emitted when items are deselected in the `Scene`
     itemsDeselected = Signal()
+
+    gridColorLightChanged = Signal()
+    gridColorDarkChanged = Signal()
+    backgroundColorChanged = Signal()
 
     def __init__(self, scene: 'Scene', parent: QWidget = None) -> None:
         """
@@ -55,16 +59,56 @@ class QDMGraphicsScene(QGraphicsScene):
         self.gridSquares = 5
         self._show_grid = True
 
-        self.initAssets()
-        self.setBackgroundBrush(self._color_background)
-
-    def initAssets(self) -> None:
-        """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
         self._color_background = QColor("#393939")
         self._color_light = QColor("#2f2f2f")
         self._color_dark = QColor("#292929")
         self._color_state = QColor("#ccc")
 
+        self.initAssets()
+        self.setBackgroundBrush(self._color_background)
+
+    def getGridColorLight(self) -> QColor:
+        """Get the light grid color"""
+        print("🐍 File: nodeeditor/node_graphics_scene.py:71 | __init__ ~ getGridColorLight")
+        return self._color_light
+
+    def setGridColorLight(self, color: QColor) -> None:
+        """Set the light grid color"""
+        print("🐍 File: nodeeditor/node_graphics_scene.py:76 | getGridColorLight ~ setGridColorLight", color)
+        self._color_light = color
+        self._pen_light.setColor(color)
+        self.update()
+
+    def getGridColorDark(self) -> QColor:
+        """Get the dark grid color"""
+        return self._color_dark
+
+    def setGridColorDark(self, color: QColor) -> None:
+        """Set the dark grid color"""
+        self._color_dark = color
+        self._pen_dark.setColor(color)
+        self.update()
+
+    def getBackgroundColor(self) -> QColor:
+        """Get the background color"""
+        return self._color_background
+
+    def setBackgroundColor(self, color: QColor) -> None:
+        """Set the background color"""
+        self._color_background = color
+        self.setBackgroundBrush(color)
+
+    gridColorLight = Property(
+        QColor, fget=getGridColorLight, fset=setGridColorLight, notify=gridColorLightChanged)
+    gridColorDark = Property(
+        QColor, fget=getGridColorDark, fset=setGridColorDark, notify=gridColorDarkChanged)
+    backgroundColor = Property(
+        QColor, fget=getBackgroundColor, fset=setBackgroundColor, notify=backgroundColorChanged)
+
+    def initAssets(self) -> None:
+        """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
+
+        # Initialize pens and fonts
         self._pen_light = QPen(self._color_light)
         self._pen_light.setWidth(1)
         self._pen_dark = QPen(self._color_dark)
@@ -73,7 +117,7 @@ class QDMGraphicsScene(QGraphicsScene):
         self._pen_state = QPen(self._color_state)
         self._font_state = QFont("Ubuntu", 16)
 
-    # the drag events won't be allowed until dragMoveEvent is overriden
+    # the drag events won't be allowed until dragMoveEvent is overwritten
 
     @property
     def showGrid(self) -> bool:

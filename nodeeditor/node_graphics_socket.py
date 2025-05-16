@@ -3,7 +3,7 @@
 A module containing Graphics representation of a :class:`~nodeeditor.node_socket.Socket`
 """
 from qtpy.QtWidgets import QGraphicsItem
-from qtpy.QtGui import QColor, QBrush, QPen
+from qtpy.QtGui import QColor, QBrush, QPen, QFont
 from qtpy.QtCore import Qt, QRectF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
@@ -47,7 +47,9 @@ class QDMGraphicsSocket(QGraphicsItem):
         self.isHighlighted = False
 
         self.radius = 6
+        self._text = ""
         self.outline_width = 1
+        self._font: Optional[QFont] = None  # Will be initialized in initAssets
         self.initAssets()
 
     @property
@@ -83,6 +85,16 @@ class QDMGraphicsSocket(QGraphicsItem):
         self._pen_highlight.setWidthF(2.0)
         self._brush = QBrush(self._color_background)
 
+        # Initialize font and text pen
+        self._font = QFont("Ubuntu", 7)
+        self._font.setBold(True)
+        self._pen_text = QPen(Qt.GlobalColor.black)
+
+    def setText(self, text: str) -> None:
+        """Set the text to display inside socket"""
+        self._text = text
+        self.update()
+
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting a circle"""
         painter.setBrush(self._brush)
@@ -90,6 +102,26 @@ class QDMGraphicsSocket(QGraphicsItem):
             self._pen if not self.isHighlighted else self._pen_highlight)
         painter.drawEllipse(-self.radius, -self.radius,
                             2 * self.radius, 2 * self.radius)
+
+        # Draw text if present
+        if self._text:
+            # painter.setFont(self._font)
+            painter.setFont(self._font)
+            painter.setPen(self._pen_text)
+
+            # Create text rect slightly smaller than socket for padding
+            text_rect = QRectF(
+                -self.radius + 1,  # Add 1px padding
+                -self.radius + 1,  # Add 1px padding
+                2 * (self.radius - 1),  # Remove 2px for padding
+                2 * (self.radius - 1)   # Remove 2px for padding
+            )
+            # Draw centered text
+            painter.drawText(
+                text_rect,
+                Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
+                self._text
+            )
 
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle"""

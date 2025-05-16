@@ -64,6 +64,8 @@ class Scene(Serializable):
 
         self._has_been_modified: bool = False
         self._last_selected_items: Optional[List[QGraphicsItem]] = None
+        self._last_selected_socket: Optional[Socket] = None
+        self._last_selected_edges: Optional[List[Edge]] = None
 
         # initialize all listeners
         self._has_been_modified_listeners: List[Callable[[], None]] = []
