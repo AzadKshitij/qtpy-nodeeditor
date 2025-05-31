@@ -180,6 +180,11 @@ class QDMGraphicsView(QGraphicsView):
         """Dispatch Qt's mouseRelease event to corresponding function below"""
         if event is None:
             return
+        if self.mode == MODE_EDGE_DRAG:
+            item = self.getItemAtClick(event)
+            if item is None:  # Clicked on empty space
+                self.dragging.cancelDragEdge()
+                return
         if event.button() == Qt.MouseButton.MiddleButton:
             self.middleMouseButtonRelease(event)
         elif event.button() == Qt.MouseButton.LeftButton:
@@ -361,6 +366,16 @@ class QDMGraphicsView(QGraphicsView):
             item = self.snapping.getSnappedSocketItem(event)
 
         if isinstance(item, QDMGraphicsSocket):
+
+            if isALTPressed(event) and self.mode == MODE_NOOP:
+                # ALT + LMB on a socket to see the data processed by that node.
+                socket = item.socket
+                node = socket.node
+                # Emit signal with both socket and node
+                self.grScene.socketClicked.emit(socket, node)
+
+                return
+
             if self.mode == MODE_NOOP and isCTRLPressed(event):
                 socket = item.socket
                 if socket.hasAnyEdge():
@@ -543,30 +558,12 @@ class QDMGraphicsView(QGraphicsView):
         :type event: ``QKeyEvent``
         :return:
         """
-        # Use this code below if you wanna have shortcuts in this widget.
-        # You want to use this, when you don't have a window which handles these shortcuts for you
 
-        # if event.key() == Qt.Key_Delete:
-        #     if not self.editingFlag:
-        #         self.deleteSelected()
-        #     else:
-        #         super().keyPressEvent(event)
-        # elif event.key() == Qt.Key_S and event.modifiers() & Qt.ControlModifier:
-        #     self.grScene.scene.saveToFile("graph.json")
-        # elif event.key() == Qt.Key_L and event.modifiers() & Qt.ControlModifier:
-        #     self.grScene.scene.loadFromFile("graph.json")
-        # elif event.key() == Qt.Key_Z and isCTRLPressed(event) and not isSHIFTPressed(event):
-        #     self.grScene.scene.history.undo()
-        # elif event.key() == Qt.Key_Z and isCTRLPressed(event)  and isSHIFTPressed(event):
-        #     self.grScene.scene.history.redo()
-        # elif event.key() == Qt.Key_H:
-        #     print("HISTORY:     len(%d)" % len(self.grScene.scene.history.history_stack),
-        #           " -- current_step", self.grScene.scene.history.history_current_step)
-        #     ix = 0
-        #     for item in self.grScene.scene.history.history_stack:
-        #         print("#", ix, "--", item['desc'])
-        #         ix += 1
-        # else:
+        if event.key() == Qt.Key.Key_Escape:
+            if self.mode == MODE_EDGE_DRAG:
+                self.dragging.cancelDragEdge()
+                return
+
         super().keyPressEvent(event)
 
     def cutIntersectingEdges(self) -> None:

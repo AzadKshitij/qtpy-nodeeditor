@@ -45,7 +45,7 @@ QDMNodeContentWidget QLineEdit#calc_node_input {
 }
 /* ------------- */
 QDMNodeIconContentWidget {
-  background: "#ffffff";
+  background: transparent;
 }
 QDMNodeIconContentWidget QFrame {
   background: transparent;

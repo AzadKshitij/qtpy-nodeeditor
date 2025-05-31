@@ -82,6 +82,11 @@ class EdgeDragging:
         :type item: ``QGraphicsItem``
         """
 
+        # Cancel edge if clicking on empty space or receiving None (ESC pressed)
+        if item is None or not isinstance(item, QDMGraphicsSocket):
+            self.cancelDragEdge()
+            return False
+
         # early out - clicked on something else than Socket
         if not isinstance(item, QDMGraphicsSocket):
             self.grView.resetMode()
@@ -155,3 +160,14 @@ class EdgeDragging:
         if DEBUG:
             print('View::edgeDragEnd ~ everything done.')
         return False
+
+    def cancelDragEdge(self) -> None:
+        """Cancel the edge dragging operation and clean up"""
+        self.grView.resetMode()
+        if DEBUG:
+            print('View::cancelDragEdge ~ Cancel dragging edge')
+
+        if self.drag_edge is not None:
+            self.drag_edge.remove(silent=True)
+            self.drag_edge = None
+        self.drag_start_socket = None

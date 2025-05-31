@@ -3,6 +3,7 @@
 A module containing NodeEditor's class for representing `Node`.
 """
 from collections import OrderedDict
+from qtpy.QtCore import QObject
 from nodeeditor.node_graphics_node import QDMGraphicsNode
 from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 DEBUG = False
 
 
-class Node(Serializable):
+class Node(QObject,  Serializable):
     """
     Class representing `Node` in the `Scene`.
     """
@@ -48,7 +49,8 @@ class Node(Serializable):
             - **outputs** - list containin Output :class:`~nodeeditor.node_socket.Socket` instances
 
         """
-        super().__init__()
+        super().__init__()  # Initialize QObject
+        super(Serializable).__init__()  # Initialize Serializable
         self._title = title
         self.scene = scene
 

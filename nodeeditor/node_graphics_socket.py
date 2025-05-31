@@ -131,3 +131,8 @@ class QDMGraphicsSocket(QGraphicsItem):
             2 * (self.radius + self.outline_width),
             2 * (self.radius + self.outline_width),
         )
+
+    # def onSelected(self) -> None:
+    #     """Handle selection event"""
+    #     self.isHighlighted = True
+    #     self.update()

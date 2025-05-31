@@ -3,6 +3,8 @@
 A module containing NodeEditor's class for representing Socket and Socket Position Constants.
 """
 from collections import OrderedDict
+from qtpy.QtCore import QObject
+
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_graphics_socket import QDMGraphicsSocket
 
@@ -29,7 +31,7 @@ DEBUG = False
 DEBUG_REMOVE_WARNINGS = False
 
 
-class Socket(Serializable):
+class Socket(QObject, Serializable):
     Socket_GR_Class = QDMGraphicsSocket
 
     """Class representing Socket."""
@@ -63,7 +65,8 @@ class Socket(Serializable):
             - **is_input** - ``True`` if this socket serves for Input
             - **is_output** - ``True`` if this socket serves for Output
         """
-        super().__init__()
+        super().__init__()  # Initialize QObject
+        super(Serializable).__init__()  # Initialize Serializable
 
         self.node = node
         self.position = position

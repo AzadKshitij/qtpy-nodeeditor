@@ -6,7 +6,7 @@ from array import array
 import math
 from qtpy import PYSIDE2
 from qtpy.QtWidgets import QGraphicsScene, QWidget
-from qtpy.QtCore import Signal, QRectF, QLine, Qt, Property
+from qtpy.QtCore import Signal, QRectF, QLine, Qt, Property, QObject
 from qtpy.QtGui import QColor, QPen, QFont, QPainter
 from nodeeditor.utils import dumpException
 from nodeeditor.node_graphics_view import STATE_STRING, DEBUG_STATE
@@ -25,6 +25,7 @@ class QDMGraphicsScene(QGraphicsScene):
     """Class representing Graphic of :class:`~nodeeditor.node_scene.Scene`"""
     #: pyqtSignal emitted when some item is selected in the `Scene`
     itemSelected = Signal()
+    socketClicked = Signal(QObject, QObject)  # (socket, node)
     #: pyqtSignal emitted when items are deselected in the `Scene`
     itemsDeselected = Signal()
 
@@ -59,9 +60,9 @@ class QDMGraphicsScene(QGraphicsScene):
         self.gridSquares = 5
         self._show_grid = True
 
-        self._color_background = QColor("#393939")
-        self._color_light = QColor("#2f2f2f")
-        self._color_dark = QColor("#292929")
+        self._color_background = QColor("#14171a")
+        self._color_light = QColor("#1d2225")
+        self._color_dark = QColor("#1d2225")
         self._color_state = QColor("#ccc")
 
         self.initAssets()
