@@ -327,8 +327,8 @@ class Scene(Serializable):
         with open(filename, "w") as file:
             json_str = json.dumps(
                 self.serialize(),
-                option=json.OPT_INDENT_2  # Use orjson's built-in indentation option
-            ).decode('utf-8')
+                option=OPT_INDENT_2,  # Use orjson's built-in indentation option
+            ).decode("utf-8")
             file.write(json_str)
             # print("saving to", filename, "was successfull.")
 
@@ -347,14 +347,11 @@ class Scene(Serializable):
         with open(filename, "r") as file:
             raw_data = file.read()
             try:
-                if sys.version_info >= (3, 9):
-                    data = json.loads(raw_data)
-                else:
-                    data = json.loads(raw_data, encoding='utf-8')
+                data = json.loads(raw_data)
                 self.filename = filename
                 self.deserialize(data)
                 self.has_been_modified = False
-            except json.JSONDecodeError:
+            except JSONDecodeError:
                 raise InvalidFile("%s is not a valid JSON file" %
                                   os.path.basename(filename))
             except Exception as e:

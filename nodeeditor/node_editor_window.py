@@ -4,6 +4,7 @@ A module containing the Main Window class
 """
 import os
 import orjson as json
+from orjson import OPT_INDENT_2, JSONDecodeError
 from qtpy.QtCore import QSize, QSettings, QPoint
 from qtpy.QtWidgets import QMainWindow, QLabel, QAction, QMessageBox, QFileDialog, QApplication, QMenu, QMenuBar
 from nodeeditor.node_editor_widget import NodeEditorWidget
@@ -270,7 +271,7 @@ class NodeEditorWindow(QMainWindow):
         if self.getCurrentNodeEditorWidget():
             data = self.getCurrentNodeEditorWidget(
             ).scene.clipboard.serializeSelected(delete=True)
-            str_data = json.dumps(data, indent=4)
+            str_data = json.dumps(data, option=OPT_INDENT_2).decode("utf-8")
             QApplication.instance().clipboard().setText(str_data)
 
     def onEditCopy(self) -> None:
@@ -278,7 +279,7 @@ class NodeEditorWindow(QMainWindow):
         if self.getCurrentNodeEditorWidget():
             data = self.getCurrentNodeEditorWidget(
             ).scene.clipboard.serializeSelected(delete=False)
-            str_data = json.dumps(data, indent=4)
+            str_data = json.dumps(data, option=OPT_INDENT_2).decode("utf-8")
             QApplication.instance().clipboard().setText(str_data)
 
     def onEditPaste(self):
@@ -288,7 +289,7 @@ class NodeEditorWindow(QMainWindow):
 
             try:
                 data = json.loads(raw_data)
-            except ValueError as e:
+            except JSONDecodeError as e:
                 print("Pasting of not valid json data!", e)
                 return
 
