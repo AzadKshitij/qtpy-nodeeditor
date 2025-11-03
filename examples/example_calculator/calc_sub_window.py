@@ -6,9 +6,12 @@ from examples.example_calculator.calc_conf import CALC_NODES, get_class_from_opc
 from nodeeditor.node_editor_widget import NodeEditorWidget
 from nodeeditor.node_edge import EDGE_TYPE_DIRECT, EDGE_TYPE_BEZIER, EDGE_TYPE_SQUARE
 from nodeeditor.node_graphics_view import MODE_EDGE_DRAG
+from nodeeditor.node_graphics_node import QDMGraphicsNode
+from nodeeditor.node_group_node import GroupNode
 from nodeeditor.utils import dumpException
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
+
 if TYPE_CHECKING:
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_node import Node
@@ -100,6 +103,58 @@ class CalculatorSubWindow(NodeEditorWidget):
             context_menu.addAction(self.node_actions[key])
         return context_menu
 
+    def getSelectedNodes(self, selected_items: List) -> List["Node"]:
+        """Extract Node objects from selected graphics items"""
+        nodes = []
+        for item in selected_items:
+            if isinstance(item, QDMGraphicsNode):
+                if hasattr(item, "node"):
+                    nodes.append(item.node)
+            elif isinstance(item, GroupNode):
+                # Don't add groups to the selection, only actual nodes
+                pass
+        return nodes
+
+    def handleGroupingContextMenu(self, event, nodes_selected: List["Node"]):
+        """Handle context menu for grouping selected nodes"""
+        if DEBUG_CONTEXT:
+            print("CONTEXT: GROUPING")
+
+        context_menu = QMenu(self)
+        group_act = context_menu.addAction("Group Selected Nodes")
+        action = context_menu.exec_(self.mapToGlobal(event.pos()))
+
+        if action == group_act:
+            self.onGroupSelectedNodes(nodes_selected)
+
+    def onGroupSelectedNodes(self, nodes: List["Node"]):
+        """Create a group containing the selected nodes"""
+        try:
+            if len(nodes) < 2:
+                return
+
+            # Create group
+            group = GroupNode(self.scene, title=f"Group ({len(nodes)} nodes)")
+
+            # Add nodes to group
+            for node in nodes:
+                group.addNode(node)
+
+            # Update group boundaries to fit all nodes
+            group.updateGroupBoundaries()
+
+            # Add group to scene's graphics scene
+            self.scene.grScene.addItem(group)
+
+            # Store in history
+            self.scene.history.storeHistory(f"Created group with {len(nodes)} nodes")
+
+            if DEBUG_CONTEXT:
+                print(f"Created group with {len(nodes)} nodes")
+
+        except Exception as e:
+            dumpException(e)
+
     def setTitle(self):
         self.setWindowTitle(self.getUserFriendlyFilename())
 
@@ -161,9 +216,22 @@ class CalculatorSubWindow(NodeEditorWidget):
                 self.handleNodeContextMenu(event)
             elif hasattr(item, 'edge'):
                 self.handleEdgeContextMenu(event)
-            # elif item is None:
             else:
-                self.handleNewNodeContextMenu(event)
+                print("Context menu for empty space")
+                # Check if we have selected nodes for grouping
+                selected_items = self.scene.getSelectedItems()
+                selected_nodes = self.getSelectedNodes(selected_items)
+                print(
+                    "🐍 File: example_calculator/calc_sub_window.py | Line: 224 | contextMenuEvent ~ selected_nodes",
+                    selected_nodes,
+                )
+
+                if len(selected_nodes) > 1:
+                    # Show grouping context menu for multiple selected nodes
+                    self.handleGroupingContextMenu(event, selected_nodes)
+                else:
+                    # Show default new node context menu for empty space
+                    self.handleNewNodeContextMenu(event)
 
             return super().contextMenuEvent(event)
         except Exception as e:
@@ -178,6 +246,7 @@ class CalculatorSubWindow(NodeEditorWidget):
             "Mark Descendant Dirty")
         markInvalidAct = context_menu.addAction("Mark Invalid")
         unmarkInvalidAct = context_menu.addAction("Unmark Invalid")
+        group_nodes = context_menu.addAction("Group Selected Nodes")
         evalAct = context_menu.addAction("Eval")
         action = context_menu.exec_(self.mapToGlobal(event.pos()))
 
@@ -201,6 +270,18 @@ class CalculatorSubWindow(NodeEditorWidget):
             selected.markInvalid()
         if selected and action == unmarkInvalidAct:
             selected.markInvalid(False)
+        if selected and action == group_nodes:
+            print("Context menu for empty space")
+            # Check if we have selected nodes for grouping
+            nodes_selected = self.scene.getSelectedNodes()
+            print(
+                "🐍 File: example_calculator/calc_sub_window.py | Line: 277 | handleNodeContextMenu ~ nodes_selected",
+                nodes_selected,
+            )
+
+            if len(nodes_selected) > 1:
+                # Show grouping context menu for multiple selected nodes
+                self.onGroupSelectedNodes(nodes_selected)
         if selected and action == evalAct:
             val = selected.eval()
             if DEBUG_CONTEXT:

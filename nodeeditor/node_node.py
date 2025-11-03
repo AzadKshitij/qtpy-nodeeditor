@@ -3,7 +3,7 @@
 A module containing NodeEditor's class for representing `Node`.
 """
 from collections import OrderedDict
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, Signal
 from nodeeditor.node_graphics_node import QDMGraphicsNode
 from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
+    from nodeeditor.node_group_node import GroupNode
 
 DEBUG = False
 
@@ -26,6 +27,9 @@ class Node(QObject,  Serializable):
     """
     Class representing `Node` in the `Scene`.
     """
+    # Signal emitted when node position changes (after user finishes dragging)
+    positionChanged = Signal(object)  # Emits the Node object
+
     GraphicsNode_class = QDMGraphicsNode
     NodeContent_class = QDMNodeContentWidget
     Socket_class = Socket
@@ -74,6 +78,9 @@ class Node(QObject,  Serializable):
         # dirty and evaluation
         self._is_dirty = False
         self._is_invalid = False
+
+        # grouping support
+        self.parent_group: Optional["GroupNode"] = None
 
     def __str__(self) -> str:
         return "<%s:%s %s..%s>" % (self.title, self.__class__.__name__, hex(id(self))[2:5], hex(id(self))[-3:])

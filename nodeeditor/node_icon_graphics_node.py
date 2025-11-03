@@ -138,6 +138,8 @@ class QDMIconGraphicsNode(QGraphicsItem):
 
         # handle when grNode moved
         if self._was_moved:
+            self.node.positionChanged.emit(self.node)
+            print("emitting positionChanged for node:", self.node.title)
             self._was_moved = False
             self.node.scene.history.storeHistory(
                 "Node moved", setModified=True)

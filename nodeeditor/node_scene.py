@@ -188,6 +188,15 @@ class Scene(Serializable):
         """
         return self.grScene.selectedItems()
 
+    def getSelectedNodes(self) -> list:
+        """
+        Returns currently selected Nodes
+
+        :return: list of ``Node``
+        :rtype: list[Node]
+        """
+        return [item.node for item in self.getSelectedItems() if hasattr(item, "node")]
+
     def doDeselectItems(self, silent: bool = False) -> None:
         """
         Deselects everything in scene
@@ -383,6 +392,12 @@ class Scene(Serializable):
         :return: Instance of `Node` class to be used in this Scene
         :rtype: `Node` class instance
         """
+        # Check if this is a GroupNode
+        if data.get("type") == "GroupNode":
+            from nodeeditor.node_group_node import GroupNode
+
+            return GroupNode
+
         return Node if self.node_class_selector is None else self.node_class_selector(data)
 
     def serialize(self) -> OrderedDict:

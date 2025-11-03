@@ -8,5 +8,6 @@
         "scanrect",
         "scenepos",
         "socketpos"
-    ]
+    ],
+    "taipyStudio.gUI.elementsFilePaths": []
 }

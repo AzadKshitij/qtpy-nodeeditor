@@ -135,6 +135,9 @@ class QDMGraphicsNode(QGraphicsItem):
 
         # handle when grNode moved
         if self._was_moved:
+            self.node.positionChanged.emit(self.node)
+            print("Emitted positionChanged for node:", self.node.title)
+
             self._was_moved = False
             self.node.scene.history.storeHistory(
                 "Node moved", setModified=True)
@@ -144,6 +147,8 @@ class QDMGraphicsNode(QGraphicsItem):
 
             # we need to store the last selected state, because moving does also select the nodes
             self.node.scene._last_selected_items = self.node.scene.getSelectedItems()
+
+            # Emit signal to notify that node position has changed (for group boundary checks)
 
             # now we want to skip storing selection
             return
