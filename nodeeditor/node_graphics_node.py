@@ -76,8 +76,8 @@ class QDMGraphicsNode(QGraphicsItem):
 
     def initSizes(self) -> None:
         """Set up internal attributes like `width`, `height`, etc."""
-        self.width = 180
-        self.height = 240
+        self.width: float = 180
+        self.height: float = 240
         self.edge_roundness = 10.0
         self.edge_padding = 10
         self.title_height = 24

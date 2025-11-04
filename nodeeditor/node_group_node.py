@@ -13,52 +13,12 @@ from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
 
 from typing import TYPE_CHECKING, List, Optional, Dict, Tuple
+from nodeeditor.node_socket import Socket
 
 if TYPE_CHECKING:
     from nodeeditor.node_scene import Scene
     from nodeeditor.node_node import Node
-    from nodeeditor.node_socket import Socket
     from nodeeditor.node_edge import Edge
-
-
-class ProxySocket:
-    """A minimal socket proxy for temporarily redirecting edges to container boundaries."""
-
-    def __init__(
-        self, group_node: "GroupNode", position: QPointF, original_socket: "Socket"
-    ):
-        """
-        Create a proxy socket at a specific position.
-
-        :param group_node: The group node this proxy belongs to
-        :param position: Position in scene coordinates
-        :param original_socket: The original socket being proxied (to copy attributes from)
-        """
-        self.group_node = group_node
-        self._scene_position = position
-
-        # Copy essential attributes from original socket
-        self.node = None  # Proxy sockets don't have a real node
-        self.edges = []  # Track edges temporarily connected to this proxy
-
-        # Copy socket attributes needed by edge path calculators
-        self.position = original_socket.position
-        self.socket_type = original_socket.socket_type
-        self.index = original_socket.index
-        self.is_input = original_socket.is_input
-        self.is_output = original_socket.is_output
-
-    def getSocketPosition(self) -> Tuple[float, float]:
-        """Return the socket position as (x, y) tuple."""
-        return (self._scene_position.x(), self._scene_position.y())
-
-    def updatePosition(self, position: QPointF):
-        """Update the proxy socket position and notify edges."""
-        self._scene_position = position
-        # Update all edges connected to this proxy
-        for edge in self.edges:
-            if edge.grEdge:
-                edge.grEdge.update()
 
 
 class GroupNode(Serializable, QGraphicsRectItem):
@@ -106,9 +66,8 @@ class GroupNode(Serializable, QGraphicsRectItem):
         self.child_nodes: List['Node'] = []
         self._child_positions: dict = {}
 
-        # Track original socket connections for collapse/expand
-        # Maps edge id to {'edge': Edge, 'original_socket': Socket, 'socket_type': 'start'|'end', 'proxy_socket': ProxySocket}
-        self._redirected_edges: Dict[int, Dict] = {}
+        # Store original node states for collapse/expand
+        self._original_node_states: Dict[int, Dict] = {}
 
         # Setup graphics
         self.setPos(x, y)
@@ -293,164 +252,51 @@ class GroupNode(Serializable, QGraphicsRectItem):
         - 0: ItemPositionChange
         - 8: ItemRectChange
         """
-        # Handle position or transformation changes (0 = ItemPositionChange, 8 = ItemRectChange)
-        if change == 0 or change == 8:
+        # Handle position changes (0 = ItemPositionChange)
+        if change == 0:
             # Update button position to keep it in top-right corner
             if self._button_proxy is not None:
                 self._updateButtonProxy()
-            
-            # Update proxy socket positions when container moves (if collapsed)
-            if self._is_collapsed and self._redirected_edges:
-                self._updateProxySocketPositions()
+
+            # When collapsed, move visible child nodes with the container
+            if self._is_collapsed and value is not None:
+                new_pos = value  # QPointF of new container position
+                container_center = new_pos + QPointF(
+                    self.rect().width() / 2, self.rect().height() / 2
+                )
+
+                # Move only visible (shrunken) child nodes to the new container center
+                # Hidden nodes don't need to move
+                for node in self.child_nodes:
+                    if node.grNode and node.grNode.isVisible():
+                        node.setPos(container_center.x(), container_center.y())
+
+                        # For collapsed nodes, ensure sockets remain centered after move
+                        if hasattr(node.grNode, "width") and node.grNode.width == 5:
+                            center_x = 0.1  # Center of 5px wide node
+                            center_y = 0.1  # Center of 5px tall node
+                            for socket in node.inputs + node.outputs:
+                                socket.grSocket.setPos(center_x, center_y)
+                                # Force graphics update to ensure scene position is current
+                                socket.grSocket.update()
+
+                        # Force node graphics update before updating edges
+                        node.grNode.update()
+                        # Update connected edges after moving the node
+                        node.updateConnectedEdges()
+
+        # Handle rect changes (8 = ItemRectChange)
+        elif change == 8:
+            if self._button_proxy is not None:
+                self._updateButtonProxy()
 
         return super().itemChange(change, value)
 
-    def _updateProxySocketPositions(self) -> None:
-        """
-        Update all proxy socket positions when the container moves or resizes.
-        This ensures external edges follow the container correctly.
-        """
-        for edge_id, edge_data in self._redirected_edges.items():
-            original_socket = edge_data["original_socket"]
-            proxy_socket = edge_data["proxy_socket"]
-            
-            # Get the original socket's position
-            socket_pos_list = original_socket.getSocketPosition()
-            socket_pos = (socket_pos_list[0], socket_pos_list[1])
-            
-            # Calculate new closest point on container edge
-            new_proxy_pos = self._getClosestEdgePoint(socket_pos)
-            
-            # Update the proxy socket position
-            proxy_socket.updatePosition(new_proxy_pos)
-
-    def _getClosestEdgePoint(self, socket_pos: Tuple[float, float]) -> QPointF:
-        """
-        Calculate the closest point on the container's edge to a given socket position.
-
-        :param socket_pos: Socket position as (x, y) tuple in scene coordinates
-        :return: Closest point on container edge in scene coordinates
-        """
-        # Get container bounds in scene coordinates
-        container_rect = self.sceneBoundingRect()
-
-        x, y = socket_pos
-
-        # Calculate distances to each edge
-        dist_left = abs(x - container_rect.left())
-        dist_right = abs(x - container_rect.right())
-        dist_top = abs(y - container_rect.top())
-        dist_bottom = abs(y - container_rect.bottom())
-
-        # Find closest edge and clamp position to it
-        min_dist = min(dist_left, dist_right, dist_top, dist_bottom)
-
-        if min_dist == dist_left:
-            # Stick to left edge
-            closest_x = container_rect.left()
-            closest_y = max(container_rect.top(), min(y, container_rect.bottom()))
-        elif min_dist == dist_right:
-            # Stick to right edge
-            closest_x = container_rect.right()
-            closest_y = max(container_rect.top(), min(y, container_rect.bottom()))
-        elif min_dist == dist_top:
-            # Stick to top edge
-            closest_x = max(container_rect.left(), min(x, container_rect.right()))
-            closest_y = container_rect.top()
-        else:  # dist_bottom
-            # Stick to bottom edge
-            closest_x = max(container_rect.left(), min(x, container_rect.right()))
-            closest_y = container_rect.bottom()
-
-        return QPointF(closest_x, closest_y)
-
-    def _redirectEdgeToProxy(
-        self, edge: "Edge", socket: "Socket", socket_type: str
-    ) -> None:
-        """
-        Redirect an edge from its original socket to a proxy socket on the container edge.
-
-        :param edge: The edge to redirect
-        :param socket: The original socket being hidden
-        :param socket_type: Either 'start' or 'end' to indicate which socket to redirect
-        """
-        # Get the original socket position (returns list [x, y])
-        socket_pos_list = socket.getSocketPosition()
-        socket_pos = (socket_pos_list[0], socket_pos_list[1])
-
-        # Calculate closest point on container edge
-        proxy_pos = self._getClosestEdgePoint(socket_pos)
-
-        # Create a proxy socket at the container edge (passing original socket for attributes)
-        proxy_socket = ProxySocket(self, proxy_pos, socket)
-
-        # Store original socket for restoration later
-        edge_id = id(edge)
-        self._redirected_edges[edge_id] = {
-            "edge": edge,
-            "original_socket": socket,
-            "socket_type": socket_type,
-            "proxy_socket": proxy_socket,
-        }
-
-        # Redirect the edge to use the proxy socket
-        if socket_type == "start":
-            # Remove edge from original socket
-            socket.removeEdge(edge)
-            # Temporarily replace the edge's start socket
-            edge._start_socket = proxy_socket
-            proxy_socket.edges.append(edge)
-        else:  # 'end'
-            # Remove edge from original socket
-            socket.removeEdge(edge)
-            # Temporarily replace the edge's end socket
-            edge._end_socket = proxy_socket
-            proxy_socket.edges.append(edge)
-
-        # Force edge to update its path
-        if edge.grEdge:
-            edge.grEdge.update()
-
-    def _restoreEdgeFromProxy(self, edge_id: int) -> None:
-        """
-        Restore an edge from proxy socket back to its original socket.
-
-        :param edge_id: ID of the edge to restore
-        """
-        if edge_id not in self._redirected_edges:
-            return
-
-        edge_data = self._redirected_edges[edge_id]
-        edge = edge_data["edge"]
-        original_socket = edge_data["original_socket"]
-        socket_type = edge_data["socket_type"]
-        proxy_socket = edge_data["proxy_socket"]
-
-        # Remove edge from proxy socket
-        if edge in proxy_socket.edges:
-            proxy_socket.edges.remove(edge)
-
-        # Restore original socket connection
-        if socket_type == "start":
-            edge._start_socket = original_socket
-            original_socket.addEdge(edge)
-        else:  # 'end'
-            edge._end_socket = original_socket
-            original_socket.addEdge(edge)
-
-        # Force edge to update its path
-        if edge.grEdge:
-            edge.grEdge.update()
-
-        # Clean up
-        del self._redirected_edges[edge_id]
-
     def collapse(self) -> None:
-        """Collapse the group, hiding all child nodes and their edges.
+        """Collapse the group by shrinking child nodes to near-zero size and moving them to container center.
 
-        Edges connecting to nodes OUTSIDE the group remain visible and are redirected
-        to proxy sockets on the container edge.
-        Only edges completely inside the group are hidden.
+        This simple approach maintains all edge connections - edges naturally follow the nodes.
+        Internal edges become very short, external edges connect to the container center.
         """
         if self._is_collapsed:
             return
@@ -458,20 +304,16 @@ class GroupNode(Serializable, QGraphicsRectItem):
         # Store current expanded size
         self._expanded_rect = self.rect()
 
-        # Clear any previous redirections
-        self._redirected_edges.clear()
+        # Clear any previous stored states
+        self._original_node_states.clear()
 
-        # Hide all child node graphics
-        for node in self.child_nodes:
-            if node.grNode is not None:
-                node.grNode.hide()
+        # First, identify which nodes have external connections
+        nodes_with_external_connections = set()
 
-        # Process edges: hide internal ones, redirect external ones
         for node in self.child_nodes:
+            has_external = False
             for socket in node.inputs + node.outputs:
-                for edge in socket.edges[
-                    :
-                ]:  # Use slice to avoid modification during iteration
+                for edge in socket.edges:
                     if edge.grEdge is not None:
                         # Get both nodes connected by this edge
                         start_node = (
@@ -479,28 +321,88 @@ class GroupNode(Serializable, QGraphicsRectItem):
                         )
                         end_node = edge.end_socket.node if edge.end_socket else None
 
-                        # Check if both nodes are in the same group (internal edge)
-                        both_in_group = (
+                        # Check if this edge connects to outside the group
+                        if (
+                            start_node in self.child_nodes
+                            and end_node not in self.child_nodes
+                        ):
+                            has_external = True
+                            break
+                        elif (
+                            end_node in self.child_nodes
+                            and start_node not in self.child_nodes
+                        ):
+                            has_external = True
+                            break
+                        # Hide internal edges (both nodes in group)
+                        elif (
                             start_node in self.child_nodes
                             and end_node in self.child_nodes
-                        )
-
-                        if both_in_group:
-                            # Hide internal edges
+                        ):
                             edge.grEdge.hide()
-                        else:
-                            # External edge - redirect the hidden socket to container edge
-                            if start_node in self.child_nodes and edge.start_socket:
-                                # Start socket is inside (being hidden), redirect it
-                                self._redirectEdgeToProxy(
-                                    edge, edge.start_socket, "start"
-                                )
-                            elif end_node in self.child_nodes and edge.end_socket:
-                                # End socket is inside (being hidden), redirect it
-                                self._redirectEdgeToProxy(edge, edge.end_socket, "end")
 
-        # Resize to minimal collapsed size
+            if has_external:
+                nodes_with_external_connections.add(node)
+
+        # Process all child nodes
+        for node in self.child_nodes:
+            # Store original state with relative position to container
+            container_pos = self.pos()
+            relative_pos = node.pos - container_pos
+
+            self._original_node_states[id(node)] = {
+                "relative_position": relative_pos,  # Position relative to container
+                "width": getattr(node.grNode, "width", None),
+                "height": getattr(node.grNode, "height", None),
+                "was_visible": node.grNode.isVisible() if node.grNode else True,
+            }
+
+        # Resize container to minimal collapsed size
         self.setRect(0, 0, 150, self._title_bar_height + 5)
+
+        # Calculate container center position after resize
+        container_center = self.scenePos() + QPointF(
+            self.rect().width() / 2, self.rect().height() / 2
+        )
+
+        # Now position the nodes
+        for node in self.child_nodes:
+            if node in nodes_with_external_connections:
+                # Node has external connections - shrink and move to container center
+                node.setPos(container_center.x(), container_center.y())
+
+                # Properly shrink the node graphics but keep it visible
+                if hasattr(node.grNode, "width") and hasattr(node.grNode, "height"):
+                    # Actually change the width and height instead of scaling
+                    node.grNode.width = 0.2
+                    node.grNode.height = 0.2
+                    node.grNode.update()
+                    node.grNode.hide()
+                    # Keep node visible so edges can connect to it
+
+                    # For tiny nodes, position all sockets at the center
+                    # This ensures edges connect to the center of the small node
+                    center_x = 2.5  # Center of 5px wide node
+                    center_y = 2.5  # Center of 5px tall node
+
+                    for socket in node.inputs + node.outputs:
+                        # Manually position socket at the center of the tiny node
+                        socket.grSocket.setPos(center_x, center_y)
+                        socket.grSocket.hide()  # Hide sockets for collapsed nodes
+
+                    # Force graphics update for all connected edges
+                    for socket in node.inputs + node.outputs:
+                        for edge in socket.edges:
+                            if edge.grEdge:
+                                edge.grEdge.update()
+
+                    # Then update all connected edges to follow the new socket positions
+                    node.updateConnectedEdges()
+
+            else:
+                # Node has only internal connections - hide it completely
+                if node.grNode:
+                    node.grNode.hide()
 
         # Update button text
         self._collapse_button.setText("−")
@@ -511,35 +413,67 @@ class GroupNode(Serializable, QGraphicsRectItem):
         self.scene.has_been_modified = True
 
     def expand(self) -> None:
-        """Expand the group, showing all child nodes and their edges.
+        """Expand the group, restoring child nodes to their original positions and sizes.
 
         All edges are shown again, including:
         - Edges between nodes inside the group (internal edges)
         - Edges connecting to nodes outside the group (external connections)
-
-        Edges that were redirected to proxy sockets are restored to their original sockets.
         """
         if not self._is_collapsed:
             return
 
-        # Restore all redirected edges to their original sockets
-        edge_ids_to_restore = list(self._redirected_edges.keys())
-        for edge_id in edge_ids_to_restore:
-            self._restoreEdgeFromProxy(edge_id)
+        # Restore all child nodes to their original positions and sizes
+        if hasattr(self, "_original_node_states"):
+            for node in self.child_nodes:
+                node_id = id(node)
+                if node_id in self._original_node_states:
+                    original_state = self._original_node_states[node_id]
 
-        # Show all child node graphics
-        for node in self.child_nodes:
-            if node.grNode is not None:
-                node.grNode.show()
+                    # Restore visibility first
+                    if node.grNode and original_state.get("was_visible", True):
+                        node.grNode.show()
+
+                    # Restore position using relative position to current container position
+                    if (
+                        "relative_position" in original_state
+                        and original_state["relative_position"]
+                    ):
+                        relative_pos = original_state["relative_position"]
+                        new_absolute_pos = self.pos() + relative_pos
+                        node.setPos(new_absolute_pos.x(), new_absolute_pos.y())
+
+                    # Restore size
+                    if hasattr(node.grNode, "width") and hasattr(node.grNode, "height"):
+                        if original_state.get("width") and original_state.get("height"):
+                            # Restore the original width and height
+                            node.grNode.width = original_state["width"]
+                            node.grNode.height = original_state["height"]
+                            node.grNode.update()
+                            node.grNode.show()
+
+                            # Force recalculation of socket positions first
+                            for socket in node.inputs + node.outputs:
+                                socket.setSocketPosition()
+                                socket.grSocket.show()
+
+                            # Then update all connected edges
+                            node.updateConnectedEdges()
+
+                            # Force graphics update for all connected edges
+                            for socket in node.inputs + node.outputs:
+                                for edge in socket.edges:
+                                    if edge.grEdge:
+                                        edge.grEdge.update()
 
         # Show all edges connected to child nodes (all edges should be visible when expanded)
         for node in self.child_nodes:
             for socket in node.inputs + node.outputs:
+                socket.grSocket.show()
                 for edge in socket.edges:
                     if edge.grEdge is not None:
                         edge.grEdge.show()
 
-        # Restore previous size if available
+        # Restore previous container size if available
         if self._expanded_rect is not None:
             self.setRect(self._expanded_rect)
         else:

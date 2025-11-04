@@ -6,6 +6,7 @@ from collections import OrderedDict
 from nodeeditor.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
+from qtpy.QtCore import QPointF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
@@ -73,7 +74,7 @@ class Edge(Serializable):
         )
 
     @property
-    def start_socket(self):
+    def start_socket(self) -> Optional["Socket"]:
         """
         Start socket
 
@@ -81,10 +82,10 @@ class Edge(Serializable):
         :setter: Sets start :class:`~nodeeditor.node_socket.Socket` safely
         :type: :class:`~nodeeditor.node_socket.Socket`
         """
-        return self._start_socket
+        return self._start_socket if self._start_socket else None
 
     @start_socket.setter
-    def start_socket(self, value) -> None:
+    def start_socket(self, value: "Socket") -> None:
         # if we were assigned to some socket before, delete us from the socket
         if self._start_socket is not None:
             self._start_socket.removeEdge(self)
@@ -219,14 +220,49 @@ class Edge(Serializable):
         Updates the internal `Graphics Edge` positions according to the start and end :class:`~nodeeditor.node_socket.Socket`.
         This should be called if you update ``Edge`` positions.
         """
-        source_pos = self.start_socket.getSocketPosition()
-        source_pos[0] += self.start_socket.node.grNode.pos().x()
-        source_pos[1] += self.start_socket.node.grNode.pos().y()
+        # Use actual graphics socket position instead of calculated position
+        # This is crucial for collapsed containers where sockets are manually positioned
+
+        # For collapsed nodes (width=5), calculate position manually to avoid timing issues
+        if (
+            self.start_socket
+            and self.start_socket.node
+            and self.start_socket.node.grNode
+            and hasattr(self.start_socket.node.grNode, "width")
+            and self.start_socket.node.grNode.width == 5
+        ):
+            # Collapsed node - socket is at center (2.5, 2.5) relative to node
+            node_scene_pos = self.start_socket.node.grNode.scenePos()
+            source_pos = [node_scene_pos.x() + 2.5, node_scene_pos.y() + 2.5]
+        else:
+            # Normal node - use socket's scene position
+            source_scene_pos = self.start_socket.grSocket.scenePos()
+            source_pos = [source_scene_pos.x(), source_scene_pos.y()]
+
+        # Normalize coordinates to ensure proper handling of negative values
+        normalized_source = QPointF(source_pos[0], source_pos[1])
+        source_pos = [normalized_source.x(), normalized_source.y()]
         self.grEdge.setSource(*source_pos)
+
         if self.end_socket is not None:
-            end_pos = self.end_socket.getSocketPosition()
-            end_pos[0] += self.end_socket.node.grNode.pos().x()
-            end_pos[1] += self.end_socket.node.grNode.pos().y()
+            # For collapsed nodes (width=5), calculate position manually to avoid timing issues
+            if (
+                self.end_socket.node
+                and self.end_socket.node.grNode
+                and hasattr(self.end_socket.node.grNode, "width")
+                and self.end_socket.node.grNode.width == 5
+            ):
+                # Collapsed node - socket is at center (2.5, 2.5) relative to node
+                node_scene_pos = self.end_socket.node.grNode.scenePos()
+                end_pos = [node_scene_pos.x() + 2.5, node_scene_pos.y() + 2.5]
+            else:
+                # Normal node - use socket's scene position
+                end_scene_pos = self.end_socket.grSocket.scenePos()
+                end_pos = [end_scene_pos.x(), end_scene_pos.y()]
+
+            # Normalize coordinates to ensure proper handling of negative values
+            normalized_end = QPointF(end_pos[0], end_pos[1])
+            end_pos = [normalized_end.x(), normalized_end.y()]
             self.grEdge.setDestination(*end_pos)
         else:
             self.grEdge.setDestination(*source_pos)

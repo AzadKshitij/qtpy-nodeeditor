@@ -4,60 +4,98 @@
   "scene_height": 64000,
   "nodes": [
     {
-      "id": 2412191333136,
-      "title": "Input",
-      "pos_x": -1762.4523057937613,
-      "pos_y": -621.6387615203856,
+      "id": 1905709786736,
+      "title": "Check",
+      "pos_x": -108.50390625,
+      "pos_y": -190.0039062499999,
       "inputs": [],
       "outputs": [
         {
-          "id": 2412191337232,
+          "id": 1905709787856,
           "index": 0,
           "multi_edges": true,
           "position": 5,
-          "socket_type": 3
+          "socket_type": 1
+        },
+        {
+          "id": 1905709788176,
+          "index": 1,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1905709788496,
+          "index": 2,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1905709788816,
+          "index": 3,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
         }
       ],
-      "content": {
-        "value": "100"
-      },
-      "op_code": 1
+      "content": {},
+      "op_code": 7
     },
     {
-      "id": 2412191431824,
-      "title": "Input",
-      "pos_x": -713.1899156570431,
-      "pos_y": 153.81204414367676,
+      "id": 1905709789136,
+      "title": "Check",
+      "pos_x": -108.50390625,
+      "pos_y": -190.0039062499999,
       "inputs": [],
       "outputs": [
         {
-          "id": 2412191431888,
+          "id": 1905709790256,
           "index": 0,
           "multi_edges": true,
           "position": 5,
-          "socket_type": 3
+          "socket_type": 1
+        },
+        {
+          "id": 1905709790576,
+          "index": 1,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1905709790896,
+          "index": 2,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1905709791216,
+          "index": 3,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
         }
       ],
-      "content": {
-        "value": "5"
-      },
-      "op_code": 1
+      "content": {},
+      "op_code": 7
     },
     {
-      "id": 2412191533072,
+      "id": 1905709791536,
       "title": "Divide and Mod",
-      "pos_x": -391.4721422195431,
-      "pos_y": 26.50442695617693,
+      "pos_x": 78.0,
+      "pos_y": -28.0,
       "inputs": [
         {
-          "id": 2412191533392,
+          "id": 1905709792496,
           "index": 0,
           "multi_edges": false,
           "position": 2,
           "socket_type": 2
         },
         {
-          "id": 2412191533456,
+          "id": 1905709792816,
           "index": 1,
           "multi_edges": false,
           "position": 2,
@@ -66,14 +104,14 @@
       ],
       "outputs": [
         {
-          "id": 2412191533520,
+          "id": 1905709793136,
           "index": 0,
           "multi_edges": true,
           "position": 5,
           "socket_type": 1
         },
         {
-          "id": 2412191533584,
+          "id": 1905709826288,
           "index": 1,
           "multi_edges": true,
           "position": 5,
@@ -82,133 +120,35 @@
       ],
       "content": {},
       "op_code": 6
-    },
-    {
-      "id": 2412191581584,
-      "title": "Output",
-      "pos_x": 47.10400390625006,
-      "pos_y": -62.477294921875455,
-      "inputs": [
-        {
-          "id": 2412191581648,
-          "index": 0,
-          "multi_edges": false,
-          "position": 2,
-          "socket_type": 1
-        }
-      ],
-      "outputs": [],
-      "content": {},
-      "op_code": 2
-    },
-    {
-      "id": 2412191587536,
-      "title": "Output",
-      "pos_x": 180.91650390624977,
-      "pos_y": 319.9602050781248,
-      "inputs": [
-        {
-          "id": 2412191587664,
-          "index": 0,
-          "multi_edges": false,
-          "position": 2,
-          "socket_type": 1
-        }
-      ],
-      "outputs": [],
-      "content": {},
-      "op_code": 2
-    },
-    {
-      "id": 1997557324432,
-      "title": "Input",
-      "pos_x": 142.0,
-      "pos_y": 69.0,
-      "inputs": [],
-      "outputs": [
-        {
-          "id": 1997557325392,
-          "index": 0,
-          "multi_edges": true,
-          "position": 5,
-          "socket_type": 3
-        }
-      ],
-      "content": {
-        "value": "1"
-      },
-      "op_code": 1
     }
   ],
   "edges": [
     {
-      "id": 2412191544400,
+      "id": 1905709570128,
       "edge_type": 5,
-      "start": 2412191337232,
-      "end": 2412191533392
+      "start": 1905709790256,
+      "end": 1905709792816
     },
     {
-      "id": 2412191580368,
+      "id": 1905708608608,
       "edge_type": 5,
-      "start": 2412191431888,
-      "end": 2412191533456
-    },
-    {
-      "id": 2412191584912,
-      "edge_type": 5,
-      "start": 2412191533520,
-      "end": 2412191581648
-    },
-    {
-      "id": 2412191592208,
-      "edge_type": 5,
-      "start": 2412191533584,
-      "end": 2412191587664
+      "start": 1905709788816,
+      "end": 1905709792496
     }
   ],
   "groups": [
     {
-      "id": 2403772814416,
+      "id": 1905709827888,
       "type": "GroupNode",
       "title": "Group (2 nodes)",
-      "x": 1624.3256721496568,
-      "y": -1791.0884962081902,
-      "width": 1209.2623901367183,
-      "height": 965.4508056640623,
-      "is_collapsed": false,
-      "child_node_ids": [],
-      "color": [
-        100,
-        100,
-        100,
-        200
-      ],
-      "title_color": [
-        255,
-        255,
-        255,
-        255
-      ],
-      "border_color": [
-        50,
-        50,
-        50,
-        255
-      ]
-    },
-    {
-      "id": 2554250072368,
-      "type": "GroupNode",
-      "title": "Group (3 nodes)",
-      "x": -1834.6063699722285,
-      "y": -673.5014066696167,
-      "width": 1530.9801635742183,
-      "height": 965.4508056640623,
-      "is_collapsed": false,
+      "x": -168.50390625,
+      "y": -167.5039062499999,
+      "width": 150.0,
+      "height": 35.0,
+      "is_collapsed": true,
       "child_node_ids": [
-        2412191431824,
-        2412191533072,
-        2412191333136
+        1905709786736,
+        1905709789136
       ],
       "color": [
         100,
