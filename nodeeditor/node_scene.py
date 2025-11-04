@@ -52,6 +52,7 @@ class Scene(Serializable):
         super().__init__()
         self.nodes: List[Node] = []
         self.edges: List[Edge] = []
+        self.groups: List = []  # List of GroupNode instances
 
         # current filename assigned to this scene
         self.filename: Optional[str] = None
@@ -318,6 +319,30 @@ class Scene(Serializable):
                 print("!W:", "Scene::removeEdge", "wanna remove edge", edge,
                       "from self.edges but it's not in the list!")
 
+    def addGroup(self, group) -> None:
+        """Add GroupNode to this `Scene`
+
+        :param group: GroupNode to be added to this `Scene`
+        """
+        self.groups.append(group)
+
+    def removeGroup(self, group) -> None:
+        """Remove GroupNode from this `Scene`
+
+        :param group: GroupNode to be removed from this `Scene`
+        """
+        if group in self.groups:
+            self.groups.remove(group)
+        else:
+            if DEBUG_REMOVE_WARNINGS:
+                print(
+                    "!W:",
+                    "Scene::removeGroup",
+                    "wanna remove group",
+                    group,
+                    "from self.groups but it's not in the list!",
+                )
+
     def clear(self) -> None:
         """Remove all `Nodes` from this `Scene`. This causes also to remove all `Edges`"""
         while len(self.nodes) > 0:
@@ -403,6 +428,7 @@ class Scene(Serializable):
     def serialize(self) -> OrderedDict:
         nodes: List[dict] = []
         edges: List[dict] = []
+        groups: List[dict] = []
         for node in self.nodes:
             new_node = node.serialize()
             if not any(new_node['id'] == a['id'] for a in nodes):
@@ -411,13 +437,20 @@ class Scene(Serializable):
             new_edge = edge.serialize()
             if not any(new_edge['id'] == a['id'] for a in edges):
                 edges.append(new_edge)
-        return OrderedDict([
-            ('id', self.id),
-            ('scene_width', self.scene_width),
-            ('scene_height', self.scene_height),
-            ('nodes', nodes),
-            ('edges', edges),
-        ])
+        for group in self.groups:
+            new_group = group.serialize()
+            if not any(new_group["id"] == a["id"] for a in groups):
+                groups.append(new_group)
+        return OrderedDict(
+            [
+                ("id", self.id),
+                ("scene_width", self.scene_width),
+                ("scene_height", self.scene_height),
+                ("nodes", nodes),
+                ("edges", edges),
+                ("groups", groups),
+            ]
+        )
 
     def deserialize(self, data: dict, hashmap: Optional[dict] = None, restore_id: bool = True, *args: Any, **kwargs: Any) -> bool:
         hashmap = hashmap or {}
@@ -494,5 +527,70 @@ class Scene(Serializable):
         while all_edges != []:
             edge = all_edges.pop()
             edge.remove()
+
+        # -- deserialize GROUPS
+
+        # Instead of recreating all the groups, reuse existing ones...
+        # get list of all current groups:
+        all_groups = self.groups.copy()
+
+        # go through deserialized groups:
+        for group_data in data.get("groups", []):
+            # can we find this group in the scene?
+            found_group = None
+            for group in all_groups:
+                if group.id == group_data["id"]:
+                    found_group = group
+                    break
+
+            if not found_group:
+                try:
+                    from nodeeditor.node_group_node import GroupNode
+
+                    new_group = GroupNode(self)
+                    new_group.deserialize(
+                        group_data, hashmap, restore_id, *args, **kwargs
+                    )
+                    self.groups.append(new_group)
+                    # print("New group for", group_data['title'])
+                except:
+                    dumpException()
+            else:
+                try:
+                    found_group.deserialize(
+                        group_data, hashmap, restore_id, *args, **kwargs
+                    )
+                    all_groups.remove(found_group)
+                    # print("Reused", group_data['title'])
+                except:
+                    dumpException()
+
+        # remove groups which are left in the scene and were NOT in the serialized data!
+        # that means they were not in the graph before...
+        while all_groups != []:
+            group = all_groups.pop()
+            if hasattr(group, "remove"):
+                group.remove()
+
+        # -- restore child node relationships for groups
+        for group_data in data.get("groups", []):
+            # Find the group
+            group = None
+            for g in self.groups:
+                if g.id == group_data["id"]:
+                    group = g
+                    break
+
+            if group and "child_node_ids" in group_data:
+                # Clear existing child nodes first
+                group.child_nodes.clear()
+
+                # Reconnect child nodes
+                for child_id in group_data["child_node_ids"]:
+                    # Find the node by id
+                    for node in self.nodes:
+                        if node.id == child_id:
+                            group.addNode(node)
+                            break
 
         return True
