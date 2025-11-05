@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SceneHistory - MVC Refactored
 A module containing all code for working with History (Undo/Redo)
-
-Refactored for MVC architecture - uses model signals and controller methods.
 """
 from nodeeditor.utils import dumpException
 
@@ -25,13 +22,8 @@ class SelectionDict(TypedDict):
     edges: List[str]  # list of edge IDs
 
 
-class SceneHistory:
-    """
-    Class contains all the code for undo/redo operations.
-    
-    Refactored for MVC: Uses model state instead of graphics state,
-    connects to model signals for automatic history tracking.
-    """
+class SceneHistory():
+    """Class contains all the code for undo/redo operations"""
 
     def __init__(self, scene: 'Scene') -> None:
         """
@@ -56,31 +48,6 @@ class SceneHistory:
         self._history_modified_listeners: List[Callable[[], None]] = []
         self._history_stored_listeners: List[Callable[[], None]] = []
         self._history_restored_listeners: List[Callable[[], None]] = []
-        
-        # Connect to model signals for automatic history tracking
-        self._connect_model_signals()
-
-    def _connect_model_signals(self) -> None:
-        """Connect to scene model signals for automatic history tracking."""
-        if hasattr(self.scene, 'model'):
-            # Track when nodes/edges are modified
-            if hasattr(self.scene.model, 'nodesChanged'):
-                try:
-                    self.scene.model.nodesChanged.connect(self._on_scene_changed)
-                except (AttributeError, TypeError):
-                    pass
-            
-            if hasattr(self.scene.model, 'edgesChanged'):
-                try:
-                    self.scene.model.edgesChanged.connect(self._on_scene_changed)
-                except (AttributeError, TypeError):
-                    pass
-
-    def _on_scene_changed(self, *args) -> None:
-        """Handle scene changes - store history if enabled."""
-        # This is called automatically when model signals are emitted
-        # Actual history storage happens through storeHistory() calls
-        pass
 
     def clear(self) -> None:
         """Reset the history stack"""
@@ -157,11 +124,7 @@ class SceneHistory:
             self.if_undo = True
             self.restoreHistory()
             self.history_current_step -= 1
-            # Use model property instead of graphics attribute
-            if hasattr(self.scene, 'model'):
-                self.scene.model.is_modified = True
-            elif hasattr(self.scene, 'has_been_modified'):
-                self.scene.has_been_modified = True
+            self.scene.has_been_modified = True
 
     def redo(self) -> None:
         """Redo operation"""
@@ -171,11 +134,7 @@ class SceneHistory:
             self.if_undo = False
             self.history_current_step += 1
             self.restoreHistory()
-            # Use model property instead of graphics attribute
-            if hasattr(self.scene, 'model'):
-                self.scene.model.is_modified = True
-            elif hasattr(self.scene, 'has_been_modified'):
-                self.scene.has_been_modified = True
+            self.scene.has_been_modified = True
 
     def restoreHistory(self) -> None:
         """
@@ -213,7 +172,7 @@ class SceneHistory:
 
         :param desc: Description of current History Stamp
         :type desc: ``str``
-        :param setModified: if ``True`` marks Scene with `is_modified`
+        :param setModified: if ``True`` marks :class:`~nodeeditor.node_scene.Scene` with `has_been_modified`
         :type setModified: ``bool``
         :param data: Additional data to store with History Stamp
         :type data: ``dict``
@@ -230,11 +189,7 @@ class SceneHistory:
             return
 
         if setModified:
-            # Use model property instead of graphics attribute
-            if hasattr(self.scene, 'model'):
-                self.scene.model.is_modified = True
-            elif hasattr(self.scene, 'has_been_modified'):
-                self.scene.has_been_modified = True
+            self.scene.has_been_modified = True
 
         if DEBUG:
             print("Storing history", '"%s"' % desc,
@@ -266,8 +221,6 @@ class SceneHistory:
     def captureCurrentSelection(self) -> SelectionDict:
         """
         Create dictionary with a list of selected nodes and a list of selected edges
-        MVC: Use model selection instead of graphics selection
-        
         :return: ``dict`` 'nodes' - list of selected nodes, 'edges' - list of selected edges
         :rtype: ``dict``
         """
@@ -275,30 +228,16 @@ class SceneHistory:
             'nodes': [],
             'edges': [],
         }
-        
-        # Try model-based selection first (MVC)
-        if hasattr(self.scene, 'model'):
-            for node in getattr(self.scene.model, 'nodes', []):
-                if getattr(node, 'selected', False):
-                    sel_obj['nodes'].append(node.id)
-            for edge in getattr(self.scene.model, 'edges', []):
-                if getattr(edge, 'selected', False):
-                    sel_obj['edges'].append(edge.id)
-        
-        # Fallback to graphics-based selection (backward compatibility)
-        if not sel_obj['nodes'] and not sel_obj['edges'] and hasattr(self.scene, 'grScene'):
-            for item in self.scene.grScene.selectedItems():
-                if hasattr(item, 'node'):
-                    sel_obj['nodes'].append(item.node.id)
-                elif hasattr(item, 'edge'):
-                    sel_obj['edges'].append(item.edge.id)
-        
+        for item in self.scene.grScene.selectedItems():
+            if hasattr(item, 'node'):
+                sel_obj['nodes'].append(item.node.id)
+            elif hasattr(item, 'edge'):
+                sel_obj['edges'].append(item.edge.id)
         return sel_obj
 
     def createHistoryStamp(self, desc: str) -> dict:
         """
         Create History Stamp. Internally serialize whole scene and the current selection
-        MVC: Store model state, not graphics state
 
         :param desc: Descriptive label for the History Stamp
         :return: History stamp serializing state of `Scene` and current selection
@@ -315,7 +254,6 @@ class SceneHistory:
     def restoreHistoryStamp(self, history_stamp: dict) -> None:
         """
         Restore History Stamp to current `Scene` with selection of items included
-        MVC: Restores model state first, graphics follow via signals
 
         :param history_stamp: History Stamp to restore
         :type history_stamp: ``dict``
@@ -330,7 +268,6 @@ class SceneHistory:
                 print("selected nodes before restore:",
                       previous_selection['nodes'])
 
-            # Deserialize restores model state, graphics follow via signals
             self.scene.deserialize(history_stamp['snapshot'])
 
             # restore selection

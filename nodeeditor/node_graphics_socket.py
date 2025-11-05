@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 A module containing Graphics representation of a :class:`~nodeeditor.node_socket.Socket`
+
+Refactored for MVC architecture - responds to SocketModel signals for type/color changes.
 """
 from qtpy.QtWidgets import QGraphicsItem
 from qtpy.QtGui import QColor, QBrush, QPen, QFont
@@ -33,7 +35,12 @@ SOCKET_COLORS = [
 
 
 class QDMGraphicsSocket(QGraphicsItem):
-    """Class representing Graphic `Socket` in ``QGraphicsScene``"""
+    """
+    Graphics representation of Socket with MVC signal integration.
+
+    Responds to SocketModel signals for real-time graphics updates.
+    Graphics state is derived from model state via signals.
+    """
 
     def __init__(self, socket: 'Socket') -> None:
         """
@@ -51,6 +58,9 @@ class QDMGraphicsSocket(QGraphicsItem):
         self.outline_width = 1
         self._font: Optional[QFont] = None  # Will be initialized in initAssets
         self.initAssets()
+
+        # Connect to model signals for real-time updates
+        self._connect_model_signals()
 
     @property
     def socket_type(self):
@@ -89,6 +99,19 @@ class QDMGraphicsSocket(QGraphicsItem):
         self._font = QFont("Ubuntu", 7)
         self._font.setBold(True)
         self._pen_text = QPen(Qt.GlobalColor.black)
+
+    def _connect_model_signals(self) -> None:
+        """Connect to SocketModel signals for real-time graphics updates."""
+        if hasattr(self.socket, "model") and hasattr(self.socket.model, "typeChanged"):
+            # When socket type changes, update graphics color
+            try:
+                self.socket.model.typeChanged.connect(self._on_socket_type_changed)
+            except (AttributeError, TypeError):
+                pass  # Signal not available or already connected
+
+    def _on_socket_type_changed(self, new_type: int) -> None:
+        """Handle socket type change from model - update graphics color."""
+        self.changeSocketType()
 
     def setText(self, text: str) -> None:
         """Set the text to display inside socket"""

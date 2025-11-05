@@ -67,6 +67,9 @@ class QDMGraphicsScene(QGraphicsScene):
 
         self.initAssets()
         self.setBackgroundBrush(self._color_background)
+        
+        # Connect to model signals for real-time updates
+        self._connect_model_signals()
 
     def getGridColorLight(self) -> QColor:
         """Get the light grid color"""
@@ -117,6 +120,21 @@ class QDMGraphicsScene(QGraphicsScene):
 
         self._pen_state = QPen(self._color_state)
         self._font_state = QFont("Ubuntu", 16)
+
+    def _connect_model_signals(self) -> None:
+        """Connect to SceneModel signals for real-time graphics updates."""
+        if hasattr(self.scene, 'model'):
+            # Connect to modification state changes
+            if hasattr(self.scene.model, 'modifiedChanged'):
+                try:
+                    self.scene.model.modifiedChanged.connect(self._on_scene_modified_changed)
+                except (AttributeError, TypeError):
+                    pass
+
+    def _on_scene_modified_changed(self, is_modified: bool) -> None:
+        """Handle scene modification state change from model."""
+        # Scene update can be triggered here if needed
+        self.update()
 
     # the drag events won't be allowed until dragMoveEvent is overwritten
 

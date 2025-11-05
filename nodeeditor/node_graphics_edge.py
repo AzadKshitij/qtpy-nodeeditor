@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 A module containing the Graphics representation of an Edge
+
+Refactored for MVC architecture - responds to EdgeModel signals for type/style changes.
 """
 from qtpy.QtWidgets import QGraphicsPathItem, QWidget, QGraphicsItem, QGraphicsSceneHoverEvent
 from qtpy.QtGui import QColor, QPen, QPainterPath
@@ -18,7 +20,12 @@ if TYPE_CHECKING:
 
 
 class QDMGraphicsEdge(QGraphicsPathItem):
-    """Base class for Graphics Edge"""
+    """
+    Base class for Graphics Edge with MVC signal integration.
+    
+    Responds to EdgeModel signals for real-time graphics updates.
+    Graphics state is derived from model state via signals.
+    """
 
     def __init__(self, edge: 'Edge', parent: QGraphicsPathItem = None) -> None:
         """
@@ -50,6 +57,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
         self.initAssets()
         self.initUI()
+        
+        # Connect to model signals for real-time updates
+        self._connect_model_signals()
 
     def initUI(self) -> None:
         """Set up this ``QGraphicsPathItem``"""
@@ -66,11 +76,26 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self._pen_selected = QPen(self._color_selected)
         self._pen_dragging = QPen(self._color)
         self._pen_hovered = QPen(self._color_hovered)
-        self._pen_dragging.setStyle(Qt.DashLine)
+        self._pen_dragging.setStyle(Qt.PenStyle.DashLine)
         self._pen.setWidthF(3.0)
         self._pen_selected.setWidthF(3.0)
         self._pen_dragging.setWidthF(3.0)
         self._pen_hovered.setWidthF(5.0)
+
+    def _connect_model_signals(self) -> None:
+        """Connect to EdgeModel signals for real-time graphics updates."""
+        if hasattr(self.edge, 'model') and hasattr(self.edge.model, 'typeChanged'):
+            # When edge type changes (path style), recreate path calculator
+            try:
+                self.edge.model.typeChanged.connect(self._on_edge_type_changed)
+            except (AttributeError, TypeError):
+                pass  # Signal not available or already connected
+
+    def _on_edge_type_changed(self, new_type: int) -> None:
+        """Handle edge type change from model - update path calculator and graphics."""
+        # Recreate path calculator based on new edge type
+        self.createEdgePathCalculator()
+        self.update()  # Trigger repaint
 
     def createEdgePathCalculator(self):
         """Create instance of :class:`~nodeeditor.node_graphics_edge_path.GraphicsEdgePathBase`"""

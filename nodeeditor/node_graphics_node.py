@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 A module containing Graphics representation of :class:`~nodeeditor.node_node.Node`
+
+Refactored for MVC architecture - responds to NodeModel signals for title/position changes.
 """
 from qtpy.QtWidgets import QGraphicsItem, QWidget, QGraphicsTextItem, QGraphicsSceneHoverEvent
 from qtpy.QtGui import QFont, QColor, QPen, QBrush, QPainterPath
@@ -17,7 +19,12 @@ if TYPE_CHECKING:
 
 
 class QDMGraphicsNode(QGraphicsItem):
-    """Class describing Graphics representation of :class:`~nodeeditor.node_node.Node`"""
+    """
+    Graphics representation of Node with MVC signal integration.
+    
+    Responds to NodeModel signals for real-time graphics updates.
+    Graphics state is derived from model state via signals.
+    """
 
     def __init__(self, node: 'Node', parent: QGraphicsItem = None) -> None:
         """
@@ -41,6 +48,9 @@ class QDMGraphicsNode(QGraphicsItem):
         self.initSizes()
         self.initAssets()
         self.initUI()
+        
+        # Connect to model signals for real-time updates
+        self._connect_model_signals()
 
     @property
     def content(self):
@@ -211,6 +221,35 @@ class QDMGraphicsNode(QGraphicsItem):
             self.width,
             self.height
         ).normalized()
+
+    def _connect_model_signals(self) -> None:
+        """Connect to NodeModel signals for real-time graphics updates."""
+        if hasattr(self.node, 'model'):
+            # Connect to title changes
+            if hasattr(self.node.model, 'titleChanged'):
+                try:
+                    self.node.model.titleChanged.connect(self._on_node_title_changed)
+                except (AttributeError, TypeError):
+                    pass
+            
+            # Connect to position changes
+            if hasattr(self.node.model, 'positionChanged'):
+                try:
+                    self.node.model.positionChanged.connect(self._on_node_position_changed)
+                except (AttributeError, TypeError):
+                    pass
+
+    def _on_node_title_changed(self, new_title: str) -> None:
+        """Handle node title change from model - update graphics text."""
+        if hasattr(self, 'title_item'):
+            self.title = new_title
+            self.update()
+
+    def _on_node_position_changed(self, new_position: Tuple[float, float]) -> None:
+        """Handle node position change from model - update graphics position."""
+        from qtpy.QtCore import QPointF
+        self.setPos(QPointF(new_position[0], new_position[1]))
+        self.update()
 
     def initTitle(self) -> None:
         """Set up the title Graphics representation: font, color, position, etc."""

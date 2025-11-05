@@ -4,8 +4,6 @@ A module containing the GroupNode class for node grouping functionality.
 
 GroupNode is a QGraphicsItem-based container for visual grouping of nodes.
 It is NOT a Node itself, but rather a visual container that holds references to child nodes.
-
-Refactored for MVC: Uses GroupNodeModel and GroupNodeController for state management.
 """
 from PyQt6.QtCore import QPoint
 from qtpy.QtCore import QRectF, Qt, QPointF, QSize
@@ -22,8 +20,6 @@ from qtpy.QtWidgets import (
 
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
-from nodeeditor.models.group_node_model import GroupNodeModel
-from nodeeditor.controllers.group_node_controller import GroupNodeController
 
 from typing import TYPE_CHECKING, List, Optional, Dict, Tuple
 from nodeeditor.node_socket import Socket
@@ -40,9 +36,6 @@ class GroupNode(Serializable, QGraphicsRectItem):
     
     This is NOT a Node - it's a pure visual container that manages a group of nodes.
     Nodes retain their independence and can move within/outside the group.
-    
-    Refactored for MVC architecture: Uses GroupNodeModel for state and 
-    GroupNodeController for operations.
     """
 
     def __init__(self, scene: 'Scene', title: str = "Group", x: float = 0, y: float = 0, 
@@ -61,17 +54,29 @@ class GroupNode(Serializable, QGraphicsRectItem):
         Serializable.__init__(self)
 
         self.scene: 'Scene' = scene
+        self.title: str = title
         self.id: int = id(self)
-        
-        # Create MVC components
-        self.model: GroupNodeModel = GroupNodeModel(self.id, title, x, y, width, height)
-        self.controller: GroupNodeController = GroupNodeController(self.model, scene.model if hasattr(scene, 'model') else None)
-        
         self.scene.addGroup(self)
         self.scene.grScene.addItem(self)  # Add to graphics scene for visual rendering
 
+        # Visual properties
+        self._title_bar_height = 30
+        self._corner_radius = 5
+        self._color = QColor(100, 100, 100, 200)
+        self._title_color = QColor(255, 255, 255)
+        self._border_color = QColor(50, 50, 50)
+        self._border_width = 2
+
+        # Collapse state
+        self._is_collapsed: bool = False
+        self._expanded_rect: Optional[QRectF] = None
+
         # Child management
         self.child_nodes: List['Node'] = []
+        self._child_positions: dict = {}
+
+        # Store original node states for collapse/expand
+        self._original_node_states: Dict[int, Dict] = {}
 
         # Hover tracking
         self._is_hovering_header: bool = False
@@ -80,8 +85,8 @@ class GroupNode(Serializable, QGraphicsRectItem):
         # Setup graphics
         self.setPos(x, y)
         self.setZValue(-1)  # Groups stay behind nodes
-        self.setPen(QPen(self.model.border_color, self.model.border_width))
-        self.setBrush(QBrush(self.model.color))
+        self.setPen(QPen(self._border_color, self._border_width))
+        self.setBrush(QBrush(self._color))
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
@@ -94,111 +99,6 @@ class GroupNode(Serializable, QGraphicsRectItem):
         # Wrap button in QGraphicsProxyWidget
         self._button_proxy: Optional[QGraphicsProxyWidget] = None
         self._updateButtonProxy()
-        
-        # Connect model signals to update graphics
-        self._connect_model_signals()
-
-    def _connect_model_signals(self) -> None:
-        """Connect to model signals for automatic graphics updates."""
-        if hasattr(self.model, 'titleChanged'):
-            self.model.titleChanged.connect(self._on_title_changed)
-        if hasattr(self.model, 'collapsedChanged'):
-            self.model.collapsedChanged.connect(self._on_collapsed_changed)
-        if hasattr(self.model, 'boundariesChanged'):
-            self.model.boundariesChanged.connect(self._on_boundaries_changed)
-        if hasattr(self.model, 'positionChanged'):
-            self.model.positionChanged.connect(self._on_position_changed)
-        if hasattr(self.model, 'sizeChanged'):
-            self.model.sizeChanged.connect(self._on_size_changed)
-
-    def _on_title_changed(self, title: str) -> None:
-        """Handle title change from model."""
-        self.update()
-
-    def _on_collapsed_changed(self, is_collapsed: bool) -> None:
-        """Handle collapse state change from model."""
-        if is_collapsed:
-            self.collapse()
-        else:
-            self.expand()
-
-    def _on_boundaries_changed(self, rect: QRectF) -> None:
-        """Handle boundaries change from model."""
-        self.update()
-
-    def _on_position_changed(self, pos: QPointF) -> None:
-        """Handle position change from model."""
-        # Only update if not already at this position (avoid circular updates)
-        if self.pos() != pos:
-            self.setPos(pos)
-
-    def _on_size_changed(self, size) -> None:
-        """Handle size change from model."""
-        # Only update if size has changed (avoid circular updates)
-        current_rect = self.rect()
-        if current_rect.width() != size.width() or current_rect.height() != size.height():
-            self.setRect(0, 0, size.width(), size.height())
-            self._updateButtonProxy()
-
-    @property
-    def title(self) -> str:
-        """Get group title from model."""
-        return self.model.title
-
-    @title.setter
-    def title(self, value: str) -> None:
-        """Set group title via controller."""
-        self.controller.set_title(value)
-
-    @property
-    def _title_bar_height(self) -> int:
-        """Get title bar height from model."""
-        return self.model.title_bar_height
-
-    @property
-    def _corner_radius(self) -> int:
-        """Get corner radius from model."""
-        return self.model.corner_radius
-
-    @property
-    def _color(self) -> QColor:
-        """Get color from model."""
-        return self.model.color
-
-    @property
-    def _title_color(self) -> QColor:
-        """Get title color from model."""
-        return self.model.title_color
-
-    @property
-    def _border_color(self) -> QColor:
-        """Get border color from model."""
-        return self.model.border_color
-
-    @property
-    def _border_width(self) -> int:
-        """Get border width from model."""
-        return self.model.border_width
-
-    @property
-    def _is_collapsed(self) -> bool:
-        """Get collapse state from model."""
-        return self.model.is_collapsed
-
-    @property
-    def _original_node_states(self) -> Dict[int, Dict]:
-        """Get original node states from model."""
-        return self.model.original_node_states
-
-    @property
-    def _expanded_rect(self) -> Optional[QRectF]:
-        """Get expanded rect - store locally."""
-        return getattr(self, '_stored_expanded_rect', None)
-
-    @_expanded_rect.setter
-    def _expanded_rect(self, value: Optional[QRectF]) -> None:
-        """Store expanded rect locally."""
-        self._stored_expanded_rect = value
 
     def addNode(self, node: 'Node') -> None:
         """
@@ -209,12 +109,12 @@ class GroupNode(Serializable, QGraphicsRectItem):
         if node not in self.child_nodes:
             self.child_nodes.append(node)
             node.parent_group = self
-            
-            # Add to model
-            if hasattr(self.controller, 'add_node'):
-                self.controller.add_node(node.model if hasattr(node, 'model') else None)
+
+            # Store current position
+            self._child_positions[id(node)] = (node.pos.x(), node.pos.y())
 
             # Connect the node's positionChanged signal to our slot
+            # This allows us to check boundaries when the node moves
             node.positionChanged.connect(self.onChildNodeMoved)
 
             self.scene.has_been_modified = True
@@ -231,10 +131,11 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
             self.child_nodes.remove(node)
             node.parent_group = None
-            
-            # Remove from model
-            if hasattr(self.controller, 'remove_node'):
-                self.controller.remove_node(node.model if hasattr(node, 'model') else None)
+
+            # Clean up stored position
+            node_id = id(node)
+            if node_id in self._child_positions:
+                del self._child_positions[node_id]
 
             self.scene.has_been_modified = True
             self.updateGroupBoundaries()
@@ -265,9 +166,9 @@ class GroupNode(Serializable, QGraphicsRectItem):
         Slot called when the collapse/expand button is clicked.
         Prints the current state and toggles collapse.
         """
-        current_state = "Collapsed" if self.model.is_collapsed else "Expanded"
+        current_state = "Collapsed" if self._is_collapsed else "Expanded"
         print(f"Group '{self.title}' is currently {current_state}")
-        self.controller.toggle_collapse()
+        self.toggleCollapse()
 
     def getChildNodes(self) -> List['Node']:
         """Get a copy of the list of child nodes."""
@@ -351,9 +252,6 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
         # Position the group at the top-left of the bounding box in scene coordinates
         self.setPos(bbox.topLeft())
-        
-        # Update model to reflect changes
-        self.controller.set_boundaries(bbox.x(), bbox.y(), normalized_width, normalized_height)
 
         # Update button position after resizing
         self._updateButtonProxy()
@@ -374,7 +272,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
                 self._updateButtonProxy()
 
             # When collapsed, move visible child nodes with the container
-            if self.model.is_collapsed and value is not None:
+            if self._is_collapsed and value is not None:
                 new_pos = value  # QPointF of new container position
                 container_width = self.rect().width()
                 container_height = self.rect().height()
@@ -428,14 +326,14 @@ class GroupNode(Serializable, QGraphicsRectItem):
         This simple approach maintains all edge connections - edges naturally follow the nodes.
         Internal edges become very short, external edges connect to the container center.
         """
-        if self.model.is_collapsed:
+        if self._is_collapsed:
             return
 
         # Store current expanded size
         self._expanded_rect = self.rect()
 
         # Clear any previous stored states
-        self.model._original_node_states.clear()
+        self._original_node_states.clear()
 
         # First, identify which nodes have external connections
         nodes_with_external_connections = set()
@@ -480,7 +378,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
             container_pos = self.pos()
             relative_pos = node.pos - container_pos
 
-            self.model._original_node_states[node.id] = {
+            self._original_node_states[node.id] = {
                 "relative_position": relative_pos,  # Position relative to container
                 "width": getattr(node.grNode, "width", None),
                 "height": getattr(node.grNode, "height", None),
@@ -566,8 +464,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
         self._collapse_button.setText("−")
         self._updateButtonProxy()
 
-        # Update model
-        self.model.is_collapsed = True
+        self._is_collapsed = True
         self.update()
         self.scene.has_been_modified = True
 
@@ -578,15 +475,15 @@ class GroupNode(Serializable, QGraphicsRectItem):
         - Edges between nodes inside the group (internal edges)
         - Edges connecting to nodes outside the group (external connections)
         """
-        if self.model.is_collapsed is False:
+        if not self._is_collapsed:
             return
 
         # Restore all child nodes to their original positions and sizes
         if hasattr(self, "_original_node_states"):
             for node in self.child_nodes:
                 node_id = node.id
-                if node_id in self.model._original_node_states:
-                    original_state = self.model._original_node_states[node_id]
+                if node_id in self._original_node_states:
+                    original_state = self._original_node_states[node_id]
 
                     # Restore visibility first
                     if node.grNode and original_state.get("was_visible", True):
@@ -666,18 +563,20 @@ class GroupNode(Serializable, QGraphicsRectItem):
         self._collapse_button.setText("+")
         self._updateButtonProxy()
 
-        # Update model
-        self.model.is_collapsed = False
+        self._is_collapsed = False
         self.update()
         self.scene.has_been_modified = True
 
     def isCollapsed(self) -> bool:
         """Check if the group is currently collapsed."""
-        return self.model.is_collapsed
+        return self._is_collapsed
 
     def toggleCollapse(self) -> None:
         """Toggle between collapsed and expanded state."""
-        self.controller.toggle_collapse()
+        if self._is_collapsed:
+            self.expand()
+        else:
+            self.collapse()
 
     def onChildNodeMoved(self, node: 'Node') -> None:
         """
@@ -874,7 +773,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
     def ungroup(self) -> None:
         """Remove the container while keeping all child nodes."""
         # Expand if collapsed first
-        if self.model.is_collapsed:
+        if self._is_collapsed:
             self.expand()
 
         # Remove all nodes from this group (but don't delete them)
@@ -936,8 +835,197 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
     def serialize(self) -> dict:
         """Serialize the group node to a dictionary."""
-        return self.controller.serialize()
+        # Serialize the original node states if they exist (for collapsed containers)
+        serialized_node_states = {}
+        if hasattr(self, "_original_node_states"):
+            for node_id, state in self._original_node_states.items():
+                serialized_node_states[str(node_id)] = {
+                    "relative_position": (
+                        (state["relative_position"].x(), state["relative_position"].y())
+                        if hasattr(state["relative_position"], "x")
+                        else state["relative_position"]
+                    ),
+                    "width": state.get("width"),
+                    "height": state.get("height"),
+                    "scale": state.get("scale", 1.0),
+                    "was_visible": state.get("was_visible", True),
+                }
+
+        return {
+            "id": self.id,
+            "type": "GroupNode",
+            "title": self.title,
+            "x": self.pos().x(),
+            "y": self.pos().y(),
+            "width": self.rect().width(),
+            "height": self.rect().height(),
+            "is_collapsed": self._is_collapsed,
+            "child_node_ids": [node.id for node in self.child_nodes],
+            "color": self._color.getRgb(),
+            "title_color": self._title_color.getRgb(),
+            "border_color": self._border_color.getRgb(),
+            "original_node_states": serialized_node_states,  # Store node positions for expansion
+        }
 
     def deserialize(self, data: dict, hashmap: Optional[dict] = None, restore_id: bool = True) -> bool:
         """Deserialize the group node from a dictionary."""
-        return self.controller.deserialize(data, restore_id)
+        try:
+            if restore_id and 'id' in data:
+                self.id = data['id']
+
+            self.title = data.get('title', 'Group')
+            self._is_collapsed = data.get('is_collapsed', False)
+
+            # Restore position and size
+            if 'x' in data and 'y' in data:
+                self.setPos(data['x'], data['y'])
+
+            width = data.get('width', 200)
+            height = data.get('height', 150)
+            self.setRect(0, 0, width, height)
+
+            # Restore colors if present
+            if 'color' in data and isinstance(data['color'], (list, tuple)):
+                self._color = QColor(*data['color'])
+            if 'title_color' in data and isinstance(data['title_color'], (list, tuple)):
+                self._title_color = QColor(*data['title_color'])
+            if 'border_color' in data and isinstance(data['border_color'], (list, tuple)):
+                self._border_color = QColor(*data['border_color'])
+
+            # Restore original node states if available (for collapsed containers)
+            if "original_node_states" in data:
+                serialized_states = data["original_node_states"]
+                for node_id_str, state_data in serialized_states.items():
+                    node_id = int(node_id_str)
+                    # Convert relative position from tuple back to QPointF
+                    relative_pos = state_data.get("relative_position")
+                    if isinstance(relative_pos, (list, tuple)):
+                        relative_pos = QPointF(relative_pos[0], relative_pos[1])
+
+                    self._original_node_states[node_id] = {
+                        "relative_position": relative_pos,
+                        "width": state_data.get("width"),
+                        "height": state_data.get("height"),
+                        "scale": state_data.get("scale", 1.0),
+                        "was_visible": state_data.get("was_visible", True),
+                    }
+
+            # If container is collapsed, we need to properly set up the collapsed state
+            if self._is_collapsed:
+                # Store that we need to apply collapse after child nodes are added
+                self._needs_collapse_setup = True
+                # Update button text to show collapsed state
+                self._collapse_button.setText("−")
+                self._updateButtonProxy()
+
+            # Child nodes will be restored by the scene deserialization process
+            # by setting their parent_group attribute
+
+            return True
+        except Exception as e:
+            dumpException(e)
+            return False
+
+    def applyCollapsedStateFromDeserialization(self) -> None:
+        """
+        Apply the collapsed state to child nodes after they have been deserialized.
+        This should be called after child nodes have been added to the group.
+        """
+        if not self._is_collapsed or not self.child_nodes:
+            return
+
+        # Identify nodes with external connections
+        nodes_with_external_connections = set()
+
+        for node in self.child_nodes:
+            has_external = False
+            for socket in node.inputs + node.outputs:
+                for edge in socket.edges:
+                    if edge.grEdge is not None:
+                        # Get both nodes connected by this edge
+                        start_node = (
+                            edge.start_socket.node if edge.start_socket else None
+                        )
+                        end_node = edge.end_socket.node if edge.end_socket else None
+
+                        # Check if this edge connects to outside the group
+                        if (
+                            start_node in self.child_nodes
+                            and end_node not in self.child_nodes
+                        ):
+                            has_external = True
+                            break
+                        elif (
+                            end_node in self.child_nodes
+                            and start_node not in self.child_nodes
+                        ):
+                            has_external = True
+                            break
+                        # Hide internal edges (both nodes in group)
+                        elif (
+                            start_node in self.child_nodes
+                            and end_node in self.child_nodes
+                        ):
+                            if edge.grEdge:
+                                edge.grEdge.hide()
+
+            if has_external:
+                nodes_with_external_connections.add(node)
+
+        # Position and shrink nodes based on edge direction
+        container_pos = self.scenePos()
+        container_width = self.rect().width()
+        container_height = self.rect().height()
+        container_center_y = container_pos.y() + container_height / 2
+
+        for node in self.child_nodes:
+            if node in nodes_with_external_connections:
+                # Determine if this node has incoming or outgoing edges
+                has_incoming = any(socket.edges for socket in node.inputs)
+                has_outgoing = any(socket.edges for socket in node.outputs)
+
+                # Position node on left for incoming edges, right for outgoing edges
+                if has_incoming and not has_outgoing:
+                    node.setPos(container_pos.x() - 10, container_center_y)
+                elif has_outgoing and not has_incoming:
+                    node.setPos(
+                        container_pos.x() + container_width + 10, container_center_y
+                    )
+                else:
+                    node_x = container_pos.x() + container_width / 2
+                    node.setPos(node_x, container_center_y)
+
+                # Shrink the node graphics
+                if hasattr(node.grNode, "width") and hasattr(node.grNode, "height"):
+                    node.grNode.width = 0.2
+                    node.grNode.height = 0.2
+                    node.grNode.setScale(0)
+                    node.grNode.update()
+                    node.grNode.hide()
+
+                    # Position all sockets at the center
+                    center_x = 2.5
+                    center_y = 2.5
+
+                    for socket in node.inputs + node.outputs:
+                        socket.grSocket.setPos(center_x, center_y)
+                        socket.grSocket.hide()
+
+                    # Update connected edges
+                    for socket in node.inputs + node.outputs:
+                        for edge in socket.edges:
+                            if edge.grEdge:
+                                edge.grEdge.update()
+
+                    # Then update all connected edges to follow the new socket positions
+                    node.updateConnectedEdges()
+
+            else:
+                # Node has only internal connections - hide it completely
+                if node.grNode:
+                    node.grNode.hide()
+                    # Also hide all edges connected to this node
+                    for socket in node.inputs + node.outputs:
+                        for edge in socket.edges:
+                            if edge.grEdge:
+                                edge.grEdge.hide()

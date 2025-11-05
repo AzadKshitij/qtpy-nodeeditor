@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-A module containing NodeEditor's class for representing `Node`.
+Node - MVC-based implementation of a node in the graph.
+
+The Node class wraps NodeModel and NodeController to provide MVC-based
+node management while maintaining the existing public API.
 """
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal
@@ -8,10 +11,9 @@ from nodeeditor.node_graphics_node import QDMGraphicsNode
 from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_socket import Socket, LEFT_BOTTOM, LEFT_CENTER, LEFT_TOP, RIGHT_BOTTOM, RIGHT_CENTER, RIGHT_TOP
-from nodeeditor.utils_no_qt import dumpException, pp
+from nodeeditor.utils_no_qt import dumpException
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Union
-
 
 if TYPE_CHECKING:
     from nodeeditor.node_graphics_view import QDMGraphicsView
@@ -23,9 +25,12 @@ if TYPE_CHECKING:
 DEBUG = False
 
 
-class Node(QObject,  Serializable):
+class Node(QObject, Serializable):
     """
-    Class representing `Node` in the `Scene`.
+    Node class representing a node in the graph using MVC architecture.
+
+    The Node wraps NodeModel and NodeController to provide data management
+    and operations while maintaining the public API.
     """
     # Signal emitted when node position changes (after user finishes dragging)
     positionChanged = Signal(object)  # Emits the Node object
@@ -34,102 +39,146 @@ class Node(QObject,  Serializable):
     NodeContent_class = QDMNodeContentWidget
     Socket_class = Socket
 
-    def __init__(self, scene: 'Scene', title: str = "Undefined Node", inputs: list = [], outputs: list = [], input_text: list = [], output_text: list = []) -> None:
+    def __init__(
+        self,
+        scene: 'Scene',
+        title: str = "Undefined Node",
+        inputs: list = [],
+        outputs: list = [],
+        input_text: list = [],
+        output_text: list = []
+    ) -> None:
         """
+        Initialize a Node with MVC components.
 
-        :param scene: reference to the :class:`~nodeeditor.node_scene.Scene`
-        :type scene: :class:`~nodeeditor.node_scene.Scene`
-        :param title: Node Title shown in Scene
-        :type title: str
-        :param inputs: list of :class:`~nodeeditor.node_socket.Socket` types from which the `Sockets` will be auto created
-        :param outputs: list of :class:`~nodeeditor.node_socket.Socket` types from which the `Sockets` will be auto created
-
-        :Instance Attributes:
-
-            - **scene** - reference to the :class:`~nodeeditor.node_scene.Scene`
-            - **grNode** - Instance of :class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` handling graphical representation in the ``QGraphicsScene``. Automatically created in the constructor
-            - **content** - Instance of :class:`~nodeeditor.node_graphics_content.QDMGraphicsContent` which is child of ``QWidget`` representing container for all inner widgets inside of the Node. Automatically created in the constructor
-            - **inputs** - list containin Input :class:`~nodeeditor.node_socket.Socket` instances
-            - **outputs** - list containin Output :class:`~nodeeditor.node_socket.Socket` instances
-
+        :param scene: reference to the Scene
+        :param title: Node title shown in Scene
+        :param inputs: list of socket types for inputs
+        :param outputs: list of socket types for outputs
+        :param input_text: list of text labels for input sockets
+        :param output_text: list of text labels for output sockets
         """
-        super().__init__()  # Initialize QObject
-        super(Serializable).__init__()  # Initialize Serializable
-        self._title = title
-        self.scene = scene
+        QObject.__init__(self)
+        Serializable.__init__(self)
+        
+        # Import here to avoid circular imports
+        from nodeeditor.models.node_model import NodeModel
+        from nodeeditor.controllers.node_controller import NodeController
+        
+        # MVC components
+        self.model: NodeModel = NodeModel(title)
+        self.controller: NodeController = NodeController(self.model)
+        
+        # Reference to scene
+        self.scene: 'Scene' = scene
 
-        # just to be sure, init these variables
+        # Graphics and content
         self.content: QDMNodeContentWidget
         self.grNode: QDMGraphicsNode
 
+        # Initialize graphics and content
         self.initInnerClasses()
         self.initSettings()
 
+        # Set title (will update model and graphics)
         self.title = title
 
+        # Add to scene
         self.scene.addNode(self)
         self.scene.grScene.addItem(self.grNode)
 
-        # create socket for inputs and outputs
+        # Create sockets for inputs and outputs
         self.inputs: List['Socket'] = []
         self.outputs: List['Socket'] = []
         self.initSockets(inputs, outputs, input_text, output_text)
 
-        # dirty and evaluation
+        # Evaluation state
         self._is_dirty = False
         self._is_invalid = False
 
-        # grouping support
+        # Grouping support
         self.parent_group: Optional["GroupNode"] = None
+        
+        # Connect model signals to update graphics
+        self.model.titleChanged.connect(self._on_title_changed)
+        self.model.positionChanged.connect(self._on_position_changed)
 
     def __str__(self) -> str:
-        return "<%s:%s %s..%s>" % (self.title, self.__class__.__name__, hex(id(self))[2:5], hex(id(self))[-3:])
+        """String representation of the node."""
+        return "<%s:%s %s..%s>" % (
+            self.title,
+            self.__class__.__name__,
+            hex(id(self))[2:5],
+            hex(id(self))[-3:]
+        )
+
+    # ==================== Signal Handlers ====================
+    
+    def _on_title_changed(self, new_title: str) -> None:
+        """Handle model title change - update graphics."""
+        if self.grNode:
+            self.grNode.title = new_title
+    
+    def _on_position_changed(self, x: float, y: float) -> None:
+        """Handle model position change - update graphics."""
+        if self.grNode:
+            self.grNode.setPos(x, y)
+        self.positionChanged.emit(self)
+
+    # ==================== Properties (Delegated to Model) ====================
 
     @property
-    def title(self):
+    def title(self) -> str:
         """
-        Title shown in the scene
+        Title shown in the scene.
 
-        :getter: return current Node title
-        :setter: sets Node title and passes it to Graphics Node class
-        :type: ``str``
+        :return: current Node title
         """
-        return self._title
+        return self.model.title
 
     @title.setter
-    def title(self, value) -> None:
-        self._title = value
-        self.grNode.title = self._title
+    def title(self, value: str) -> None:
+        """Set node title."""
+        self.model.title = value
+        # Also update graphics immediately
+        if self.grNode:
+            self.grNode.title = value
 
     @property
     def pos(self):
         """
-        Retrieve Node's position in the Scene
+        Retrieve Node's position in the Scene.
 
-        :return: Node position
-        :rtype: ``QPointF``
+        :return: Node position (QPointF)
         """
-        return self.grNode.pos()        # QPointF
+        return self.grNode.pos()
 
     def setPos(self, x: float, y: float) -> None:
         """
-        Sets position of the Graphics Node
+        Sets position of the Node.
 
-        :param x: X `Scene` position
-        :param y: Y `Scene` position
+        :param x: X Scene position
+        :param y: Y Scene position
         """
+        # Update model first
+        self.model.position = (x, y)
+        
+        # Update graphics
         self.grNode.setPos(x, y)
-        for inputs in self.inputs:
-            for edge in inputs.edges:
+        
+        # Update connected edges
+        for socket in self.inputs + self.outputs:
+            for edge in socket.edges:
                 edge.grEdge.calcPath()
                 edge.updatePositions()
-        for outputs in self.outputs:
-            for edge in outputs.edges:
-                edge.grEdge.calcPath()
-                edge.updatePositions()
+        
+        # Emit signal
+        self.positionChanged.emit(self)
+
+    # ==================== Graphics and Content Initialization ====================
 
     def initInnerClasses(self) -> None:
-        """Sets up graphics Node (PyQt) and Content Widget"""
+        """Sets up graphics Node (PyQt) and Content Widget."""
         node_content_class = self.getNodeContentClass()
         graphics_node_class = self.getGraphicsNodeClass()
         if node_content_class is not None:
@@ -138,16 +187,16 @@ class Node(QObject,  Serializable):
             self.grNode = graphics_node_class(self)
 
     def getNodeContentClass(self):
-        """Returns class representing nodeeditor content"""
+        """Returns class representing node content."""
         return self.__class__.NodeContent_class
 
     def getGraphicsNodeClass(self):
+        """Returns class representing graphics node."""
         return self.__class__.GraphicsNode_class
 
     def initSettings(self) -> None:
-        """Initialize properties and socket information"""
+        """Initialize socket configuration."""
         self.socket_spacing = 22
-        # Todo: set input_multi_edged option.
         self.input_socket_position = LEFT_BOTTOM
         self.output_socket_position = RIGHT_TOP
         self.input_multi_edged = False
@@ -161,46 +210,42 @@ class Node(QObject,  Serializable):
             RIGHT_TOP: 1,
         }
 
-    def initSockets(self, inputs: list, outputs: list,
-                    input_text: list = [], output_text: list = [],
-                    reset: bool = True) -> None:
+    def initSockets(
+        self,
+        inputs: list,
+        outputs: list,
+        input_text: list = [],
+        output_text: list = [],
+        reset: bool = True
+    ) -> None:
         """
-        Create sockets for inputs and outputs
+        Create sockets for inputs and outputs.
 
-        :param inputs: list of Socket Types (int)
-        :type inputs: ``list``
-        :param outputs: list of Socket Types (int)
-        :type outputs: ``list``
-        :param input_text: list of Socket Types (int)
-        :type input_text: ``list``
-        :param output_text: list of Socket Types (int)
-        :type output_text: ``list``
-        :param reset: if ``True`` destroys and removes old `Sockets`
-        :type reset: ``bool``
+        :param inputs: list of socket types for inputs
+        :param outputs: list of socket types for outputs
+        :param input_text: list of text labels for input sockets
+        :param output_text: list of text labels for output sockets
+        :param reset: if True, destroys and removes old sockets
         """
-
-        # Initialize empty lists if None provided
         input_text = input_text or []
         output_text = output_text or []
 
         if reset:
-            # clear old sockets
+            # Clear old sockets
             if hasattr(self, 'inputs') and hasattr(self, 'outputs'):
-                # remove grSockets from scene
                 for socket in (self.inputs + self.outputs):
                     self.scene.grScene.removeItem(socket.grSocket)
                 self.inputs = []
                 self.outputs = []
 
-        # create new sockets
-        for i, item in enumerate(inputs):
-            # Get text if available, otherwise empty string
+        # Create input sockets
+        for i, socket_type in enumerate(inputs):
             text = input_text[i] if i < len(input_text) else ""
             socket = self.__class__.Socket_class(
                 node=self,
                 index=i,
                 position=self.input_socket_position,
-                socket_type=item,
+                socket_type=socket_type,
                 multi_edges=self.input_multi_edged,
                 count_on_this_node_side=len(inputs),
                 is_input=True
@@ -208,14 +253,14 @@ class Node(QObject,  Serializable):
             socket.grSocket.setText(text)
             self.inputs.append(socket)
 
-        for i, item in enumerate(outputs):
-            # Get text if available, otherwise empty string
+        # Create output sockets
+        for i, socket_type in enumerate(outputs):
             text = output_text[i] if i < len(output_text) else ""
             socket = self.__class__.Socket_class(
                 node=self,
                 index=i,
                 position=self.output_socket_position,
-                socket_type=item,
+                socket_type=socket_type,
                 multi_edges=self.output_multi_edged,
                 count_on_this_node_side=len(outputs),
                 is_input=False
@@ -225,70 +270,71 @@ class Node(QObject,  Serializable):
 
     def onEdgeConnectionChanged(self, new_edge: 'Edge') -> None:
         """
-        Event handling that any connection (`Edge`) has changed. Currently not used...
+        Event handling when any connection (Edge) has changed.
 
-        :param new_edge: reference to the changed :class:`~nodeeditor.node_edge.Edge`
-        :type new_edge: :class:`~nodeeditor.node_edge.Edge`
+        :param new_edge: reference to the changed Edge
         """
         pass
 
     def onInputChanged(self, socket: 'Socket') -> None:
-        """Event handling when Node's input Edge has changed. We auto-mark this `Node` to be `Dirty` with all it's
-        descendants
+        """
+        Event handling when Node's input Edge has changed.
+        Auto-marks this Node and descendants as Dirty.
 
-        :param socket: reference to the changed :class:`~nodeeditor.node_socket.Socket`
-        :type socket: :class:`~nodeeditor.node_socket.Socket`
+        :param socket: reference to the changed Socket
         """
         self.markDirty()
         self.markDescendantsDirty()
 
     def onDeserialized(self, data: dict) -> None:
-        """Event manually called when this node was deserialized. Currently called when node is deserialized from scene
-        Passing `data` containing the data which have been deserialized """
+        """
+        Event manually called when this node was deserialized.
+
+        :param data: the deserialized data
+        """
         pass
 
     def onDoubleClicked(self, event) -> None:
-        """Event handling double click on Graphics Node in `Scene`"""
+        """Event handling double click on Graphics Node in Scene."""
         pass
 
     def doSelect(self, new_state: bool = True) -> None:
-        """Shortcut method for selecting/deselecting the `Node`
+        """
+        Shortcut method for selecting/deselecting the Node.
 
-        :param new_state: ``True`` if you want to select the `Node`. ``False`` if you want to deselect the `Node`
-        :type new_state: ``bool``
+        :param new_state: True to select, False to deselect
         """
         self.grNode.doSelect(new_state)
 
-    def isSelected(self):
-        """Returns ``True`` if current `Node` is selected"""
+    def isSelected(self) -> bool:
+        """Returns True if current Node is selected."""
         return self.grNode.isSelected()
 
     def hasConnectedEdge(self, edge: 'Edge') -> bool:
-        """Returns ``True`` if edge is connected to any :class:`~nodeeditor.node_socket.Socket` of this `Node`"""
+        """Returns True if edge is connected to any Socket of this Node."""
         for socket in (self.inputs + self.outputs):
             if socket.isConnected(edge):
                 return True
         return False
 
-    def getSocketPosition(self, index: int, position: int, num_out_of: int = 1) -> List[float]:
+    def getSocketPosition(
+        self,
+        index: int,
+        position: int,
+        num_out_of: int = 1
+    ) -> List[float]:
         """
-        Get the relative `x, y` position of a :class:`~nodeeditor.node_socket.Socket`. This is used for placing
-        the `Graphics Sockets` on `Graphics Node`.
+        Get the relative x, y position of a Socket.
 
-        :param index: Order number of the Socket. (0, 1, 2, ...)
-        :type index: ``int``
-        :param position: `Socket Position Constant` describing where the Socket is located. See :ref:`socket-position-constants`
-        :type position: ``int``
-        :param num_out_of: Total number of Sockets on this `Socket Position`
-        :type num_out_of: ``int``
-        :return: Position of described Socket on the `Node`
-        :rtype: ``x, y``
+        :param index: Order number of the Socket (0, 1, 2, ...)
+        :param position: Socket position constant
+        :param num_out_of: Total number of Sockets on this position
+        :return: [x, y] position of socket on the node
         """
         x = self.socket_offsets[position] if (position in (
             LEFT_TOP, LEFT_CENTER, LEFT_BOTTOM)) else self.grNode.width + self.socket_offsets[position]
 
         if position in (LEFT_BOTTOM, RIGHT_BOTTOM):
-            # start from bottom
             y = self.grNode.height - self.grNode.edge_roundness - \
                 self.grNode.title_vertical_padding - index * self.socket_spacing
         elif position in (LEFT_CENTER, RIGHT_CENTER):
@@ -301,27 +347,23 @@ class Node(QObject,  Serializable):
             total_height_of_all_sockets = num_sockets * self.socket_spacing
             new_top = available_height - total_height_of_all_sockets
 
-            # y = top_offset + index * self.socket_spacing + new_top / 2
-            y = top_offset + available_height / \
-                2.0 + (index-0.5)*self.socket_spacing
+            y = top_offset + available_height / 2.0 + (index-0.5)*self.socket_spacing
             if num_sockets > 1:
                 y -= self.socket_spacing * (num_sockets-1)/2
 
         elif position in (LEFT_TOP, RIGHT_TOP):
-            # start from top
             y = self.grNode.title_height + self.grNode.title_vertical_padding + \
                 self.grNode.edge_roundness + index * self.socket_spacing
         else:
-            # this should never happen
             y = 0
 
         return [x, y]
 
     def getSocketScenePosition(self, socket: 'Socket') -> Tuple[float, float]:
         """
-        Get absolute Socket position in the Scene
+        Get absolute Socket position in the Scene.
 
-        :param socket: `Socket` which position we want to know
+        :param socket: Socket which position we want to know
         :return: (x, y) Socket's scene position
         """
         nodepos = self.grNode.pos()
@@ -330,139 +372,108 @@ class Node(QObject,  Serializable):
         return (nodepos.x() + socketpos[0], nodepos.y() + socketpos[1])
 
     def updateConnectedEdges(self) -> None:
-        """Recalculate (Refresh) positions of all connected `Edges`. Used for updating Graphics Edges"""
+        """Recalculate positions of all connected Edges."""
         for socket in self.inputs + self.outputs:
-            # if socket.hasEdge():
             for edge in socket.edges:
                 edge.updatePositions()
 
     def remove(self) -> None:
-        """
-        Safely remove this Node
-        """
+        """Safely remove this Node."""
         if DEBUG:
             print("> Removing Node", self)
+        
+        # Remove all edges from sockets
         if DEBUG:
             print(" - remove all edges from sockets")
-        for socket in (self.inputs+self.outputs):
-            # if socket.hasEdge():
+        for socket in (self.inputs + self.outputs):
             for edge in socket.edges.copy():
                 if DEBUG:
                     print("    - removing from socket:", socket, "edge:", edge)
                 edge.remove()
+        
+        # Remove graphics node
         if DEBUG:
             print(" - remove grNode")
         self.scene.grScene.removeItem(self.grNode)
         self.grNode = None
+        
+        # Remove node from scene
         if DEBUG:
             print(" - remove node from the scene")
         self.scene.removeNode(self)
         if DEBUG:
             print(" - everything was done.")
 
-    # node evaluation stuff
+    # ==================== Evaluation (Dirty/Invalid State) ====================
 
     def isDirty(self) -> bool:
-        """Is this node marked as `Dirty`
-
-        :return: ``True`` if `Node` is marked as `Dirty`
-        :rtype: ``bool``
-        """
+        """Is this node marked as Dirty?"""
         return self._is_dirty
 
     def markDirty(self, new_value: bool = True) -> None:
-        """Mark this `Node` as `Dirty`. See :ref:`evaluation` for more
-
-        :param new_value: ``True`` if this `Node` should be `Dirty`. ``False`` if you want to un-dirty this `Node`
-        :type new_value: ``bool``
-        """
+        """Mark this Node as Dirty."""
         self._is_dirty = new_value
         if self._is_dirty:
             self.onMarkedDirty()
 
     def onMarkedDirty(self) -> None:
-        """Called when this `Node` has been marked as `Dirty`. This method is supposed to be overridden"""
+        """Called when this Node has been marked as Dirty. Override this."""
         pass
 
     def markChildrenDirty(self, new_value: bool = True) -> None:
-        """Mark all first level children of this `Node` to be `Dirty`. Not this `Node` it self. Not other descendants
-
-        :param new_value: ``True`` if children should be `Dirty`. ``False`` if you want to un-dirty children
-        :type new_value: ``bool``
-        """
+        """Mark all first level children of this Node to be Dirty."""
         for other_node in self.getChildrenNodes():
             other_node.markDirty(new_value)
 
     def markDescendantsDirty(self, new_value: bool = True) -> None:
-        """Mark all children and descendants of this `Node` to be `Dirty`. Not this `Node` it self
-
-        :param new_value: ``True`` if children and descendants should be `Dirty`. ``False`` if you want to un-dirty children and descendants
-        :type new_value: ``bool``
-        """
+        """Mark all children and descendants of this Node to be Dirty."""
         for other_node in self.getChildrenNodes():
             other_node.markDirty(new_value)
             other_node.markDescendantsDirty(new_value)
 
     def isInvalid(self) -> bool:
-        """Is this node marked as `Invalid`?
-
-        :return: ``True`` if `Node` is marked as `Invalid`
-        :rtype: ``bool``
-        """
+        """Is this node marked as Invalid?"""
         return self._is_invalid
 
     def markInvalid(self, new_value: bool = True) -> None:
-        """Mark this `Node` as `Invalid`. See :ref:`evaluation` for more
-
-        :param new_value: ``True`` if this `Node` should be `Invalid`. ``False`` if you want to make this `Node` valid
-        :type new_value: ``bool``
-        """
+        """Mark this Node as Invalid."""
         self._is_invalid = new_value
         if self._is_invalid:
             self.onMarkedInvalid()
 
     def onMarkedInvalid(self) -> None:
-        """Called when this `Node` has been marked as `Invalid`. This method is supposed to be overridden"""
+        """Called when this Node has been marked as Invalid. Override this."""
         pass
 
     def markChildrenInvalid(self, new_value: bool = True) -> None:
-        """Mark all first level children of this `Node` to be `Invalid`. Not this `Node` it self. Not other descendants
-
-        :param new_value: ``True`` if children should be `Invalid`. ``False`` if you want to make children valid
-        :type new_value: ``bool``
-        """
+        """Mark all first level children of this Node to be Invalid."""
         for other_node in self.getChildrenNodes():
             other_node.markInvalid(new_value)
 
     def markDescendantsInvalid(self, new_value: bool = True) -> None:
-        """Mark all children and descendants of this `Node` to be `Invalid`. Not this `Node` it self
-
-        :param new_value: ``True`` if children and descendants should be `Invalid`. ``False`` if you want to make children and descendants valid
-        :type new_value: ``bool``
-        """
+        """Mark all children and descendants of this Node to be Invalid."""
         for other_node in self.getChildrenNodes():
             other_node.markInvalid(new_value)
             other_node.markDescendantsInvalid(new_value)
 
     def eval(self, index: int = 0) -> int:
-        """Evaluate this `Node`. This is supposed to be overridden. See :ref:`evaluation` for more"""
+        """Evaluate this Node. Override this method. Returns status code."""
         self.markDirty(False)
         self.markInvalid(False)
         return 0
 
     def evalChildren(self) -> None:
-        """Evaluate all children of this `Node`"""
+        """Evaluate all children of this Node."""
         for node in self.getChildrenNodes():
             node.eval()
 
-    # traversing nodes functions
+    # ==================== Graph Traversal ====================
 
-    def getChildrenNodes(self) -> 'List[Node]':
+    def getChildrenNodes(self) -> List['Node']:
         """
-        Retreive all first-level children connected to this `Node` `Outputs`
+        Retrieve all first-level children connected to this Node's Outputs.
 
-        :return: list of `Nodes` connected to this `Node` from all `Outputs`
-        :rtype: List[:class:`~nodeeditor.node_node.Node`]
+        :return: list of Nodes connected to this Node from all Outputs
         """
         if self.outputs == []:
             return []
@@ -475,13 +486,10 @@ class Node(QObject,  Serializable):
 
     def getInput(self, index: int = 0) -> Optional['Node']:
         """
-        Get the **first**  `Node` connected to the  Input specified by `index`
+        Get the first Node connected to the Input specified by index.
 
-        :param index: Order number of the `Input Socket`
-        :type index: ``int``
-        :return: :class:`~nodeeditor.node_node.Node` which is connected to the specified `Input` or ``None`` if
-            there is no connection or the index is out of range
-        :rtype: :class:`~nodeeditor.node_node.Node` or ``None``
+        :param index: Order number of the Input Socket
+        :return: Node which is connected to the specified Input or None
         """
         try:
             input_socket = self.inputs[index]
@@ -494,15 +502,15 @@ class Node(QObject,  Serializable):
             dumpException(e)
             return None
 
-    def getInputWithSocket(self, index: int = 0) -> Union[Tuple['Node', 'Socket'], Tuple[None, None]]:
+    def getInputWithSocket(
+        self,
+        index: int = 0
+    ) -> Union[Tuple['Node', 'Socket'], Tuple[None, None]]:
         """
-        Get the **first**  `Node` connected to the Input specified by `index` and the connection `Socket`
+        Get the first Node connected to the Input and its Socket.
 
-        :param index: Order number of the `Input Socket`
-        :type index: ``int``
-        :return: Tuple containing :class:`~nodeeditor.node_node.Node` and :class:`~nodeeditor.node_socket.Socket` which
-            is connected to the specified `Input` or ``None`` if there is no connection or the index is out of range
-        :rtype: (:class:`~nodeeditor.node_node.Node`, :class:`~nodeeditor.node_socket.Socket`)
+        :param index: Order number of the Input Socket
+        :return: Tuple (Node, Socket) or (None, None)
         """
         try:
             input_socket = self.inputs[index]
@@ -515,36 +523,32 @@ class Node(QObject,  Serializable):
             dumpException(e)
             return None, None
 
-    def getInputWithSocketIndex(self, index: int = 0) -> Union[Tuple['Node', int], Tuple[None, None]]:
+    def getInputWithSocketIndex(
+        self,
+        index: int = 0
+    ) -> Union[Tuple['Node', int], Tuple[None, None]]:
         """
-        Get the **first**  `Node` connected to the Input specified by `index` and the connection `Socket`
+        Get the first Node connected to the Input and its Socket index.
 
-        :param index: Order number of the `Input Socket`
-        :type index: ``int``
-        :return: Tuple containing :class:`~nodeeditor.node_node.Node` and :class:`~nodeeditor.node_socket.Socket` which
-            is connected to the specified `Input` or ``None`` if there is no connection or the index is out of range
-        :rtype: (:class:`~nodeeditor.node_node.Node`, int)
+        :param index: Order number of the Input Socket
+        :return: Tuple (Node, socket_index) or (None, None)
         """
         try:
             edge = self.inputs[index].edges[0]
             socket = edge.getOtherSocket(self.inputs[index])
             return socket.node, socket.index
         except IndexError:
-            # print("EXC: Trying to get input with socket index %d, but none is attached to" % index, self)
             return None, None
         except Exception as e:
             dumpException(e)
             return None, None
 
-    def getInputs(self, index: int = 0) -> 'List[Node]':
+    def getInputs(self, index: int = 0) -> List['Node']:
         """
-        Get **all** `Nodes` connected to the Input specified by `index`
+        Get all Nodes connected to the Input specified by index.
 
-        :param index: Order number of the `Input Socket`
-        :type index: ``int``
-        :return: all :class:`~nodeeditor.node_node.Node` instances which are connected to the
-            specified `Input` or ``[]`` if there is no connection or the index is out of range
-        :rtype: List[:class:`~nodeeditor.node_node.Node`]
+        :param index: Order number of the Input Socket
+        :return: all Nodes which are connected to the specified Input
         """
         ins = []
         for edge in self.inputs[index].edges:
@@ -552,15 +556,12 @@ class Node(QObject,  Serializable):
             ins.append(other_socket.node)
         return ins
 
-    def getOutputs(self, index: int = 0) -> 'List[Node]':
+    def getOutputs(self, index: int = 0) -> List['Node']:
         """
-        Get **all** `Nodes` connected to the Output specified by `index`
+        Get all Nodes connected to the Output specified by index.
 
-        :param index: Order number of the `Output Socket`
-        :type index: ``int``
-        :return: all :class:`~nodeeditor.node_node.Node` instances which are connected to the
-            specified `Output` or ``[]`` if there is no connection or the index is out of range
-        :rtype: List[:class:`~nodeeditor.node_node.Node`]
+        :param index: Order number of the Output Socket
+        :return: all Nodes which are connected to the specified Output
         """
         outs = []
         for edge in self.outputs[index].edges:
@@ -568,9 +569,10 @@ class Node(QObject,  Serializable):
             outs.append(other_socket.node)
         return outs
 
-    # serialization functions
+    # ==================== Serialization ====================
 
     def serialize(self) -> OrderedDict:
+        """Serialize the node to OrderedDict."""
         inputs, outputs = [], []
         for socket in self.inputs:
             inputs.append(socket.serialize())
@@ -588,7 +590,15 @@ class Node(QObject,  Serializable):
             ('content', ser_content),
         ])
 
-    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
+    def deserialize(
+        self,
+        data: dict,
+        hashmap: dict = {},
+        restore_id: bool = True,
+        *args,
+        **kwargs
+    ) -> bool:
+        """Deserialize the node from dict data."""
         try:
             if restore_id:
                 self.id = data['id']
@@ -604,57 +614,47 @@ class Node(QObject,  Serializable):
             num_inputs = len(data['inputs'])
             num_outputs = len(data['outputs'])
 
-            # print("> deserialize node,   num inputs:", num_inputs, "num outputs:", num_outputs)
-            # pp(data)
-
-            # possible way to do it is reuse existing sockets...
-            # dont create new ones if not necessary
-
+            # Reuse existing sockets or create new ones
             for socket_data in data['inputs']:
                 found = None
                 for socket in self.inputs:
-                    # print("\t", socket, socket.index, "=?", socket_data['index'])
                     if socket.index == socket_data['index']:
                         found = socket
                         break
                 if found is None:
-                    # print("deserialization of socket data has not found input socket with index:", socket_data['index'])
-                    # print("actual socket data:", socket_data)
-                    # we can create new socket for this
                     found = self.__class__.Socket_class(
-                        node=self, index=socket_data['index'], position=socket_data['position'],
-                        socket_type=socket_data['socket_type'], count_on_this_node_side=num_inputs,
+                        node=self,
+                        index=socket_data['index'],
+                        position=socket_data['position'],
+                        socket_type=socket_data['socket_type'],
+                        count_on_this_node_side=num_inputs,
                         is_input=True
                     )
-                    # append newly created input to the list
                     self.inputs.append(found)
                 found.deserialize(socket_data, hashmap, restore_id)
 
             for socket_data in data['outputs']:
                 found = None
                 for socket in self.outputs:
-                    # print("\t", socket, socket.index, "=?", socket_data['index'])
                     if socket.index == socket_data['index']:
                         found = socket
                         break
                 if found is None:
-                    # print("deserialization of socket data has not found output socket with index:", socket_data['index'])
-                    # print("actual socket data:", socket_data)
-                    # we can create new socket for this
                     found = self.__class__.Socket_class(
-                        node=self, index=socket_data['index'], position=socket_data['position'],
-                        socket_type=socket_data['socket_type'], count_on_this_node_side=num_outputs,
+                        node=self,
+                        index=socket_data['index'],
+                        position=socket_data['position'],
+                        socket_type=socket_data['socket_type'],
+                        count_on_this_node_side=num_outputs,
                         is_input=False
                     )
-                    # append newly created output to the list
                     self.outputs.append(found)
                 found.deserialize(socket_data, hashmap, restore_id)
 
         except Exception as e:
             dumpException(e)
 
-        # also deserialize the content of the node
-        # so far the rest was ok, now as last step the content...
+        # Deserialize the content of the node
         if isinstance(self.content, Serializable):
             res = self.content.deserialize(data['content'], hashmap)
             return res

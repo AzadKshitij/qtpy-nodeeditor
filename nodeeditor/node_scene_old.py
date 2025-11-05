@@ -1,0 +1,661 @@
+# -*- coding: utf-8 -*-
+"""
+A module containing the representation of the NodeEditor's Scene.
+
+Uses MVC architecture where:
+- SceneModel holds all data
+- SceneController handles business logic
+- Scene is a wrapper providing the public API
+"""
+import os
+import sys
+import orjson as json
+from orjson import JSONDecodeError, OPT_INDENT_2
+from collections import OrderedDict
+from qtpy.QtCore import QRectF, Qt, QPoint, QObject
+from qtpy.QtWidgets import QGraphicsItem
+from nodeeditor.utils_no_qt import dumpException, pp
+from nodeeditor.node_serializable import Serializable
+from nodeeditor.node_graphics_scene import QDMGraphicsScene
+from nodeeditor.models.scene_model import SceneModel
+from nodeeditor.controllers.scene_controller import SceneController
+from nodeeditor.view.graphics_scene_model import QDMGraphicsSceneModel
+from nodeeditor.node_scene_history import SceneHistory
+from nodeeditor.node_scene_clipboard import SceneClipboard
+
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, OrderedDict as OrderedDictType, Type
+
+
+if TYPE_CHECKING:
+    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.node_socket import Socket
+    from nodeeditor.node_node import Node
+    from nodeeditor.node_edge import Edge
+    NodeClassType = Callable[[dict], Type['Node']]
+
+
+DEBUG_REMOVE_WARNINGS = False
+
+
+class InvalidFile(Exception):
+    pass
+
+
+class Scene(QObject, Serializable):
+    """
+    Scene class representing NodeEditor's graph structure.
+    
+    This is now a wrapper around the MVC architecture:
+    - SceneModel: Contains all data (nodes, edges, groups)
+    - SceneController: Handles operations and business logic
+    - QDMGraphicsSceneModel: Synchronizes graphics with model
+    
+    The public API remains similar for backward compatibility.
+    """
+    historyClass = SceneHistory
+    clipboardClass = SceneClipboard
+
+    def __init__(self) -> None:
+        """
+        Initialize Scene with MVC architecture.
+        
+        :Instance Attributes:
+
+            - **model** - :class:`~nodeeditor.models.scene_model.SceneModel` containing scene data
+            - **controller** - :class:`~nodeeditor.controllers.scene_controller.SceneController` for operations
+            - **grScene** - Qt graphics scene
+            - **history** - Instance of :class:`~nodeeditor.node_scene_history.SceneHistory`
+            - **clipboard** - Instance of :class:`~nodeeditor.node_scene_clipboard.SceneClipboard`
+            - **scene_width** - width of this `Scene` in pixels
+            - **scene_height** - height of this `Scene` in pixels
+        """
+        QObject.__init__(self)
+        Serializable.__init__(self)
+        
+        # MVC components
+        self.model: SceneModel = SceneModel()
+        self.controller: SceneController = SceneController(self.model)
+        
+        # current filename assigned to this scene
+        self.filename: Optional[str] = None
+
+        self.scene_width: int = 64000
+        self.scene_height: int = 64000
+
+        # custom flag used to suppress triggering onItemSelected which does a bunch of stuff
+        self._silent_selection_events: bool = False
+
+        self._last_selected_items: Optional[List[QGraphicsItem]] = None
+        self._last_selected_socket: Optional['Socket'] = None
+        self._last_selected_edges: Optional[List['Edge']] = None
+
+        # initialize all listeners
+        self._has_been_modified_listeners: List[Callable[[], None]] = []
+        self._item_selected_listeners: List[Callable[[], None]] = []
+        self._items_deselected_listeners: List[Callable[[], None]] = []
+
+        # here we can store callback for retrieving the class for Nodes
+        self.node_class_selector: Optional['NodeClassType'] = None
+
+        self.initUI()
+        
+        # Connect MVC signals
+        self.model.nodeAdded.connect(self._on_node_added)
+        self.model.nodeRemoved.connect(self._on_node_removed)
+        self.model.edgeAdded.connect(self._on_edge_added)
+        self.model.edgeRemoved.connect(self._on_edge_removed)
+        self.model.modifiedChanged.connect(self._on_modified_changed)
+        
+        self.history = self.historyClass(self)
+        self.clipboard = self.clipboardClass(self)
+
+        self.grScene.itemSelected.connect(self.onItemSelected)
+        self.grScene.itemsDeselected.connect(self.onItemsDeselected)
+    
+    # Public API wrappers for backward compatibility and delegation to MVC
+    
+    @property
+    def nodes(self) -> List['Node']:
+        """Get list of nodes from model"""
+        return self.controller.get_all_nodes()
+    
+    @property
+    def edges(self) -> List['Edge']:
+        """Get list of edges from model"""
+        return self.controller.get_all_edges()
+    
+    @property
+    def groups(self) -> List:
+        """Get list of groups from model"""
+        return self.model.groups
+
+    @property
+    def has_been_modified(self) -> bool:
+        """
+        Has this `Scene` been modified?
+
+        :getter: ``True`` if the `Scene` has been modified
+        :setter: set new state. Triggers `Has Been Modified` event
+        :type: ``bool``
+        """
+        return self.model.is_modified
+
+    @has_been_modified.setter
+    def has_been_modified(self, value: bool) -> None:
+        self.model.is_modified = value
+
+    @property
+    def has_been_modified(self):
+        """
+        Has this `Scene` been modified?
+
+        :getter: ``True`` if the `Scene` has been modified
+        :setter: set new state. Triggers `Has Been Modified` event
+        :type: ``bool``
+        """
+        return self._has_been_modified
+
+    @has_been_modified.setter
+    def has_been_modified(self, value) -> None:
+        if not self._has_been_modified and value:
+            # set it now, because we will be reading it soon
+            self._has_been_modified = value
+
+            # call all registered listeners
+            for callback in self._has_been_modified_listeners:
+                callback()
+
+        self._has_been_modified = value
+
+    def initUI(self) -> None:
+        """Set up Graphics Scene Instance"""
+        self.grScene = QDMGraphicsScene(self)
+        self.grScene.setGrScene(self.scene_width, self.scene_height)
+
+    def getNodeByID(self, node_id: int):
+        """
+        Find node in the scene according to provided `node_id`
+
+        :param node_id: ID of the node we are looking for
+        :type node_id: ``int``
+        :return: Found ``Node`` or ``None``
+        """
+        for node in self.nodes:
+            if node.id == node_id:
+                return node
+        return None
+
+    def setSilentSelectionEvents(self, value: bool = True) -> None:
+        """Calling this can suppress onItemSelected events to be triggered. This is useful when working with clipboard"""
+        self._silent_selection_events = value
+
+    def onItemSelected(self, silent: bool = False) -> None:
+        """
+        Handle Item selection and trigger event `Item Selected`
+
+        :param silent: If ``True`` scene's onItemSelected won't be called and history stamp not stored
+        :type silent: ``bool``
+        """
+        if self._silent_selection_events:
+            return
+
+        current_selected_items = self.getSelectedItems()
+        if current_selected_items != self._last_selected_items:
+            self._last_selected_items = current_selected_items
+            if not silent:
+                # we could create some kind of UI which could be serialized,
+                # therefore first run all callbacks...
+                for callback in self._item_selected_listeners:
+                    callback()
+                # and store history as a last step always
+                self.history.storeHistory("Selection Changed")
+
+    def onItemsDeselected(self, silent: bool = False) -> None:
+        """
+        Handle Items deselection and trigger event `Items Deselected`
+
+        :param silent: If ``True`` scene's onItemsDeselected won't be called and history stamp not stored
+        :type silent: ``bool``
+        """
+        # somehow this event is being triggered when we start dragging file outside of our application
+        # or we just loose focus on our app? -- which does not mean we've deselected item in the scene!
+        # double check if the selection has actually changed, since
+        current_selected_items = self.getSelectedItems()
+        if current_selected_items == self._last_selected_items:
+            # print("Qt itemsDeselected Invalid Event! Ignoring")
+            return
+
+        self.resetLastSelectedStates()
+        if current_selected_items == []:
+            self._last_selected_items = []
+            if not silent:
+                self.history.storeHistory("Deselected Everything")
+                for callback in self._items_deselected_listeners:
+                    callback()
+
+    def isModified(self) -> bool:
+        """Is this `Scene` dirty aka `has been modified` ?
+
+        :return: ``True`` if `Scene` has been modified
+        :rtype: ``bool``
+        """
+        return self.has_been_modified
+
+    def getSelectedItems(self) -> list:
+        """
+        Returns currently selected Graphics Items
+
+        :return: list of ``QGraphicsItems``
+        :rtype: list[QGraphicsItem]
+        """
+        return self.grScene.selectedItems()
+
+    def getSelectedNodes(self) -> list:
+        """
+        Returns currently selected Nodes
+
+        :return: list of ``Node``
+        :rtype: list[Node]
+        """
+        return [item.node for item in self.getSelectedItems() if hasattr(item, "node")]
+
+    def doDeselectItems(self, silent: bool = False) -> None:
+        """
+        Deselects everything in scene
+
+        :param silent: If ``True`` scene's onItemsDeselected won't be called
+        :type silent: ``bool``
+        """
+        for item in self.getSelectedItems():
+            item.setSelected(False)
+        if not silent:
+            self.onItemsDeselected()
+
+    # our helper listener functions
+    def addHasBeenModifiedListener(self, callback: Callable[[], None]) -> None:
+        """
+        Register callback for `Has Been Modified` event
+
+        :param callback: callback function
+        """
+        self._has_been_modified_listeners.append(callback)
+
+    def addItemSelectedListener(self, callback: Callable[[], None]) -> None:
+        """
+        Register callback for `Item Selected` event
+
+        :param callback: callback function
+        """
+        self._item_selected_listeners.append(callback)
+
+    def addItemsDeselectedListener(self, callback: Callable[[], None]) -> None:
+        """
+        Register callback for `Items Deselected` event
+
+        :param callback: callback function
+        """
+        self._items_deselected_listeners.append(callback)
+
+    def addDragEnterListener(self, callback: Callable[[], None]) -> None:
+        """
+        Register callback for `Drag Enter` event
+
+        :param callback: callback function
+        """
+        self.getView().addDragEnterListener(callback)
+
+    def addDropListener(self, callback: Callable[[], None]) -> None:
+        """
+        Register callback for `Drop` event
+
+        :param callback: callback function
+        """
+        self.getView().addDropListener(callback)
+
+    # custom flag to detect node or edge has been selected....
+    def resetLastSelectedStates(self) -> None:
+        """Resets internal `selected flags` in all `Nodes` and `Edges` in the `Scene`"""
+        for node in self.nodes:
+            node.grNode._last_selected_state = False
+        for edge in self.edges:
+            edge.grEdge._last_selected_state = False
+
+    def getView(self) -> 'QDMGraphicsView':
+        """Shortcut for returning `Scene` ``QGraphicsView``
+
+        :return: ``QGraphicsView`` attached to the `Scene`
+        :rtype: ``QGraphicsView``
+        """
+        return self.grScene.views()[0]
+
+    def getItemAt(self, pos: 'QPoint') -> Optional['QGraphicsItem']:
+        """Shortcut for retrieving item at provided `Scene` position
+
+        :param pos: scene position
+        :type pos: ``QPointF``
+        :return: Qt Graphics Item at scene position
+        :rtype: ``QGraphicsItem``
+        """
+        return self.getView().itemAt(pos)
+
+    def addNode(self, node: Node) -> None:
+        """Add :class:`~nodeeditor.node_node.Node` to this `Scene`
+
+        :param node: :class:`~nodeeditor.node_node.Node` to be added to this `Scene`
+        :type node: :class:`~nodeeditor.node_node.Node`
+        """
+        self.nodes.append(node)
+
+    def addEdge(self, edge: Edge) -> None:
+        """Add :class:`~nodeeditor.node_edge.Edge` to this `Scene`
+
+        :param edge: :class:`~nodeeditor.node_edge.Edge` to be added to this `Scene`
+        :return: :class:`~nodeeditor.node_edge.Edge`
+        """
+        self.edges.append(edge)
+
+    def removeNode(self, node: Node) -> None:
+        """Remove :class:`~nodeeditor.node_node.Node` from this `Scene`
+
+        :param node: :class:`~nodeeditor.node_node.Node` to be removed from this `Scene`
+        :type node: :class:`~nodeeditor.node_node.Node`
+        """
+        if node in self.nodes:
+            self.nodes.remove(node)
+        else:
+            if DEBUG_REMOVE_WARNINGS:
+                print("!W:", "Scene::removeNode", "wanna remove nodeeditor", node,
+                      "from self.nodes but it's not in the list!")
+
+    def removeEdge(self, edge: Edge) -> None:
+        """Remove :class:`~nodeeditor.node_edge.Edge` from this `Scene`
+
+        :param edge: :class:`~nodeeditor.node_edge.Edge` to be remove from this `Scene`
+        :return: :class:`~nodeeditor.node_edge.Edge`
+        """
+        if edge in self.edges:
+            self.edges.remove(edge)
+        else:
+            if DEBUG_REMOVE_WARNINGS:
+                print("!W:", "Scene::removeEdge", "wanna remove edge", edge,
+                      "from self.edges but it's not in the list!")
+
+    def addGroup(self, group) -> None:
+        """Add GroupNode to this `Scene`
+
+        :param group: GroupNode to be added to this `Scene`
+        """
+        self.groups.append(group)
+
+    def removeGroup(self, group) -> None:
+        """Remove GroupNode from this `Scene`
+
+        :param group: GroupNode to be removed from this `Scene`
+        """
+        if group in self.groups:
+            self.groups.remove(group)
+        else:
+            if DEBUG_REMOVE_WARNINGS:
+                print(
+                    "!W:",
+                    "Scene::removeGroup",
+                    "wanna remove group",
+                    group,
+                    "from self.groups but it's not in the list!",
+                )
+
+    def clear(self) -> None:
+        """Remove all `Nodes` from this `Scene`. This causes also to remove all `Edges`"""
+        while len(self.nodes) > 0:
+            self.nodes[0].remove()
+
+        self.has_been_modified = False
+
+    def saveToFile(self, filename: str) -> None:
+        """
+        Save this `Scene` to the file on disk.
+
+        :param filename: where to save this scene
+        :type filename: ``str``
+        """
+        # orjson returns bytes, so we need to decode to str before writing
+        with open(filename, "w") as file:
+            json_str = json.dumps(
+                self.serialize(),
+                option=OPT_INDENT_2,  # Use orjson's built-in indentation option
+            ).decode("utf-8")
+            file.write(json_str)
+            # print("saving to", filename, "was successfull.")
+
+            self.has_been_modified = False
+            self.filename = filename
+
+    def loadFromFile(self, filename: str):
+        """
+        Load `Scene` from a file on disk
+
+        :param filename: from what file to load the `Scene`
+        :type filename: ``str``
+        :raises: :class:`~nodeeditor.node_scene.InvalidFile` if there was an error decoding JSON file
+        """
+
+        with open(filename, "r") as file:
+            raw_data = file.read()
+            try:
+                data = json.loads(raw_data)
+                self.filename = filename
+                self.deserialize(data)
+                self.has_been_modified = False
+            except JSONDecodeError:
+                raise InvalidFile("%s is not a valid JSON file" %
+                                  os.path.basename(filename))
+            except Exception as e:
+                dumpException(e)
+
+    def getEdgeClass(self):
+        """Return the class representing Edge. Override me if needed"""
+        return Edge
+
+    def setNodeClassSelector(self, class_selecting_function: 'NodeClassType') -> None:  # noqa
+        """
+        Set the function which decides what `Node` class to instantiate when deserializing `Scene`.
+        If not set, we will always instantiate :class:`~nodeeditor.node_node.Node` for each `Node` in the `Scene`
+
+        :param class_selecting_function: function which returns `Node` class type (not instance) from `Node` serialized ``dict`` data
+        :type class_selecting_function: ``function``
+        :return: Class Type of `Node` to be instantiated during deserialization
+        :rtype: `Node` class type
+        """
+        self.node_class_selector = class_selecting_function
+
+    def getNodeClassFromData(self, data: dict) -> Type['Node']:
+        """
+        Takes `Node` serialized data and determines which `Node Class` to instantiate according the description
+        in the serialized Node
+
+        :param data: serialized `Node` object data
+        :type data: ``dict``
+        :return: Instance of `Node` class to be used in this Scene
+        :rtype: `Node` class instance
+        """
+        # Check if this is a GroupNode
+        if data.get("type") == "GroupNode":
+            from nodeeditor.node_group_node import GroupNode
+
+            return GroupNode
+
+        return Node if self.node_class_selector is None else self.node_class_selector(data)
+
+    def serialize(self) -> OrderedDict:
+        nodes: List[dict] = []
+        edges: List[dict] = []
+        groups: List[dict] = []
+        for node in self.nodes:
+            new_node = node.serialize()
+            if not any(new_node['id'] == a['id'] for a in nodes):
+                nodes.append(new_node)
+        for edge in self.edges:
+            new_edge = edge.serialize()
+            if not any(new_edge['id'] == a['id'] for a in edges):
+                edges.append(new_edge)
+        for group in self.groups:
+            new_group = group.serialize()
+            if not any(new_group["id"] == a["id"] for a in groups):
+                groups.append(new_group)
+        return OrderedDict(
+            [
+                ("id", self.id),
+                ("scene_width", self.scene_width),
+                ("scene_height", self.scene_height),
+                ("nodes", nodes),
+                ("edges", edges),
+                ("groups", groups),
+            ]
+        )
+
+    def deserialize(self, data: dict, hashmap: Optional[dict] = None, restore_id: bool = True, *args: Any, **kwargs: Any) -> bool:
+        hashmap = hashmap or {}
+
+        if restore_id:
+            self.id = data['id']
+
+        # -- deserialize NODES
+
+        # Instead of recreating all the nodes, reuse existing ones...
+        # get list of all current nodes:
+        all_nodes = self.nodes.copy()
+
+        # go through deserialized nodes:
+        for node_data in data['nodes']:
+            # can we find this node in the scene?
+            found_node: Optional[Node] = None
+            for node in all_nodes:
+                if node.id == node_data['id']:
+                    found_node = node
+                    break
+
+            if not found_node:
+                try:
+                    new_node = self.getNodeClassFromData(node_data)(self)
+                    new_node.deserialize(
+                        node_data, hashmap, restore_id, *args, **kwargs)
+                    new_node.onDeserialized(node_data)
+                    # print("New node for", node_data['title'])
+                except:
+                    dumpException()
+            else:
+                try:
+                    found_node.deserialize(node_data, hashmap,
+                                           restore_id, *args, **kwargs)
+                    found_node.onDeserialized(node_data)
+                    all_nodes.remove(found_node)
+                    # print("Reused", node_data['title'])
+                except:
+                    dumpException()
+
+        # remove nodes which are left in the scene and were NOT in the serialized data!
+        # that means they were not in the graph before...
+        while all_nodes != []:
+            node = all_nodes.pop()
+            node.remove()
+
+        # -- deserialize EDGES
+
+        # Instead of recreating all the edges, reuse existing ones...
+        # get list of all current edges:
+        all_edges = self.edges.copy()
+
+        # go through deserialized edges:
+        for edge_data in data['edges']:
+            # can we find this node in the scene?
+            found_edge: Optional[Edge] = None
+            for edge in all_edges:
+                if edge.id == edge_data['id']:
+                    found_edge = edge
+                    break
+
+            if not found_edge:
+                new_edge = self.getEdgeClass()(self).deserialize(
+                    edge_data, hashmap, restore_id, *args, **kwargs)
+                # print("New edge for", edge_data)
+            else:
+                found_edge.deserialize(edge_data, hashmap,
+                                       restore_id, *args, **kwargs)
+                all_edges.remove(found_edge)
+
+        # remove nodes which are left in the scene and were NOT in the serialized data!
+        # that means they were not in the graph before...
+        while all_edges != []:
+            edge = all_edges.pop()
+            edge.remove()
+
+        # -- deserialize GROUPS
+
+        # Instead of recreating all the groups, reuse existing ones...
+        # get list of all current groups:
+        all_groups = self.groups.copy()
+
+        # go through deserialized groups:
+        for group_data in data.get("groups", []):
+            # can we find this group in the scene?
+            found_group = None
+            for group in all_groups:
+                if group.id == group_data["id"]:
+                    found_group = group
+                    break
+
+            if not found_group:
+                try:
+                    from nodeeditor.node_group_node import GroupNode
+
+                    new_group = GroupNode(self)
+                    new_group.deserialize(
+                        group_data, hashmap, restore_id, *args, **kwargs
+                    )
+                    self.groups.append(new_group)
+                    # print("New group for", group_data['title'])
+                except:
+                    dumpException()
+            else:
+                try:
+                    found_group.deserialize(
+                        group_data, hashmap, restore_id, *args, **kwargs
+                    )
+                    all_groups.remove(found_group)
+                    # print("Reused", group_data['title'])
+                except:
+                    dumpException()
+
+        # remove groups which are left in the scene and were NOT in the serialized data!
+        # that means they were not in the graph before...
+        while all_groups != []:
+            group = all_groups.pop()
+            if hasattr(group, "remove"):
+                group.remove()
+
+        # -- restore child node relationships for groups
+        for group_data in data.get("groups", []):
+            # Find the group
+            group = None
+            for g in self.groups:
+                if g.id == group_data["id"]:
+                    group = g
+                    break
+
+            if group and "child_node_ids" in group_data:
+                # Clear existing child nodes first
+                group.child_nodes.clear()
+
+                # Reconnect child nodes
+                for child_id in group_data["child_node_ids"]:
+                    # Find the node by id
+                    for node in self.nodes:
+                        if node.id == child_id:
+                            group.addNode(node)
+                            break
+
+                # Apply collapsed state if the group was collapsed when serialized
+                if group._is_collapsed:
+                    group.applyCollapsedStateFromDeserialization()
+
+        return True

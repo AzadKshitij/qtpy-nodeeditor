@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class GroupNodeFactory:
     """Factory for creating and managing group nodes"""
-    
+
     @staticmethod
     def createGroup(scene: 'Scene', title: str = "Group", nodes: Optional[List['Node']] = None) -> Optional[GroupNode]:
         """
@@ -27,16 +27,16 @@ class GroupNodeFactory:
         """
         try:
             group = GroupNode(scene, title=title)
-            
+
             if nodes:
                 for node in nodes:
                     group.addNode(node)
-            
+
             return group
         except Exception as e:
             dumpException(e)
             return None
-    
+
     @staticmethod
     def groupSelectedNodes(scene: 'Scene', title: str = "Group") -> Optional[GroupNode]:
         """
@@ -50,21 +50,21 @@ class GroupNodeFactory:
             selected_items = scene.getSelectedItems()
             if not selected_items:
                 return None
-            
+
             # Filter to get only nodes
             nodes = []
             for item in selected_items:
                 if hasattr(item, 'node') and not isinstance(item.node, GroupNode):
                     nodes.append(item.node)
-            
+
             if len(nodes) < 2:
                 return None
-            
+
             return GroupNodeFactory.createGroup(scene, title, nodes)
         except Exception as e:
             dumpException(e)
             return None
-    
+
     @staticmethod
     def ungroupNodes(group: GroupNode) -> None:
         """
@@ -78,7 +78,7 @@ class GroupNodeFactory:
                 group.removeNode(node)
         except Exception as e:
             dumpException(e)
-    
+
     @staticmethod
     def deleteGroup(group: GroupNode, delete_children: bool = False) -> None:
         """
@@ -96,16 +96,16 @@ class GroupNodeFactory:
             else:
                 # Ungroup first
                 GroupNodeFactory.ungroupNodes(group)
-            
-            # Delete the group itself
-            group.scene.removeNode(group)
+
+            # Delete the group itself (GroupNode is a container, use removeGroup from Scene)
+            group.scene.removeGroup(group)
         except Exception as e:
             dumpException(e)
 
 
 class GroupNodeManager:
     """Manager for advanced group operations"""
-    
+
     @staticmethod
     def checkAndUpdateGroupBoundaries(node: 'Node') -> None:
         """
@@ -115,11 +115,11 @@ class GroupNodeManager:
         """
         try:
             if node.parent_group:
-                node.parent_group.checkNodeBoundaries()
+                node.parent_group.checkAndAutoAdjustBoundaries()
                 node.parent_group.updateGroupBoundaries()
         except Exception as e:
             dumpException(e)
-    
+
     @staticmethod
     def getAllNodesInGroup(group: GroupNode, recursive: bool = True) -> List['Node']:
         """
@@ -131,39 +131,41 @@ class GroupNodeManager:
         """
         try:
             nodes = []
-            
+
             for node in group.getChildNodes():
                 nodes.append(node)
-                
+
                 if recursive and isinstance(node, GroupNode):
                     nodes.extend(GroupNodeManager.getAllNodesInGroup(node, recursive=True))
-            
+
             return nodes
         except Exception as e:
             dumpException(e)
             return []
-    
+
     @staticmethod
     def getGroupHierarchy(node: 'Node') -> List[GroupNode]:
         """
         Get the hierarchy of parent groups for a node
-        
+
+        Note: GroupNode containers cannot be nested within other GroupNode containers
+        (they only contain regular Nodes). So this returns at most one group.
+
         :param node: the node
-        :return: list of parent groups from immediate parent to root
+        :return: list of parent groups (at most one for regular nodes)
         """
         try:
             hierarchy = []
-            current = node
-            
-            while current.parent_group is not None:
-                hierarchy.append(current.parent_group)
-                current = current.parent_group
-            
+
+            # Regular nodes only have one parent_group (GroupNodes cannot contain other GroupNodes)
+            if hasattr(node, "parent_group") and node.parent_group is not None:
+                hierarchy.append(node.parent_group)
+
             return hierarchy
         except Exception as e:
             dumpException(e)
             return []
-    
+
     @staticmethod
     def isNodeInNestedGroup(node: 'Node', group: GroupNode) -> bool:
         """
@@ -176,12 +178,12 @@ class GroupNodeManager:
         try:
             if node in group.getChildNodes():
                 return True
-            
+
             for child in group.getChildNodes():
                 if isinstance(child, GroupNode):
                     if GroupNodeManager.isNodeInNestedGroup(node, child):
                         return True
-            
+
             return False
         except Exception as e:
             dumpException(e)

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-A module containing NodeEditor's class for representing Socket and Socket Position Constants.
+Socket - MVC-based implementation of a socket (port) in a node.
+
+The Socket class wraps SocketModel and SocketController to provide MVC-based
+socket management while maintaining the existing public API.
 """
 from collections import OrderedDict
 from qtpy.QtCore import QObject
@@ -8,9 +11,7 @@ from qtpy.QtCore import QObject
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_graphics_socket import QDMGraphicsSocket
 
-
-from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, TypedDict
-
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
 if TYPE_CHECKING:
     from nodeeditor.node_graphics_view import QDMGraphicsView
@@ -18,156 +19,193 @@ if TYPE_CHECKING:
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_node import Node
 
-
-LEFT_TOP = 1        #:
-LEFT_CENTER = 2      #:
-LEFT_BOTTOM = 3     #:
-RIGHT_TOP = 4       #:
-RIGHT_CENTER = 5    #:
-RIGHT_BOTTOM = 6    #:
-
+# Socket position constants
+LEFT_TOP = 1
+LEFT_CENTER = 2
+LEFT_BOTTOM = 3
+RIGHT_TOP = 4
+RIGHT_CENTER = 5
+RIGHT_BOTTOM = 6
 
 DEBUG = False
 DEBUG_REMOVE_WARNINGS = False
 
 
 class Socket(QObject, Serializable):
+    """
+    Socket class representing a port/connection point on a node using MVC architecture.
+
+    The Socket wraps SocketModel and SocketController to provide data management
+    and operations while maintaining the public API.
+    """
+
     Socket_GR_Class = QDMGraphicsSocket
 
-    """Class representing Socket."""
-
-    def __init__(self, node: 'Node', index: int = 0, position: int = LEFT_TOP, socket_type: int = 1, multi_edges: bool = True,
-                 count_on_this_node_side: int = 1, is_input: bool = False) -> None:
+    def __init__(
+        self,
+        node: 'Node',
+        index: int = 0,
+        position: int = LEFT_TOP,
+        socket_type: int = 1,
+        multi_edges: bool = True,
+        count_on_this_node_side: int = 1,
+        is_input: bool = False
+    ) -> None:
         """
-        :param node: reference to the :class:`~nodeeditor.node_node.Node` containing this `Socket`
-        :type node: :class:`~nodeeditor.node_node.Node`
+        Initialize a Socket with MVC components.
+
+        :param node: reference to the Node containing this Socket
         :param index: Current index of this socket in the position
-        :type index: ``int``
-        :param position: Socket position. See :ref:`socket-position-constants`
-        :param socket_type: Constant defining type(color) of this socket
-        :param multi_edges: Can this socket have multiple `Edges` connected?
-        :type multi_edges: ``bool``
-        :param count_on_this_node_side: number of total sockets on this position
-        :type count_on_this_node_side: ``int``
-        :param is_input: Is this an input `Socket`?
-        :type is_input: ``bool``
-
-        :Instance Attributes:
-
-            - **node** - reference to the :class:`~nodeeditor.node_node.Node` containing this `Socket`
-            - **edges** - list of `Edges` connected to this `Socket`
-            - **grSocket** - reference to the :class:`~nodeeditor.node_graphics_socket.QDMGraphicsSocket`
-            - **position** - Socket position. See :ref:`socket-position-constants`
-            - **index** - Current index of this socket in the position
-            - **socket_type** - Constant defining type(color) of this socket
-            - **count_on_this_node_side** - number of sockets on this position
-            - **is_multi_edges** - ``True`` if `Socket` can contain multiple `Edges`
-            - **is_input** - ``True`` if this socket serves for Input
-            - **is_output** - ``True`` if this socket serves for Output
+        :param position: Socket position constant (LEFT_TOP, RIGHT_BOTTOM, etc.)
+        :param socket_type: Constant defining type/color of this socket
+        :param multi_edges: Can this socket have multiple Edges connected?
+        :param count_on_this_node_side: Total number of sockets on this position
+        :param is_input: Is this an input Socket?
         """
-        super().__init__()  # Initialize QObject
-        super(Serializable).__init__()  # Initialize Serializable
+        QObject.__init__(self)
+        Serializable.__init__(self)
 
-        self.node = node
-        self.position = position
-        self.index = index
-        self.socket_type = socket_type
-        self.count_on_this_node_side = count_on_this_node_side
-        self.is_multi_edges = multi_edges
-        self.is_input = is_input
-        self.is_output = not self.is_input
+        # Import here to avoid circular imports
+        from nodeeditor.models.socket_model import SocketModel
+        from nodeeditor.controllers.socket_controller import SocketController
+
+        # MVC components
+        self.model: SocketModel = SocketModel(
+            socket_type=socket_type,
+            is_input=is_input,
+            position=position,
+            index=index
+        )
+        self.controller: SocketController = SocketController(self.model)
+
+        # Reference to node
+        self.node: 'Node' = node
+        
+        # Socket configuration
+        self.position: int = position
+        self.index: int = index
+        self.socket_type: int = socket_type
+        self.count_on_this_node_side: int = count_on_this_node_side
+        self.is_multi_edges: bool = multi_edges
+        self.is_input: bool = is_input
+        self.is_output: bool = not self.is_input
 
         if DEBUG:
-            print("Socket -- creating with", self.index,
-                  self.position, "for nodeeditor", self.node)
+            print("Socket -- creating with", self.index, self.position, "for node", self.node)
 
-        self.grSocket = self.__class__.Socket_GR_Class(self)
+        # Create graphics socket
+        self.grSocket: QDMGraphicsSocket = self.__class__.Socket_GR_Class(self)
 
+        # Set position
         self.setSocketPosition()
 
+        # Edge connections
         self.edges: List['Edge'] = []
+        
+        # Connect model signals
+        self.model.typeChanged.connect(self._on_type_changed)
 
     def __str__(self) -> str:
+        """String representation of the socket."""
         return "<Socket #%d %s %s..%s>" % (
-            self.index, "ME" if self.is_multi_edges else "SE", hex(id(self))[
-                2:5], hex(id(self))[-3:]
+            self.index,
+            "ME" if self.is_multi_edges else "SE",
+            hex(id(self))[2:5],
+            hex(id(self))[-3:]
         )
 
+    # ==================== Signal Handlers ====================
+    
+    def _on_type_changed(self, new_type: int) -> None:
+        """Handle model type change - update graphics."""
+        if self.grSocket:
+            self.grSocket.changeSocketType()
+
+    # ==================== Socket Management ====================
+
     def delete(self) -> None:
-        """Delete this `Socket` from graphics scene for sure"""
+        """Delete this Socket from graphics scene."""
         self.grSocket.setParentItem(None)
         self.node.scene.grScene.removeItem(self.grSocket)
         del self.grSocket
 
     def changeSocketType(self, new_socket_type: int) -> bool:
         """
-        Change the Socket Type
+        Change the Socket Type.
 
-        :param new_socket_type: new socket type
-        :type new_socket_type: ``int``
-        :return: Returns ``True`` if the socket type was actually changed
-        :rtype: ``bool``
+        :param new_socket_type: new socket type constant
+        :return: True if the socket type was actually changed
         """
         if self.socket_type != new_socket_type:
             self.socket_type = new_socket_type
+            self.model.type = new_socket_type
             self.grSocket.changeSocketType()
             return True
         return False
 
     def setSocketPosition(self) -> None:
-        """Helper function to set `Graphics Socket` position. Exact socket position is calculated
-        inside :class:`~nodeeditor.node_node.Node`."""
-        self.grSocket.setPos(*self.node.getSocketPosition(self.index,
-                             self.position, self.count_on_this_node_side))
-
-    def getSocketPosition(self):
         """
-        :return: Returns this `Socket` position according to the implementation stored in
-            :class:`~nodeeditor.node_node.Node`
-        :rtype: ``x, y`` position
+        Helper function to set Graphics Socket position.
+
+        Exact socket position is calculated inside Node.
+        """
+        self.grSocket.setPos(
+            *self.node.getSocketPosition(
+                self.index,
+                self.position,
+                self.count_on_this_node_side
+            )
+        )
+
+    def getSocketPosition(self) -> Tuple[float, float]:
+        """
+        Get this Socket's position according to the Node implementation.
+
+        :return: (x, y) position tuple
         """
         if DEBUG:
-            print("  GSP: ", self.index, self.position, "nodeeditor:", self.node)
+            print("  GSP: ", self.index, self.position, "node:", self.node)
         res = self.node.getSocketPosition(
-            self.index, self.position, self.count_on_this_node_side)
+            self.index,
+            self.position,
+            self.count_on_this_node_side
+        )
         if DEBUG:
             print("  res", res)
         return res
 
+    # ==================== Edge Management ====================
+
     def hasAnyEdge(self) -> bool:
         """
-        Returns ``True`` if any :class:`~nodeeditor.node_edge.Edge` is connected to this socket
+        Check if any Edge is connected to this socket.
 
-        :return: ``True`` if any :class:`~nodeeditor.node_edge.Edge` is connected to this socket
-        :rtype: ``bool``
+        :return: True if any Edge is connected to this socket
         """
         return len(self.edges) > 0
 
     def isConnected(self, edge: 'Edge') -> bool:
         """
-        Returns ``True`` if :class:`~nodeeditor.node_edge.Edge` is connected to this `Socket`
+        Check if an Edge is connected to this Socket.
 
-        :param edge: :class:`~nodeeditor.node_edge.Edge` to check if it is connected to this `Socket`
-        :type edge: :class:`~nodeeditor.node_edge.Edge`
-        :return: ``True`` if `Edge` is connected to this socket
-        :rtype: ``bool``
+        :param edge: Edge to check if it is connected to this Socket
+        :return: True if Edge is connected to this socket
         """
         return edge in self.edges
 
     def addEdge(self, edge: 'Edge') -> None:
         """
-        Append an Edge to the list of connected Edges
+        Append an Edge to the list of connected Edges.
 
-        :param edge: :class:`~nodeeditor.node_edge.Edge` to connect to this `Socket`
-        :type edge: :class:`~nodeeditor.node_edge.Edge`
+        :param edge: Edge to connect to this Socket
         """
         self.edges.append(edge)
 
     def removeEdge(self, edge: 'Edge') -> None:
         """
-        Disconnect passed :class:`~nodeeditor.node_edge.Edge` from this `Socket`
-        :param edge: :class:`~nodeeditor.node_edge.Edge` to disconnect
-        :type edge: :class:`~nodeeditor.node_edge.Edge`
+        Disconnect an Edge from this Socket.
+
+        :param edge: Edge to disconnect
         """
         if edge in self.edges:
             self.edges.remove(edge)
@@ -177,32 +215,37 @@ class Socket(QObject, Serializable):
                       "from self.edges but it's not in the list!")
 
     def removeAllEdges(self, silent: bool = False) -> None:
-        """Disconnect all `Edges` from this `Socket`"""
+        """
+        Disconnect all Edges from this Socket.
+
+        :param silent: If True, edges are removed without notifications
+        """
         while self.edges:
             edge = self.edges.pop(0)
             if silent:
                 edge.remove(silent_for_socket=self)
             else:
-                edge.remove()       # just remove all with notifications
+                edge.remove()  # Remove with notifications
+
+    # ==================== Serialization ====================
 
     def determineMultiEdges(self, data: dict) -> bool:
         """
-        Deserialization helper function. In our tutorials we created a new version of graph data format.
-        This function is here to help solve the issue of opening older files in the newer format.
-        If the 'multi_edges' param is missing in the dictionary, we determine if this `Socket`
-        should support multiple `Edges`.
+        Deserialization helper to determine multi-edges support.
 
-        :param data: `Socket` data in ``dict`` format for deserialization
-        :type data: ``dict``
-        :return: ``True`` if this `Socket` should support multi_edges
+        Handles legacy file format compatibility.
+
+        :param data: Socket data in dict format
+        :return: True if this Socket should support multi_edges
         """
         if 'multi_edges' in data:
             return data['multi_edges']
         else:
-            # probably older version of file, make RIGHT socket multiedged by default
+            # Older version of file: make RIGHT socket multi-edged by default
             return data['position'] in (RIGHT_BOTTOM, RIGHT_TOP)
 
     def serialize(self) -> OrderedDict:
+        """Serialize the socket to OrderedDict."""
         return OrderedDict([
             ('id', self.id),
             ('index', self.index),
@@ -211,7 +254,13 @@ class Socket(QObject, Serializable):
             ('socket_type', self.socket_type),
         ])
 
-    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
+    def deserialize(
+        self,
+        data: dict,
+        hashmap: dict = {},
+        restore_id: bool = True
+    ) -> bool:
+        """Deserialize the socket from dict data."""
         if restore_id:
             self.id = data['id']
         self.is_multi_edges = self.determineMultiEdges(data)

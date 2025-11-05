@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-A module containing NodeEditor's class for representing Edge and Edge Type Constants.
+Edge - MVC-based implementation of an edge/connection in the graph.
+
+The Edge class wraps EdgeModel and EdgeController to provide MVC-based
+edge management while maintaining the existing public API.
 """
 from collections import OrderedDict
 from nodeeditor.node_graphics_edge import QDMGraphicsEdge
@@ -10,18 +13,17 @@ from qtpy.QtCore import QPointF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
-
 if TYPE_CHECKING:
     from nodeeditor.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
 
-
-EDGE_TYPE_DIRECT = 1        #:
-EDGE_TYPE_BEZIER = 2        #:
-EDGE_TYPE_SQUARE = 3        #:
-EDGE_TYPE_IMPROVED_SHARP = 4       #:
-EDGE_TYPE_IMPROVED_BEZIER = 5       #:
+# Edge type constants
+EDGE_TYPE_DIRECT = 1
+EDGE_TYPE_BEZIER = 2
+EDGE_TYPE_SQUARE = 3
+EDGE_TYPE_IMPROVED_SHARP = 4
+EDGE_TYPE_IMPROVED_BEZIER = 5
 EDGE_TYPE_DEFAULT = EDGE_TYPE_IMPROVED_BEZIER
 
 DEBUG = False
@@ -29,164 +31,202 @@ DEBUG = False
 
 class Edge(Serializable):
     """
-    Class for representing Edge in NodeEditor.
+    Edge class representing a connection between two sockets in the graph using MVC architecture.
+
+    The Edge wraps EdgeModel and EdgeController to provide data management
+    and operations while maintaining the public API.
     """
 
-    #: class variable containing list of registered edge validators
+    # Class variable containing list of registered edge validators
     edge_validators: List['function'] = []
 
-    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT) -> None:
+    def __init__(
+        self,
+        scene: 'Scene',
+        start_socket: 'Socket' = None,
+        end_socket: 'Socket' = None,
+        edge_type=EDGE_TYPE_DIRECT
+    ) -> None:
         """
+        Initialize an Edge with MVC components.
 
-        :param scene: Reference to the :py:class:`~nodeeditor.node_scene.Scene`
-        :type scene: :py:class:`~nodeeditor.node_scene.Scene`
+        :param scene: Reference to the Scene
         :param start_socket: Reference to the starting socket
-        :type start_socket: :py:class:`~nodeeditor.node_socket.Socket`
-        :param end_socket: Reference to the End socket or ``None``
-        :type end_socket: :py:class:`~nodeeditor.node_socket.Socket` or ``None``
-        :param edge_type: Constant determining type of edge. See :ref:`edge-type-constants`
-
-        :Instance Attributes:
-
-            - **scene** - reference to the :class:`~nodeeditor.node_scene.Scene`
-            - **grEdge** - Instance of :class:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge` subclass handling graphical representation in the ``QGraphicsScene``.
+        :param end_socket: Reference to the end socket (or None)
+        :param edge_type: Constant determining type of edge
         """
         super().__init__()
-        self.scene = scene
+        
+        # Import here to avoid circular imports
+        from nodeeditor.models.edge_model import EdgeModel
+        from nodeeditor.controllers.edge_controller import EdgeController
+        
+        # MVC components
+        self.model: EdgeModel = EdgeModel()
+        self.controller: EdgeController = EdgeController(self.model)
+        
+        # Reference to scene
+        self.scene: 'Scene' = scene
 
-        # default init
-        self._start_socket = None
-        self._end_socket = None
+        # Socket references
+        self._start_socket: Optional['Socket'] = None
+        self._end_socket: Optional['Socket'] = None
 
+        # Set sockets (this updates model and scene)
         self.start_socket = start_socket
         self.end_socket = end_socket
+        
+        # Edge type
         self._edge_type = edge_type
 
-        # create Graphics Edge instance
+        # Create graphics edge instance
         self.grEdge: QDMGraphicsEdge = self.createEdgeClassInstance()
 
+        # Add to scene
         self.scene.addEdge(self)
+        
+        # Connect model signals
+        self.model.typeChanged.connect(self._on_type_changed)
 
     def __str__(self) -> str:
+        """String representation of the edge."""
         return "<Edge %s..%s -- S:%s E:%s>" % (
             hex(id(self))[2:5], hex(id(self))[-3:],
             self.start_socket, self.end_socket
         )
 
-    @property
-    def start_socket(self) -> Optional["Socket"]:
-        """
-        Start socket
+    # ==================== Signal Handlers ====================
+    
+    def _on_type_changed(self, new_type: int) -> None:
+        """Handle model type change - update graphics."""
+        if self.grEdge:
+            self.grEdge.createEdgePathCalculator()
+        if self.start_socket is not None:
+            self.updatePositions()
 
-        :getter: Returns start :class:`~nodeeditor.node_socket.Socket`
-        :setter: Sets start :class:`~nodeeditor.node_socket.Socket` safely
-        :type: :class:`~nodeeditor.node_socket.Socket`
+    # ==================== Properties (Delegated to Model) ====================
+
+    @property
+    def start_socket(self) -> Optional['Socket']:
+        """
+        Start socket property.
+
+        :return: Starting Socket or None
         """
         return self._start_socket if self._start_socket else None
 
     @start_socket.setter
-    def start_socket(self, value: "Socket") -> None:
-        # if we were assigned to some socket before, delete us from the socket
+    def start_socket(self, value: 'Socket') -> None:
+        """Set the start socket safely."""
+        # Remove edge from old socket
         if self._start_socket is not None:
             self._start_socket.removeEdge(self)
 
-        # assign new start socket
+        # Assign new start socket
         self._start_socket = value
-        # addEdge to the Socket class
+        
+        # Add edge to new socket
         if self.start_socket is not None:
             self.start_socket.addEdge(self)
 
     @property
-    def end_socket(self):
+    def end_socket(self) -> Optional['Socket']:
         """
-        End socket
+        End socket property.
 
-        :getter: Returns end :class:`~nodeeditor.node_socket.Socket` or ``None`` if not set
-        :setter: Sets end :class:`~nodeeditor.node_socket.Socket` safely
-        :type: :class:`~nodeeditor.node_socket.Socket` or ``None``
+        :return: End Socket or None
         """
         return self._end_socket
 
     @end_socket.setter
-    def end_socket(self, value) -> None:
-        # if we were assigned to some socket before, delete us from the socket
+    def end_socket(self, value: Optional['Socket']) -> None:
+        """Set the end socket safely."""
+        # Remove edge from old socket
         if self._end_socket is not None:
             self._end_socket.removeEdge(self)
 
-        # assign new end socket
+        # Assign new end socket
         self._end_socket = value
-        # addEdge to the Socket class
+        
+        # Add edge to new socket
         if self.end_socket is not None:
             self.end_socket.addEdge(self)
 
     @property
-    def edge_type(self):
+    def edge_type(self) -> int:
         """
-        Edge type
+        Edge type constant.
 
-        :getter: get edge type constant for current ``Edge``. See :ref:`edge-type-constants`
-        :setter: sets new edge type. On background, creates new :class:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge`
-            child class if necessary, adds this ``QGraphicsPathItem`` to the ``QGraphicsScene`` and updates edge sockets
-            positions.
+        :return: Edge type constant
         """
         return self._edge_type
 
     @edge_type.setter
-    def edge_type(self, value) -> None:
-        # assign new value
+    def edge_type(self, value: int) -> None:
+        """Set edge type and update graphics."""
         self._edge_type = value
+        self.model.type = value
 
-        # update the grEdge pathCalculator
-        self.grEdge.createEdgePathCalculator()
+        # Update graphics
+        if self.grEdge:
+            self.grEdge.createEdgePathCalculator()
 
         if self.start_socket is not None:
             self.updatePositions()
 
+    # ==================== Edge Validation ====================
+
     @classmethod
-    def getEdgeValidators(cls):
-        """Return the list of Edge Validator Callbacks"""
+    def getEdgeValidators(cls) -> List['function']:
+        """Return the list of Edge Validator Callbacks."""
         return cls.edge_validators
 
     @classmethod
     def registerEdgeValidator(cls, validator_callback: 'function') -> None:
-        """Register Edge Validator Callback
+        """
+        Register Edge Validator Callback.
 
-        :param validator_callback: A function handle to validate Edge
-        :type validator_callback: `function`
+        :param validator_callback: A function to validate Edge
         """
         cls.edge_validators.append(validator_callback)
 
     @classmethod
     def validateEdge(cls, start_socket: 'Socket', end_socket: 'Socket') -> bool:
-        """Validate Edge agains all registered `Edge Validator Callbacks`
+        """
+        Validate Edge against all registered Edge Validator Callbacks.
 
-        :param start_socket: Starting :class:`~nodeeditor.node_socket.Socket` of Edge to check
-        :type start_socket: :class:`~nodeeditor.node_socket.Socket`
-        :param end_socket: Target/End :class:`~nodeeditor.node_socket.Socket` of Edge to check
-        :type end_socket: :class:`~nodeeditor.node_socket.Socket`
-        :return: ``True`` if the Edge is valid or ``False`` if not
-        :rtype: ``bool``
+        :param start_socket: Starting Socket of Edge to check
+        :param end_socket: End Socket of Edge to check
+        :return: True if the Edge is valid, False otherwise
         """
         for validator in cls.getEdgeValidators():
             if not validator(start_socket, end_socket):
                 return False
         return True
 
+    # ==================== Edge Operations ====================
+
     def reconnect(self, from_socket: 'Socket', to_socket: 'Socket') -> None:
-        """Helper function which reconnects edge `from_socket` to `to_socket`"""
+        """
+        Helper function which reconnects edge from_socket to to_socket.
+
+        :param from_socket: Current socket
+        :param to_socket: New socket
+        """
         if self.start_socket == from_socket:
             self.start_socket = to_socket
         elif self.end_socket == from_socket:
             self.end_socket = to_socket
 
     def getGraphicsEdgeClass(self):
-        """Returns the class representing Graphics Edge"""
+        """Returns the class representing Graphics Edge."""
         return QDMGraphicsEdge
 
-    def createEdgeClassInstance(self):
+    def createEdgeClassInstance(self) -> QDMGraphicsEdge:
         """
-        Create instance of grEdge class
-        :return: Instance of `grEdge` class representing the Graphics Edge in the grScene
+        Create instance of graphics edge class.
+
+        :return: Instance of QDMGraphicsEdge
         """
         self.grEdge = self.getGraphicsEdgeClass()(self)
         self.scene.grScene.addItem(self.grEdge)
@@ -194,36 +234,33 @@ class Edge(Serializable):
             self.updatePositions()
         return self.grEdge
 
-    def getOtherSocket(self, known_socket: 'Socket'):
+    def getOtherSocket(self, known_socket: 'Socket') -> Optional['Socket']:
         """
-        Returns the opposite socket on this ``Edge``
+        Returns the opposite socket on this Edge.
 
-        :param known_socket: Provide known :class:`~nodeeditor.node_socket.Socket` to be able to determine the opposite one.
-        :type known_socket: :class:`~nodeeditor.node_socket.Socket`
-        :return: The oposite socket on this ``Edge`` or ``None``
-        :rtype: :class:`~nodeeditor.node_socket.Socket` or ``None``
+        :param known_socket: Provide known Socket to determine the opposite one
+        :return: The opposite socket on this Edge or None
         """
         return self.start_socket if known_socket == self.end_socket else self.end_socket
 
     def doSelect(self, new_state: bool = True) -> None:
         """
-        Provide the safe selecting/deselecting operation. In the background it takes care about the flags, notifications
-        and storing history for undo/redo.
+        Provide safe selecting/deselecting operation.
 
-        :param new_state: ``True`` if you want to select the ``Edge``, ``False`` if you want to deselect the ``Edge``
-        :type new_state: ``bool``
+        :param new_state: True to select, False to deselect
         """
         self.grEdge.doSelect(new_state)
 
     def updatePositions(self) -> None:
         """
-        Updates the internal `Graphics Edge` positions according to the start and end :class:`~nodeeditor.node_socket.Socket`.
-        This should be called if you update ``Edge`` positions.
-        """
-        # Use actual graphics socket position instead of calculated position
-        # This is crucial for collapsed containers where sockets are manually positioned
+        Updates the internal Graphics Edge positions according to the sockets.
 
-        # For collapsed nodes (width=5), calculate position manually to avoid timing issues
+        This should be called if you update Edge positions.
+        """
+        if not self.start_socket:
+            return
+
+        # For collapsed nodes (width=5), calculate position manually
         if (
             self.start_socket
             and self.start_socket.node
@@ -231,140 +268,122 @@ class Edge(Serializable):
             and hasattr(self.start_socket.node.grNode, "width")
             and self.start_socket.node.grNode.width == 5
         ):
-            # Collapsed node - socket is at center (2.5, 2.5) relative to node
             node_scene_pos = self.start_socket.node.grNode.scenePos()
             source_pos = [node_scene_pos.x() + 2.5, node_scene_pos.y() + 2.5]
         else:
-            # Normal node - use socket's scene position
             source_scene_pos = self.start_socket.grSocket.scenePos()
             source_pos = [source_scene_pos.x(), source_scene_pos.y()]
 
-        # Normalize coordinates to ensure proper handling of negative values
+        # Normalize coordinates
         normalized_source = QPointF(source_pos[0], source_pos[1])
         source_pos = [normalized_source.x(), normalized_source.y()]
         self.grEdge.setSource(*source_pos)
 
         if self.end_socket is not None:
-            # For collapsed nodes (width=5), calculate position manually to avoid timing issues
             if (
                 self.end_socket.node
                 and self.end_socket.node.grNode
                 and hasattr(self.end_socket.node.grNode, "width")
                 and self.end_socket.node.grNode.width == 5
             ):
-                # Collapsed node - socket is at center (2.5, 2.5) relative to node
                 node_scene_pos = self.end_socket.node.grNode.scenePos()
                 end_pos = [node_scene_pos.x() + 2.5, node_scene_pos.y() + 2.5]
             else:
-                # Normal node - use socket's scene position
                 end_scene_pos = self.end_socket.grSocket.scenePos()
                 end_pos = [end_scene_pos.x(), end_scene_pos.y()]
 
-            # Normalize coordinates to ensure proper handling of negative values
+            # Normalize coordinates
             normalized_end = QPointF(end_pos[0], end_pos[1])
             end_pos = [normalized_end.x(), normalized_end.y()]
             self.grEdge.setDestination(*end_pos)
         else:
             self.grEdge.setDestination(*source_pos)
+        
         self.grEdge.update()
 
     def remove_from_sockets(self) -> None:
         """
-        Helper function which sets start and end :class:`~nodeeditor.node_socket.Socket` to ``None``
+        Helper function which sets start and end Socket to None.
         """
         self.end_socket = None
         self.start_socket = None
 
-    def remove(self, silent_for_socket: 'Socket' = None, silent: bool=False) -> None:
+    def remove(self, silent_for_socket: 'Socket' = None, silent: bool = False) -> None:
         """
         Safely remove this Edge.
 
-        Removes `Graphics Edge` from the ``QGraphicsScene`` and it's reference to all GC to clean it up.
-        Notifies nodes previously connected :class:`~nodeeditor.node_node.Node` (s) about this event.
+        Removes Graphics Edge from the QGraphicsScene and its references.
+        Notifies nodes of this event.
 
-        Triggers Nodes':
-
-        - :py:meth:`~nodeeditor.node_node.Node.onEdgeConnectionChanged`
-        - :py:meth:`~nodeeditor.node_node.Node.onInputChanged`
-
-        :param silent_for_socket: :class:`~nodeeditor.node_socket.Socket` of a :class:`~nodeeditor.node_node.Node` which
-            won't be notified, when this ``Edge`` is going to be removed
-        :type silent_for_socket: :class:`~nodeeditor.node_socket.Socket`
-        :param silent: ``True`` if no events should be triggered during removing
-        :type silent: ``bool``
+        :param silent_for_socket: Socket of Node which won't be notified
+        :param silent: If True, no events should be triggered
         """
         old_sockets = [self.start_socket, self.end_socket]
 
-        # ugly hack, since I noticed that even when you remove grEdge from scene,
-        # sometimes it stays there! How dare you Qt!
+        # Ugly hack since Qt sometimes doesn't remove grEdge from scene
         if DEBUG:
-            print(" - hide grEdge")
-        self.grEdge.hide()
+            print("> Edge::remove", self)
 
-        if DEBUG:
-            print(" - remove grEdge", self.grEdge)
-        self.scene.grScene.removeItem(self.grEdge)
-        if DEBUG:
-            print("   grEdge:", self.grEdge)
-
-        self.scene.grScene.update()
-
-        if DEBUG:
-            print("# Removing Edge", self)
-        if DEBUG:
-            print(" - remove edge from all sockets")
-        self.remove_from_sockets()
-        if DEBUG:
-            print(" - remove edge from scene")
         try:
-            self.scene.removeEdge(self)
-        except ValueError:
+            self.scene.grScene.removeItem(self.grEdge)
+        except:
             pass
+
         if DEBUG:
-            print(" - everything is done.")
+            print(" - remove edge from the scene")
 
-        try:
-            # notify nodes from old sockets
-            for socket in old_sockets:
-                if socket and socket.node:
-                    if silent:
-                        continue
-                    if silent_for_socket is not None and socket == silent_for_socket:
-                        # if we requested silence for Socket and it's this one, skip notifications
-                        continue
+        self.scene.removeEdge(self)
 
-                    # notify Socket's Node
+        if DEBUG:
+            print(" - notify nodes")
+
+        # Notify nodes about edge removal
+        for socket in old_sockets:
+            if socket:
+                if socket.node != silent_for_socket:
                     socket.node.onEdgeConnectionChanged(self)
                     if socket.is_input:
                         socket.node.onInputChanged(socket)
 
-        except Exception as e:
-            dumpException(e)
+        if self.grEdge:
+            self.grEdge = None
+
+        if DEBUG:
+            print(" - everything was done.")
+
+    # ==================== Serialization ====================
 
     def serialize(self) -> OrderedDict:
+        """Serialize the edge to OrderedDict."""
         return OrderedDict([
             ('id', self.id),
-            ('edge_type', self.edge_type),
-            ('start', self.start_socket.id if self.start_socket is not None else None),
-            ('end', self.end_socket.id if self.end_socket is not None else None),
+            ('start', self.start_socket.id if self.start_socket else None),
+            ('end', self.end_socket.id if self.end_socket else None),
+            ('type', self.edge_type),
         ])
 
-    def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
-        if restore_id:
-            self.id = data['id']
-        self.start_socket = hashmap[data['start']]
-        self.end_socket = hashmap[data['end']]
-        self.edge_type = data['edge_type']
+    def deserialize(
+        self,
+        data: dict,
+        hashmap: dict = {},
+        restore_id: bool = True,
+        *args,
+        **kwargs
+    ) -> bool:
+        """Deserialize the edge from dict data."""
+        try:
+            if restore_id:
+                self.id = data['id']
 
-        return True
+            hashmap[data['id']] = self
 
+            # Resolve socket references from hashmap
+            self.start_socket = hashmap[data['start']]
+            self.end_socket = hashmap[data['end']]
+            self.edge_type = data['type']
 
-# Example: using validators for Edge
-# You can register edge validators wherever you want, even here...
-# However if you do use overridden Edge, you should call registerEdgeValidator on that overridden class
-#
-# from nodeeditor.node_edge_validators import *
-# Edge.registerEdgeValidator(edge_validator_debug)
-# Edge.registerEdgeValidator(edge_cannot_connect_two_outputs_or_two_inputs)
-# Edge.registerEdgeValidator(edge_cannot_connect_input_and_output_of_same_node)
-# Edge.registerEdgeValidator(edge_cannot_connect_input_and_output_of_different_color)
+            return True
+        except Exception as e:
+            if DEBUG:
+                dumpException(e)
+            return False
