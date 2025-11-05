@@ -7,8 +7,16 @@ It is NOT a Node itself, but rather a visual container that holds references to 
 """
 from PyQt6.QtCore import QPoint
 from qtpy.QtCore import QRectF, Qt, QPointF, QSize
-from qtpy.QtGui import QColor, QPainter, QPen, QBrush
-from qtpy.QtWidgets import QGraphicsRectItem, QGraphicsItem, QGraphicsTextItem, QGraphicsPathItem, QGraphicsProxyWidget, QPushButton
+from qtpy.QtGui import QColor, QPainter, QPen, QBrush, QCursor
+from qtpy.QtWidgets import (
+    QGraphicsRectItem,
+    QGraphicsItem,
+    QGraphicsTextItem,
+    QGraphicsPathItem,
+    QGraphicsProxyWidget,
+    QPushButton,
+    QMenu,
+)
 
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
@@ -69,6 +77,10 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
         # Store original node states for collapse/expand
         self._original_node_states: Dict[int, Dict] = {}
+
+        # Hover tracking
+        self._is_hovering_header: bool = False
+        self.setAcceptHoverEvents(True)
 
         # Setup graphics
         self.setPos(x, y)
@@ -651,12 +663,15 @@ class GroupNode(Serializable, QGraphicsRectItem):
         Handle mouse press events.
         Only allow movement from the header area (title bar).
         Clicks elsewhere allow selection logic to work.
+        Select the container when clicking on header.
         """
         local_pos = event.pos()
         # Check if click is in the header area (top _title_bar_height pixels)
         if local_pos.y() < self._title_bar_height:
-            # Click is on header - allow movement
+            # Click is on header - allow movement and select the container
             self._can_move = True
+            # Select the group
+            self.setSelected(True)
         else:
             # Click is not on header - disable movable flag to allow selection only
             self._can_move = False
@@ -709,6 +724,86 @@ class GroupNode(Serializable, QGraphicsRectItem):
             del self._can_move
         super().mouseReleaseEvent(event)
 
+    def hoverEnterEvent(self, event) -> None:
+        """Handle hover enter event - show hint for header selection."""
+        local_pos = event.pos()
+        if local_pos.y() < self._title_bar_height:
+            self._is_hovering_header = True
+            self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.update()
+        super().hoverEnterEvent(event)
+
+    def hoverMoveEvent(self, event) -> None:
+        """Handle hover move event to update cursor based on position."""
+        local_pos = event.pos()
+        if local_pos.y() < self._title_bar_height:
+            if not self._is_hovering_header:
+                self._is_hovering_header = True
+                self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                self.update()
+        else:
+            if self._is_hovering_header:
+                self._is_hovering_header = False
+                self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+                self.update()
+        super().hoverMoveEvent(event)
+
+    def hoverLeaveEvent(self, event) -> None:
+        """Handle hover leave event."""
+        self._is_hovering_header = False
+        self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+        self.update()
+        super().hoverLeaveEvent(event)
+
+    def contextMenuEvent(self, event) -> None:
+        """Handle context menu event to show group options."""
+        menu = QMenu()
+
+        # Add ungroup option
+        ungroup_action = menu.addAction("Ungroup")
+        ungroup_action.triggered.connect(self.ungroup)
+
+        # Add delete option
+        delete_action = menu.addAction("Delete Container")
+        delete_action.triggered.connect(self.deleteContainer)
+
+        # Show menu at cursor position
+        menu.exec(event.screenPos())
+
+    def ungroup(self) -> None:
+        """Remove the container while keeping all child nodes."""
+        # Expand if collapsed first
+        if self._is_collapsed:
+            self.expand()
+
+        # Remove all nodes from this group (but don't delete them)
+        nodes_to_remove = self.child_nodes.copy()
+        for node in nodes_to_remove:
+            self.removeNode(node)
+
+        # Remove from graphics scene
+        if self.scene.grScene and self in self.scene.grScene.items():
+            self.scene.grScene.removeItem(self)
+
+        # Remove the group from the scene
+        self.scene.removeGroup(self)
+
+    def deleteContainer(self) -> None:
+        """Delete the container and all its child nodes."""
+        # Get all child nodes
+        nodes_to_delete = self.child_nodes.copy()
+
+        # Delete all child nodes
+        for node in nodes_to_delete:
+            node.remove()
+
+        # Remove from graphics scene
+        if self.scene.grScene and self in self.scene.grScene.items():
+            self.scene.grScene.removeItem(self)
+
+        # Remove the group from the scene
+        self.scene.removeGroup(self)
+
     def paint(self, painter: QPainter, option, widget) -> None:
         """Paint the group node with title bar. Button is handled by QGraphicsProxyWidget."""
         # Draw main rect
@@ -719,7 +814,17 @@ class GroupNode(Serializable, QGraphicsRectItem):
         # Draw title bar
         title_bar_rect = QRectF(self.rect().x(), self.rect().y(),
                                  self.rect().width(), self._title_bar_height)
-        painter.fillRect(title_bar_rect, QBrush(QColor(60, 60, 60)))
+
+        # Change title bar color if hovering
+        title_bar_color = (
+            QColor(80, 80, 80) if self._is_hovering_header else QColor(60, 60, 60)
+        )
+        painter.fillRect(title_bar_rect, QBrush(title_bar_color))
+
+        # Draw hover hint border on header
+        if self._is_hovering_header:
+            painter.setPen(QPen(QColor(255, 200, 0), 2))  # Gold border for hover
+            painter.drawRect(title_bar_rect)
 
         # Draw title text
         painter.setPen(QPen(self._title_color))
