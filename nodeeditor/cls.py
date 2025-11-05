@@ -366,7 +366,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
             container_pos = self.pos()
             relative_pos = node.pos - container_pos
 
-            self._original_node_states[node.id] = {
+            self._original_node_states[id(node)] = {
                 "relative_position": relative_pos,  # Position relative to container
                 "width": getattr(node.grNode, "width", None),
                 "height": getattr(node.grNode, "height", None),
@@ -469,7 +469,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
         # Restore all child nodes to their original positions and sizes
         if hasattr(self, "_original_node_states"):
             for node in self.child_nodes:
-                node_id = node.id
+                node_id = id(node)
                 if node_id in self._original_node_states:
                     original_state = self._original_node_states[node_id]
 
@@ -492,14 +492,14 @@ class GroupNode(Serializable, QGraphicsRectItem):
                         original_width = original_state.get("width", 120)
                         original_height = original_state.get("height", 120)
                         original_scale = original_state.get("scale", 1.0)
-
+                        
                         # Restore the original width and height
                         node.grNode.width = original_width if original_width else 120
                         node.grNode.height = original_height if original_height else 120
-
+                        
                         # Restore the original scale (default to 1.0)
                         node.grNode.setScale(original_scale if original_scale else 1.0)
-
+                        
                         node.grNode.update()
                         node.grNode.show()
 
@@ -524,12 +524,12 @@ class GroupNode(Serializable, QGraphicsRectItem):
                         node.grNode.setScale(1.0)
                         node.grNode.update()
                         node.grNode.show()
-
+                        
                         # Recalculate socket positions
                         for socket in node.inputs + node.outputs:
                             socket.setSocketPosition()
                             socket.grSocket.show()
-
+                        
                         # Update edges
                         node.updateConnectedEdges()
 
@@ -539,6 +539,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
                 socket.grSocket.show()
                 for edge in socket.edges:
                     if edge.grEdge is not None:
+                        edge.grEdge.show()
                         edge.grEdge.show()
 
         # Restore previous container size if available
@@ -861,8 +862,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
                             start_node in self.child_nodes
                             and end_node in self.child_nodes
                         ):
-                            if edge.grEdge:
-                                edge.grEdge.hide()
+                            edge.grEdge.hide()
 
             if has_external:
                 nodes_with_external_connections.add(node)
@@ -919,8 +919,3 @@ class GroupNode(Serializable, QGraphicsRectItem):
                 # Node has only internal connections - hide it completely
                 if node.grNode:
                     node.grNode.hide()
-                    # Also hide all edges connected to this node
-                    for socket in node.inputs + node.outputs:
-                        for edge in socket.edges:
-                            if edge.grEdge:
-                                edge.grEdge.hide()

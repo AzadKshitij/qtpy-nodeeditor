@@ -593,4 +593,8 @@ class Scene(Serializable):
                             group.addNode(node)
                             break
 
+                # Apply collapsed state if the group was collapsed when serialized
+                if group._is_collapsed:
+                    group.applyCollapsedStateFromDeserialization()
+
         return True
