@@ -1,0 +1,295 @@
+{
+  "id": 1861237169744,
+  "scene_width": 64000,
+  "scene_height": 64000,
+  "nodes": [
+    {
+      "id": 1861238576048,
+      "title": "Check",
+      "pos_x": -12.90625,
+      "pos_y": -409.84375,
+      "inputs": [
+        {
+          "id": 1861238577168,
+          "index": 0,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        },
+        {
+          "id": 1861238577488,
+          "index": 1,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1861238577808,
+          "index": 0,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238578128,
+          "index": 1,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238578448,
+          "index": 2,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238578768,
+          "index": 3,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        }
+      ],
+      "content": {},
+      "op_code": 7
+    },
+    {
+      "id": 1861238579088,
+      "title": "Check",
+      "pos_x": 317.0,
+      "pos_y": -65.0,
+      "inputs": [
+        {
+          "id": 1861238580208,
+          "index": 0,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        },
+        {
+          "id": 1861238580528,
+          "index": 1,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1861238580848,
+          "index": 0,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238581168,
+          "index": 1,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238581488,
+          "index": 2,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238581808,
+          "index": 3,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        }
+      ],
+      "content": {},
+      "op_code": 7
+    },
+    {
+      "id": 1861238582128,
+      "title": "Check",
+      "pos_x": -12.90625,
+      "pos_y": -409.84375,
+      "inputs": [
+        {
+          "id": 1861238583248,
+          "index": 0,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        },
+        {
+          "id": 1861238583568,
+          "index": 1,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1861238583888,
+          "index": 0,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238584208,
+          "index": 1,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238584528,
+          "index": 2,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238584848,
+          "index": 3,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        }
+      ],
+      "content": {},
+      "op_code": 7
+    },
+    {
+      "id": 1861238521072,
+      "title": "Check",
+      "pos_x": -375.36621093749983,
+      "pos_y": 12.207031249999995,
+      "inputs": [
+        {
+          "id": 1861238519632,
+          "index": 0,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        },
+        {
+          "id": 1861238519312,
+          "index": 1,
+          "multi_edges": false,
+          "position": 2,
+          "socket_type": 2
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1861238513872,
+          "index": 0,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238519152,
+          "index": 1,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238518352,
+          "index": 2,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        },
+        {
+          "id": 1861238518512,
+          "index": 3,
+          "multi_edges": true,
+          "position": 5,
+          "socket_type": 1
+        }
+      ],
+      "content": {},
+      "op_code": 7
+    }
+  ],
+  "edges": [
+    {
+      "id": 1861238288944,
+      "edge_type": 5,
+      "start": 1861238583888,
+      "end": 1861238580528
+    },
+    {
+      "id": 1861238288560,
+      "edge_type": 5,
+      "start": 1861238578768,
+      "end": 1861238580208
+    },
+    {
+      "id": 1861238087920,
+      "edge_type": 5,
+      "start": 1861238513872,
+      "end": 1861238577168
+    },
+    {
+      "id": 1861238288128,
+      "edge_type": 5,
+      "start": 1861238519152,
+      "end": 1861238577488
+    },
+    {
+      "id": 1861238087824,
+      "edge_type": 5,
+      "start": 1861238518352,
+      "end": 1861238583248
+    },
+    {
+      "id": 1861238379856,
+      "edge_type": 5,
+      "start": 1861238518512,
+      "end": 1861238583568
+    }
+  ],
+  "groups": [
+    {
+      "id": 1861238515312,
+      "type": "GroupNode",
+      "title": "Group (2 nodes)",
+      "x": -87.90625,
+      "y": -420.34375,
+      "width": 150.0,
+      "height": 35.0,
+      "is_collapsed": true,
+      "child_node_ids": [
+        1861238576048,
+        1861238582128
+      ],
+      "color": [
+        100,
+        100,
+        100,
+        200
+      ],
+      "title_color": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "border_color": [
+        50,
+        50,
+        50,
+        255
+      ]
+    }
+  ]
+}

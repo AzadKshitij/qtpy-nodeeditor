@@ -5,6 +5,7 @@ A module containing the GroupNode class for node grouping functionality.
 GroupNode is a QGraphicsItem-based container for visual grouping of nodes.
 It is NOT a Node itself, but rather a visual container that holds references to child nodes.
 """
+from PyQt6.QtCore import QPoint
 from qtpy.QtCore import QRectF, Qt, QPointF, QSize
 from qtpy.QtGui import QColor, QPainter, QPen, QBrush
 from qtpy.QtWidgets import QGraphicsRectItem, QGraphicsItem, QGraphicsTextItem, QGraphicsPathItem, QGraphicsProxyWidget, QPushButton
@@ -261,20 +262,35 @@ class GroupNode(Serializable, QGraphicsRectItem):
             # When collapsed, move visible child nodes with the container
             if self._is_collapsed and value is not None:
                 new_pos = value  # QPointF of new container position
-                container_center = new_pos + QPointF(
-                    self.rect().width() / 2, self.rect().height() / 2
-                )
+                container_width = self.rect().width()
+                container_height = self.rect().height()
+                container_center_y = new_pos.y() + container_height / 2
 
-                # Move only visible (shrunken) child nodes to the new container center
-                # Hidden nodes don't need to move
+                # Move only visible (shrunken) child nodes to maintain their edge direction positions
                 for node in self.child_nodes:
                     if node.grNode and node.grNode.isVisible():
-                        node.setPos(container_center.x(), container_center.y())
+                        # Determine if this node has incoming or outgoing edges
+                        has_incoming = any(socket.edges for socket in node.inputs)
+                        has_outgoing = any(socket.edges for socket in node.outputs)
+
+                        # Position node on left for incoming edges, right for outgoing edges
+                        if has_incoming and not has_outgoing:
+                            # Node has only incoming edges - position on the left
+                            node_x = new_pos.x() - 10
+                        elif has_outgoing and not has_incoming:
+                            # Node has only outgoing edges - position on the right
+                            node_x = new_pos.x() + container_width + 10
+                        else:
+                            # Node has both incoming and outgoing edges - position in center
+                            node_x = new_pos.x() + container_width / 2
+
+                        # Position node at calculated x, and vertically at container center
+                        node.setPos(node_x, container_center_y)
 
                         # For collapsed nodes, ensure sockets remain centered after move
-                        if hasattr(node.grNode, "width") and node.grNode.width == 5:
-                            center_x = 0.1  # Center of 5px wide node
-                            center_y = 0.1  # Center of 5px tall node
+                        if hasattr(node.grNode, "width") and node.grNode.width <= 0.2:
+                            center_x = 0.1  # Center of scaled down node
+                            center_y = 0.1  # Center of scaled down node
                             for socket in node.inputs + node.outputs:
                                 socket.grSocket.setPos(center_x, center_y)
                                 # Force graphics update to ensure scene position is current
@@ -354,31 +370,59 @@ class GroupNode(Serializable, QGraphicsRectItem):
                 "relative_position": relative_pos,  # Position relative to container
                 "width": getattr(node.grNode, "width", None),
                 "height": getattr(node.grNode, "height", None),
+                "scale": (
+                    node.grNode.scale() if node.grNode else 1.0
+                ),  # Store original scale
                 "was_visible": node.grNode.isVisible() if node.grNode else True,
             }
 
         # Resize container to minimal collapsed size
         self.setRect(0, 0, 150, self._title_bar_height + 5)
 
-        # Calculate container center position after resize
-        container_center = self.scenePos() + QPointF(
-            self.rect().width() / 2, self.rect().height() / 2
+        # Calculate container positions
+        container_pos = self.scenePos()
+        container_width = self.rect().width()
+        container_height = self.rect().height()
+        container_center_y = container_pos.y() + container_height / 2
+        left_edge_center = container_pos + QPointF(0, container_height / 2)
+        right_edge_center = container_pos + QPointF(
+            container_width, container_height / 2
         )
 
-        # Now position the nodes
+        # Now position the nodes based on edge direction
         for node in self.child_nodes:
             if node in nodes_with_external_connections:
-                # Node has external connections - shrink and move to container center
-                node.setPos(container_center.x(), container_center.y())
+                # Determine if this node has incoming or outgoing edges
+                has_incoming = any(socket.edges for socket in node.inputs)
+                has_outgoing = any(socket.edges for socket in node.outputs)
+
+                # Position node on left for incoming edges, right for outgoing edges
+                if has_incoming and not has_outgoing:
+                    # Node has only incoming edges - position on the left
+                    node.setPos(container_pos.x() - 10, container_center_y)
+                elif has_outgoing and not has_incoming:
+                    # Node has only outgoing edges - position on the right
+                    # node_x = container_pos.x() + container_width + 10
+                    node.setPos(
+                        container_pos.x() + container_width + 10, container_center_y
+                    )
+                else:
+                    # Node has both incoming and outgoing edges - position in center (or could prioritize one)
+                    node_x = container_pos.x() + container_width / 2
+                    node.setPos(node_x, container_center_y)
+
+                # Position node at calculated x, and vertically at container center
+                # node.setPos(node_x, container_center_y)
 
                 # Properly shrink the node graphics but keep it visible
                 if hasattr(node.grNode, "width") and hasattr(node.grNode, "height"):
                     # Actually change the width and height instead of scaling
                     node.grNode.width = 0.2
                     node.grNode.height = 0.2
+                    # Set scale to zero after changing dimensions
+                    node.grNode.setScale(0)
                     node.grNode.update()
                     node.grNode.hide()
-                    # Keep node visible so edges can connect to it
 
                     # For tiny nodes, position all sockets at the center
                     # This ensures edges connect to the center of the small node
@@ -448,6 +492,9 @@ class GroupNode(Serializable, QGraphicsRectItem):
                             # Restore the original width and height
                             node.grNode.width = original_state["width"]
                             node.grNode.height = original_state["height"]
+                            # Restore the original scale
+                            if "scale" in original_state:
+                                node.grNode.setScale(original_state["scale"])
                             node.grNode.update()
                             node.grNode.show()
 
@@ -578,8 +625,38 @@ class GroupNode(Serializable, QGraphicsRectItem):
         if needs_expansion:
             self.updateGroupBoundaries()
 
+    def mousePressEvent(self, event) -> None:
+        """
+        Handle mouse press events.
+        Only allow movement from the header area (title bar).
+        Clicks elsewhere allow selection logic to work.
+        """
+        local_pos = event.pos()
+        # Check if click is in the header area (top _title_bar_height pixels)
+        if local_pos.y() < self._title_bar_height:
+            # Click is on header - allow movement
+            self._can_move = True
+        else:
+            # Click is not on header - disable movable flag to allow selection only
+            self._can_move = False
+            # was_movable = self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable
+            # self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+            # super().mousePressEvent(event)
+            # self.setFlag(
+            #     QGraphicsItem.GraphicsItemFlag.ItemIsMovable, bool(was_movable)
+            # )
+            event.ignore()
+            super().mousePressEvent(event)
+            return
+
+        super().mousePressEvent(event)
+
     def mouseMoveEvent(self, event) -> None:
         """Handle mouse move to also move child nodes."""
+        # Only allow movement if click was on header
+        if not getattr(self, "_can_move", False):
+            return
+
         # Calculate movement delta
         if event is None or not hasattr(event, 'pos'):
             super().mouseMoveEvent(event)
@@ -607,14 +684,9 @@ class GroupNode(Serializable, QGraphicsRectItem):
         """Handle mouse release."""
         if hasattr(self, '_last_pos'):
             del self._last_pos
+        if hasattr(self, "_can_move"):
+            del self._can_move
         super().mouseReleaseEvent(event)
-
-    def mousePressEvent(self, event) -> None:
-        """
-        Handle mouse press events.
-        The collapse button is handled by QGraphicsProxyWidget.
-        """
-        super().mousePressEvent(event)
 
     def paint(self, painter: QPainter, option, widget) -> None:
         """Paint the group node with title bar. Button is handled by QGraphicsProxyWidget."""

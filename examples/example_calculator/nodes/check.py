@@ -44,7 +44,7 @@ class CalcCheck_Input(CalcNode):
     content_label_objname = "calc_node_check"
 
     def __init__(self, scene):
-        super().__init__(scene, inputs=[], outputs=[1, 1, 1, 1])
+        super().__init__(scene, inputs=[2, 2], outputs=[1, 1, 1, 1])
         # self.picon = QImage("icons/in.png")
         self.eval()
 
