@@ -60,15 +60,15 @@ class Node(QObject, Serializable):
         """
         QObject.__init__(self)
         Serializable.__init__(self)
-        
+
         # Import here to avoid circular imports
         from nodeeditor.models.node_model import NodeModel
         from nodeeditor.controllers.node_controller import NodeController
-        
+
         # MVC components
         self.model: NodeModel = NodeModel(title)
         self.controller: NodeController = NodeController(self.model)
-        
+
         # Reference to scene
         self.scene: 'Scene' = scene
 
@@ -80,25 +80,27 @@ class Node(QObject, Serializable):
         self.initInnerClasses()
         self.initSettings()
 
+        # Evaluation state - MUST be initialized before initSockets as it may be accessed during socket creation
+        self._is_dirty = False
+        self._is_invalid = False
+
         # Set title (will update model and graphics)
         self.title = title
 
         # Add to scene
         self.scene.addNode(self)
-        self.scene.grScene.addItem(self.grNode)
+        # Only add to graphics scene if not already added
+        if self.grNode.scene() is None:
+            self.scene.grScene.addItem(self.grNode)
 
         # Create sockets for inputs and outputs
         self.inputs: List['Socket'] = []
         self.outputs: List['Socket'] = []
         self.initSockets(inputs, outputs, input_text, output_text)
 
-        # Evaluation state
-        self._is_dirty = False
-        self._is_invalid = False
-
         # Grouping support
         self.parent_group: Optional["GroupNode"] = None
-        
+
         # Connect model signals to update graphics
         self.model.titleChanged.connect(self._on_title_changed)
         self.model.positionChanged.connect(self._on_position_changed)
@@ -113,16 +115,38 @@ class Node(QObject, Serializable):
         )
 
     # ==================== Signal Handlers ====================
-    
+
     def _on_title_changed(self, new_title: str) -> None:
         """Handle model title change - update graphics."""
         if self.grNode:
             self.grNode.title = new_title
-    
-    def _on_position_changed(self, x: float, y: float) -> None:
+
+    def _on_position_changed(self, pos) -> None:
         """Handle model position change - update graphics."""
+        # Support both QPointF payloads (from MVC model) and legacy tuple payloads
+        if hasattr(pos, "x") and hasattr(pos, "y"):
+            x = float(pos.x())
+            y = float(pos.y())
+        else:
+            try:
+                x, y = pos  # type: ignore[misc]
+                x = float(x)
+                y = float(y)
+            except (TypeError, ValueError):
+                # Fallback: ignore malformed payload
+                return
+
         if self.grNode:
             self.grNode.setPos(x, y)
+
+        for socket in self.inputs + self.outputs:
+            for edge in socket.edges:
+                # Guard against edges being removed during updates
+                if edge.grEdge is None:
+                    continue
+                edge.grEdge.calcPath()
+                edge.updatePositions()
+
         self.positionChanged.emit(self)
 
     # ==================== Properties (Delegated to Model) ====================
@@ -162,16 +186,16 @@ class Node(QObject, Serializable):
         """
         # Update model first
         self.model.position = (x, y)
-        
+
         # Update graphics
         self.grNode.setPos(x, y)
-        
+
         # Update connected edges
         for socket in self.inputs + self.outputs:
             for edge in socket.edges:
                 edge.grEdge.calcPath()
                 edge.updatePositions()
-        
+
         # Emit signal
         self.positionChanged.emit(self)
 
@@ -381,7 +405,7 @@ class Node(QObject, Serializable):
         """Safely remove this Node."""
         if DEBUG:
             print("> Removing Node", self)
-        
+
         # Remove all edges from sockets
         if DEBUG:
             print(" - remove all edges from sockets")
@@ -390,13 +414,13 @@ class Node(QObject, Serializable):
                 if DEBUG:
                     print("    - removing from socket:", socket, "edge:", edge)
                 edge.remove()
-        
+
         # Remove graphics node
         if DEBUG:
             print(" - remove grNode")
         self.scene.grScene.removeItem(self.grNode)
         self.grNode = None
-        
+
         # Remove node from scene
         if DEBUG:
             print(" - remove node from the scene")

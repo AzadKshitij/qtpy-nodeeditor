@@ -1,0 +1,1 @@
+python examples/mvc_calculator/main.py

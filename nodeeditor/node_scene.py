@@ -62,6 +62,10 @@ class Scene(QObject, Serializable):
         self.model: SceneModel = SceneModel()
         self.controller: SceneController = SceneController(self.model)
 
+        # Legacy-compatible registries for node and edge wrappers
+        self._nodes: List["Node"] = []
+        self._edges: List["Edge"] = []
+
         # current filename assigned to this scene
         self.filename: Optional[str] = None
 
@@ -104,13 +108,23 @@ class Scene(QObject, Serializable):
     # ==================== Properties (Delegated to MVC) ====================
 
     @property
-    def nodes(self) -> List["NodeModel"]:
-        """Get all nodes from the model."""
+    def nodes(self) -> List["Node"]:
+        """Return legacy Node wrapper instances registered with the scene."""
+        return self._nodes
+
+    @property
+    def edges(self) -> List["Edge"]:
+        """Return legacy Edge wrapper instances registered with the scene."""
+        return self._edges
+
+    @property
+    def node_models(self) -> List["NodeModel"]:
+        """Return underlying NodeModel instances tracked by the SceneModel."""
         return self.model.nodes
 
     @property
-    def edges(self) -> List["EdgeModel"]:
-        """Get all edges from the model."""
+    def edge_models(self) -> List["EdgeModel"]:
+        """Return underlying EdgeModel instances tracked by the SceneModel."""
         return self.model.edges
 
     @property
@@ -259,18 +273,26 @@ class Scene(QObject, Serializable):
 
     def addNode(self, node: "Node") -> None:
         """Add Node to this Scene (delegates to controller)."""
+        if node not in self._nodes:
+            self._nodes.append(node)
         self.controller.register_node(node)
 
     def addEdge(self, edge: "Edge") -> None:
         """Add Edge to this Scene (delegates to controller)."""
+        if edge not in self._edges:
+            self._edges.append(edge)
         self.controller.register_edge(edge)
 
     def removeNode(self, node: "Node") -> None:
         """Remove Node from this Scene."""
+        if node in self._nodes:
+            self._nodes.remove(node)
         self.controller.unregister_node(node)
 
     def removeEdge(self, edge: "Edge") -> None:
         """Remove Edge from this Scene."""
+        if edge in self._edges:
+            self._edges.remove(edge)
         self.controller.unregister_edge(edge)
 
     def addGroup(self, group: Any) -> None:

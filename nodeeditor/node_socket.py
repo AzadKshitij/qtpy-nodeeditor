@@ -69,18 +69,9 @@ class Socket(QObject, Serializable):
         from nodeeditor.models.socket_model import SocketModel
         from nodeeditor.controllers.socket_controller import SocketController
 
-        # MVC components
-        self.model: SocketModel = SocketModel(
-            socket_type=socket_type,
-            is_input=is_input,
-            position=position,
-            index=index
-        )
-        self.controller: SocketController = SocketController(self.model)
-
         # Reference to node
         self.node: 'Node' = node
-        
+
         # Socket configuration
         self.position: int = position
         self.index: int = index
@@ -99,9 +90,20 @@ class Socket(QObject, Serializable):
         # Set position
         self.setSocketPosition()
 
+        # MVC components - Create model with correct parameters
+        # Convert is_input to socket_type (INPUT=1, OUTPUT=2)
+        model_socket_type = SocketModel.INPUT if is_input else SocketModel.OUTPUT
+        self.model: SocketModel = SocketModel(
+            name=f"{'input' if is_input else 'output'}_{index}",
+            socket_type=model_socket_type,
+            socket_id=None,  # Auto-generate ID
+            parent_node=node.model if hasattr(node, "model") else None,
+        )
+        self.controller: SocketController = SocketController(self.model)
+
         # Edge connections
         self.edges: List['Edge'] = []
-        
+
         # Connect model signals
         self.model.typeChanged.connect(self._on_type_changed)
 
@@ -115,7 +117,7 @@ class Socket(QObject, Serializable):
         )
 
     # ==================== Signal Handlers ====================
-    
+
     def _on_type_changed(self, new_type: int) -> None:
         """Handle model type change - update graphics."""
         if self.grSocket:
@@ -138,7 +140,8 @@ class Socket(QObject, Serializable):
         """
         if self.socket_type != new_socket_type:
             self.socket_type = new_socket_type
-            self.model.type = new_socket_type
+            # Note: SocketModel.socket_type is immutable, so we only update the Socket wrapper
+            # and trigger the graphics update
             self.grSocket.changeSocketType()
             return True
         return False
@@ -157,11 +160,11 @@ class Socket(QObject, Serializable):
             )
         )
 
-    def getSocketPosition(self) -> Tuple[float, float]:
+    def getSocketPosition(self) -> List[float]:
         """
         Get this Socket's position according to the Node implementation.
 
-        :return: (x, y) position tuple
+        :return: [x, y] position list
         """
         if DEBUG:
             print("  GSP: ", self.index, self.position, "node:", self.node)

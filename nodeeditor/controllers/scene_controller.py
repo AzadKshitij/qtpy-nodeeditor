@@ -42,6 +42,8 @@ from nodeeditor.exceptions import (
 
 if TYPE_CHECKING:
     from nodeeditor.commands import BaseCommand
+    from nodeeditor.node_node import Node
+    from nodeeditor.node_edge import Edge
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +219,99 @@ class SceneController(QObject):
             error_msg = f"Failed to set node position: {str(e)}"
             self.error.emit(error_msg)
             raise
+
+    # ======================== Legacy Compatibility Methods ========================
+
+    def register_node(self, node: "Node") -> None:
+        """
+        Register a legacy Node object with the scene.
+
+        This is a compatibility method for the old Node API. It handles both
+        legacy Node objects and new NodeModel objects.
+
+        Args:
+            node: The Node object to register
+        """
+        try:
+            # Check if this is a legacy Node object (has both model and controller)
+            if hasattr(node, "model") and hasattr(node, "controller"):
+                # It's already an MVC node, just ensure it's in the model
+                added = self.model.add_node(node.model)
+                if added:
+                    logger.debug(f"Registered MVC node {node.model.id} with scene")
+            else:
+                # Treat as legacy node - just add it to tracking if needed
+                logger.debug(f"Registered legacy node {node} with scene")
+        except Exception as e:
+            error_msg = f"Failed to register node: {str(e)}"
+            self.error.emit(error_msg)
+            logger.error(error_msg, exc_info=True)
+
+    def unregister_node(self, node: "Node") -> None:
+        """
+        Unregister a legacy Node object from the scene.
+
+        This is a compatibility method for the old Node API.
+
+        Args:
+            node: The Node object to unregister
+        """
+        try:
+            # Check if this is an MVC node with a model
+            if hasattr(node, "model"):
+                removed = self.model.remove_node(node.model.id)
+                if removed:
+                    logger.debug(f"Unregistered MVC node {node.model.id} from scene")
+            else:
+                logger.debug(f"Unregistered legacy node {node} from scene")
+        except Exception as e:
+            error_msg = f"Failed to unregister node: {str(e)}"
+            self.error.emit(error_msg)
+            logger.error(error_msg, exc_info=True)
+
+    def register_edge(self, edge: "Edge") -> None:
+        """
+        Register a legacy Edge object with the scene.
+
+        This is a compatibility method for the old Edge API.
+
+        Args:
+            edge: The Edge object to register
+        """
+        try:
+            # Check if this is an MVC edge with a model
+            if hasattr(edge, "model") and hasattr(edge, "controller"):
+                added = self.model.add_edge(edge.model)
+                if added:
+                    logger.debug(f"Registered MVC edge {edge.model.id} with scene")
+            else:
+                logger.debug(f"Registered legacy edge {edge} with scene")
+        except Exception as e:
+            error_msg = f"Failed to register edge: {str(e)}"
+            self.error.emit(error_msg)
+            logger.error(error_msg, exc_info=True)
+
+    def unregister_edge(self, edge: "Edge") -> None:
+        """
+        Unregister a legacy Edge object from the scene.
+
+        This is a compatibility method for the old Edge API.
+
+        Args:
+            edge: The Edge object to unregister
+        """
+        try:
+            # Check if this is an MVC edge with a model
+            if hasattr(edge, "model"):
+                removed = self.model.remove_edge(edge.model.id)
+                if removed:
+                    logger.debug(f"Unregistered MVC edge {edge.model.id} from scene")
+            else:
+                logger.debug(f"Unregistered legacy edge {edge} from scene")
+        except Exception as e:
+            error_msg = f"Failed to unregister edge: {str(e)}"
+            self.error.emit(error_msg)
+            logger.error(error_msg, exc_info=True)
 
     # ======================== Edge Operations ========================
 

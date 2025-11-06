@@ -56,17 +56,39 @@ class Edge(Serializable):
         :param edge_type: Constant determining type of edge
         """
         super().__init__()
-        
+
         # Import here to avoid circular imports
         from nodeeditor.models.edge_model import EdgeModel
         from nodeeditor.controllers.edge_controller import EdgeController
-        
+
+        # Reference to scene
+        self.scene: "Scene" = scene
+
         # MVC components
         self.model: EdgeModel = EdgeModel()
-        self.controller: EdgeController = EdgeController(self.model)
-        
-        # Reference to scene
-        self.scene: 'Scene' = scene
+
+        controller: Optional[EdgeController] = None
+        if self.scene is not None:
+            scene_controller = getattr(self.scene, "controller", None)
+            if scene_controller is not None:
+                controller = getattr(scene_controller, "edge_controller", None)
+
+            if controller is None:
+                # Fallback to creating dedicated controller using scene model
+                from nodeeditor.models.scene_model import (
+                    SceneModel,
+                )  # Local import to avoid circular dependency
+
+                scene_model = getattr(self.scene, "model", None)
+                if isinstance(scene_model, SceneModel):
+                    controller = EdgeController(scene_model)
+
+        if controller is None:
+            raise TypeError(
+                "Edge requires a scene with an initialized SceneController or SceneModel"
+            )
+
+        self.controller: EdgeController = controller
 
         # Socket references
         self._start_socket: Optional['Socket'] = None
@@ -75,7 +97,7 @@ class Edge(Serializable):
         # Set sockets (this updates model and scene)
         self.start_socket = start_socket
         self.end_socket = end_socket
-        
+
         # Edge type
         self._edge_type = edge_type
 
@@ -84,7 +106,7 @@ class Edge(Serializable):
 
         # Add to scene
         self.scene.addEdge(self)
-        
+
         # Connect model signals
         self.model.typeChanged.connect(self._on_type_changed)
 
@@ -96,7 +118,7 @@ class Edge(Serializable):
         )
 
     # ==================== Signal Handlers ====================
-    
+
     def _on_type_changed(self, new_type: int) -> None:
         """Handle model type change - update graphics."""
         if self.grEdge:
@@ -124,7 +146,7 @@ class Edge(Serializable):
 
         # Assign new start socket
         self._start_socket = value
-        
+
         # Add edge to new socket
         if self.start_socket is not None:
             self.start_socket.addEdge(self)
@@ -147,7 +169,7 @@ class Edge(Serializable):
 
         # Assign new end socket
         self._end_socket = value
-        
+
         # Add edge to new socket
         if self.end_socket is not None:
             self.end_socket.addEdge(self)
@@ -257,6 +279,10 @@ class Edge(Serializable):
 
         This should be called if you update Edge positions.
         """
+        if self.grEdge is None:
+            # Graphics edge has already been removed; nothing to update.
+            return
+
         if not self.start_socket:
             return
 
@@ -298,7 +324,7 @@ class Edge(Serializable):
             self.grEdge.setDestination(*end_pos)
         else:
             self.grEdge.setDestination(*source_pos)
-        
+
         self.grEdge.update()
 
     def remove_from_sockets(self) -> None:
