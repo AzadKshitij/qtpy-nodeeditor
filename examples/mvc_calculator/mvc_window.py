@@ -23,6 +23,7 @@ from nodeeditor.utils import loadStylesheets, dumpException, pp
 
 from examples.mvc_calculator.mvc_conf import CALC_NODES
 from examples.mvc_calculator.mvc_sub_window import MvcCalculatorSubWindow
+from examples.mvc_calculator.mvc_drag_listbox import MvcQDMDragListbox
 
 # Enable edge validators
 Edge.registerEdgeValidator(edge_validator_debug)
@@ -320,14 +321,8 @@ class MvcCalculatorWindow(NodeEditorWindow):
 
     def createNodesDock(self):
         """Create the nodes dock with available node types."""
-        self.nodesListWidget = QListWidget()
+        self.nodesListWidget = MvcQDMDragListbox()
         self.nodesListWidget.setObjectName("nodesListWidget")
-
-        # Add node types to the list
-        for op_code, node_class in sorted(CALC_NODES.items()):
-            item = QListWidgetItem(node_class.op_title)
-            item.setData(Qt.ItemDataRole.UserRole, op_code)
-            self.nodesListWidget.addItem(item)
 
         self.nodesDock = QDockWidget("Nodes")
         self.nodesDock.setWidget(self.nodesListWidget)

@@ -7,11 +7,10 @@ Demonstrates input node implementation in the MVC architecture.
 from qtpy.QtWidgets import QLineEdit
 from qtpy.QtCore import Qt
 
-from nodeeditor.node_node import Node
 from nodeeditor.node_content_widget import QDMNodeContentWidget
-from nodeeditor.node_graphics_node import QDMGraphicsNode
 from nodeeditor.utils import dumpException
 
+from examples.mvc_calculator.mvc_calc_node_base import MvcCalcNode, MvcCalcGraphicsNode
 from examples.mvc_calculator.mvc_conf import register_node, OP_NODE_INPUT
 
 
@@ -44,22 +43,8 @@ class MvcCalcInputContent(QDMNodeContentWidget):
         return res
 
 
-class MvcCalcGraphicsNode(QDMGraphicsNode):
-    """Graphics node for calculator nodes."""
-
-    def initSizes(self):
-        """Initialize node dimensions and styling."""
-        super().initSizes()
-        self.width = 120
-        self.height = 120
-        self.edge_roundness = 6
-        self.edge_padding = 0
-        self.title_horizontal_padding = 8
-        self.title_vertical_padding = 10
-
-
 @register_node(OP_NODE_INPUT)
-class MvcCalcNode_Input(Node):
+class MvcCalcNode_Input(MvcCalcNode):
     """
     Input node for calculator in MVC architecture.
 

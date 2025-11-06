@@ -139,6 +139,11 @@ class Node(QObject, Serializable):
         if self.grNode:
             self.grNode.setPos(x, y)
 
+        # # Guard: Only process edges if sockets have been initialized as Socket objects
+        # # During initialization, self.inputs/outputs may still contain integer socket types
+        # if hasattr(self, 'inputs') and hasattr(self, 'outputs') and self.inputs and self.outputs:
+        #     # Check if the first item is actually a Socket object (has 'edges' attribute)
+        #     if hasattr(self.inputs[0] if self.inputs else self.outputs[0], 'edges'):
         for socket in self.inputs + self.outputs:
             for edge in socket.edges:
                 # Guard against edges being removed during updates
@@ -147,9 +152,9 @@ class Node(QObject, Serializable):
                 edge.grEdge.calcPath()
                 edge.updatePositions()
 
-        self.positionChanged.emit(self)
-
-    # ==================== Properties (Delegated to Model) ====================
+        self.positionChanged.emit(
+            self
+        )  # ==================== Properties (Delegated to Model) ====================
 
     @property
     def title(self) -> str:
@@ -504,8 +509,12 @@ class Node(QObject, Serializable):
         other_nodes = []
         for ix in range(len(self.outputs)):
             for edge in self.outputs[ix].edges:
-                other_node = edge.getOtherSocket(self.outputs[ix]).node
-                other_nodes.append(other_node)
+                # Guard against malformed edges where getOtherSocket returns None
+                other_socket = edge.getOtherSocket(self.outputs[ix])
+                if other_socket is not None:
+                    other_node = other_socket.node
+                    if other_node is not None:
+                        other_nodes.append(other_node)
         return other_nodes
 
     def getInput(self, index: int = 0) -> Optional['Node']:
@@ -521,6 +530,9 @@ class Node(QObject, Serializable):
                 return None
             connecting_edge = input_socket.edges[0]
             other_socket = connecting_edge.getOtherSocket(self.inputs[index])
+            # Guard against malformed edges
+            if other_socket is None:
+                return None
             return other_socket.node
         except Exception as e:
             dumpException(e)
@@ -542,6 +554,9 @@ class Node(QObject, Serializable):
                 return None, None
             connecting_edge = input_socket.edges[0]
             other_socket = connecting_edge.getOtherSocket(self.inputs[index])
+            # Guard against malformed edges
+            if other_socket is None:
+                return None, None
             return other_socket.node, other_socket
         except Exception as e:
             dumpException(e)
@@ -560,6 +575,9 @@ class Node(QObject, Serializable):
         try:
             edge = self.inputs[index].edges[0]
             socket = edge.getOtherSocket(self.inputs[index])
+            # Guard against malformed edges
+            if socket is None:
+                return None, None
             return socket.node, socket.index
         except IndexError:
             return None, None
@@ -577,7 +595,9 @@ class Node(QObject, Serializable):
         ins = []
         for edge in self.inputs[index].edges:
             other_socket = edge.getOtherSocket(self.inputs[index])
-            ins.append(other_socket.node)
+            # Guard against malformed edges
+            if other_socket is not None:
+                ins.append(other_socket.node)
         return ins
 
     def getOutputs(self, index: int = 0) -> List['Node']:
@@ -590,7 +610,9 @@ class Node(QObject, Serializable):
         outs = []
         for edge in self.outputs[index].edges:
             other_socket = edge.getOtherSocket(self.outputs[index])
-            outs.append(other_socket.node)
+            # Guard against malformed edges
+            if other_socket is not None:
+                outs.append(other_socket.node)
         return outs
 
     # ==================== Serialization ====================

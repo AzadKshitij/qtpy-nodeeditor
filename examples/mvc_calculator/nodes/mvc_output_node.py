@@ -7,9 +7,8 @@ Demonstrates output node implementation in the MVC architecture.
 from qtpy.QtWidgets import QLabel
 from qtpy.QtCore import Qt
 
-from nodeeditor.node_node import Node
 from nodeeditor.node_content_widget import QDMNodeContentWidget
-from examples.mvc_calculator.nodes.mvc_input_node import MvcCalcGraphicsNode
+from examples.mvc_calculator.mvc_calc_node_base import MvcCalcNode, MvcCalcGraphicsNode
 
 from examples.mvc_calculator.mvc_conf import register_node, OP_NODE_OUTPUT
 
@@ -25,7 +24,7 @@ class MvcCalcOutputContent(QDMNodeContentWidget):
 
 
 @register_node(OP_NODE_OUTPUT)
-class MvcCalcNode_Output(Node):
+class MvcCalcNode_Output(MvcCalcNode):
     """
     Output node for calculator in MVC architecture.
 

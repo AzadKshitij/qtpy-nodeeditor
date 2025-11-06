@@ -4,12 +4,14 @@ MVC Calculator Operation Nodes
 Demonstrates operation nodes (Add, Sub, Mul, Div) implementation in the MVC architecture.
 """
 
-from nodeeditor.node_node import Node
 from nodeeditor.node_content_widget import QDMNodeContentWidget
 from qtpy.QtWidgets import QLabel
 from qtpy.QtCore import Qt
 
-from examples.mvc_calculator.nodes.mvc_input_node import MvcCalcGraphicsNode
+from examples.mvc_calculator.mvc_calc_node_base import (
+    MvcCalcNode,
+    MvcCalcGraphicsNode,
+)
 from examples.mvc_calculator.mvc_conf import (
     register_node,
     OP_NODE_ADD,
@@ -29,7 +31,7 @@ class MvcCalcOperationContent(QDMNodeContentWidget):
         self.lbl.setObjectName("mvc_calc_operation")
 
 
-class MvcCalcOperationNode(Node):
+class MvcCalcOperationNode(MvcCalcNode):
     """
     Base class for binary operation nodes (two inputs, one output).
 

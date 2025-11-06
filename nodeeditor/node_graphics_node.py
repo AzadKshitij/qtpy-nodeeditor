@@ -48,7 +48,7 @@ class QDMGraphicsNode(QGraphicsItem):
         self.initSizes()
         self.initAssets()
         self.initUI()
-        
+
         # Connect to model signals for real-time updates
         self._connect_model_signals()
 
@@ -231,7 +231,7 @@ class QDMGraphicsNode(QGraphicsItem):
                     self.node.model.titleChanged.connect(self._on_node_title_changed)
                 except (AttributeError, TypeError):
                     pass
-            
+
             # Connect to position changes
             if hasattr(self.node.model, 'positionChanged'):
                 try:
@@ -245,10 +245,14 @@ class QDMGraphicsNode(QGraphicsItem):
             self.title = new_title
             self.update()
 
-    def _on_node_position_changed(self, new_position: Tuple[float, float]) -> None:
+    def _on_node_position_changed(self, new_position) -> None:
         """Handle node position change from model - update graphics position."""
         from qtpy.QtCore import QPointF
-        self.setPos(QPointF(new_position[0], new_position[1]))
+        # Handle both QPointF and tuple formats
+        if isinstance(new_position, QPointF):
+            self.setPos(new_position)
+        else:
+            self.setPos(QPointF(new_position[0], new_position[1]))
         self.update()
 
     def initTitle(self) -> None:
