@@ -8,13 +8,13 @@ from qtpy.QtWidgets import QGraphicsPathItem, QWidget, QGraphicsItem, QGraphicsS
 from qtpy.QtGui import QColor, QPen, QPainterPath
 from qtpy.QtCore import Qt, QRectF, QPointF
 
-from nodeeditor.node_graphics_edge_path import GraphicsEdgePathBezier, GraphicsEdgePathDirect, GraphicsEdgePathSquare, GraphicsEdgePathImprovedSharp, GraphicsEdgePathImprovedBezier
+from .node_graphics_edge_path import GraphicsEdgePathBezier, GraphicsEdgePathDirect, GraphicsEdgePathSquare, GraphicsEdgePathImprovedSharp, GraphicsEdgePathImprovedBezier
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from .node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
 

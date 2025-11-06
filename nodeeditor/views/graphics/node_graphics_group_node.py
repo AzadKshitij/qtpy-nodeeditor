@@ -5,7 +5,7 @@ A module containing Graphics representation of GroupNode
 from qtpy.QtWidgets import QGraphicsItem
 from qtpy.QtGui import QFont, QColor, QPen, QBrush, QFontMetrics
 from qtpy.QtCore import Qt, QRectF
-from nodeeditor.node_graphics_node import QDMGraphicsNode
+from .node_graphics_node import QDMGraphicsNode
 
 from typing import TYPE_CHECKING
 

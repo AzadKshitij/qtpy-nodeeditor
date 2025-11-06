@@ -2,7 +2,7 @@
 """A module containing the base class for the Node's content graphical representation. It also contains an example of
 an overridden Text Widget, which can pass a notification to it's parent about being modified."""
 from collections import OrderedDict
-from nodeeditor.node_content_widget import QDMNodeContentWidget
+from nodeeditor.views.content_widgets.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
 from qtpy.QtWidgets import QWidget, QLabel, QVBoxLayout, QTextEdit
 from qtpy.QtGui import QPixmap, QImage, QFocusEvent
@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
     from nodeeditor.node_node import Node

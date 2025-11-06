@@ -7,16 +7,16 @@ node management while maintaining the existing public API.
 """
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal
-from nodeeditor.node_graphics_node import QDMGraphicsNode
-from nodeeditor.node_content_widget import QDMNodeContentWidget
+from nodeeditor.views.graphics.node_graphics_node import QDMGraphicsNode
+from nodeeditor.views.content_widgets.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_socket import Socket, LEFT_BOTTOM, LEFT_CENTER, LEFT_TOP, RIGHT_BOTTOM, RIGHT_CENTER, RIGHT_TOP
-from nodeeditor.utils_no_qt import dumpException
+from nodeeditor.utils.utils_no_qt import dumpException
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Union
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
@@ -149,7 +149,8 @@ class Node(QObject, Serializable):
                 # Guard against edges being removed during updates
                 if edge.grEdge is None:
                     continue
-                edge.grEdge.calcPath()
+                if edge.grEdge is not None:
+                    edge.grEdge.calcPath()
                 edge.updatePositions()
 
         self.positionChanged.emit(
@@ -198,7 +199,11 @@ class Node(QObject, Serializable):
         # Update connected edges
         for socket in self.inputs + self.outputs:
             for edge in socket.edges:
-                edge.grEdge.calcPath()
+                # Guard against edges being removed during updates
+                if edge.grEdge is None:
+                    continue
+                if edge.grEdge is not None:
+                    edge.grEdge.calcPath()
                 edge.updatePositions()
 
         # Emit signal
@@ -424,7 +429,7 @@ class Node(QObject, Serializable):
         if DEBUG:
             print(" - remove grNode")
         self.scene.grScene.removeItem(self.grNode)
-        self.grNode = None
+        self.grNode = None  # type: ignore
 
         # Remove node from scene
         if DEBUG:

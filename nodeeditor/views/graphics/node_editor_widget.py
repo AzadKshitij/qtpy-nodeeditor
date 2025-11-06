@@ -10,14 +10,14 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout, QApplication, QMessageBox, QLab
 from nodeeditor.node_scene import Scene, InvalidFile
 from nodeeditor.node_node import Node
 from nodeeditor.node_edge import Edge, EDGE_TYPE_BEZIER
-from nodeeditor.node_graphics_view import QDMGraphicsView
-from nodeeditor.utils import dumpException
+from .node_graphics_view import QDMGraphicsView
+from nodeeditor.utils.utils import dumpException
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from .node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
 
@@ -205,7 +205,7 @@ class NodeEditorWidget(QWidget):
 
     def addCustomNode(self):
         """Testing method to create a custom Node with custom content"""
-        from nodeeditor.node_content_widget import QDMNodeContentWidget
+        from nodeeditor.views.content_widgets.node_content_widget import QDMNodeContentWidget
         from nodeeditor.node_serializable import Serializable
 
         class NNodeContent(QLabel):  # , Serializable):

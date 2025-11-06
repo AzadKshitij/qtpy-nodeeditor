@@ -34,11 +34,7 @@ if _QT_API_NAME is None:
     except ImportError:
         pass
 
-# don't be too strict yet...
-# if _QT_API_NAME is None:
-#     raise ImportError("Please install PyQt5/PySide2 or PyQt6/PySide6")
-
-# Import industry-standard modules for better architecture
+# Import exceptions
 from nodeeditor.exceptions import (
     NodeEditorException,
     NodeError,
@@ -58,6 +54,7 @@ from nodeeditor.exceptions import (
     ValidationError,
 )
 
+# Import constants
 from nodeeditor.constants import (
     NodeZValue,
     SocketType,
@@ -68,34 +65,97 @@ from nodeeditor.constants import (
     SerializationKeys,
 )
 
+# Import commands (undo/redo)
 from nodeeditor.commands import (
     BaseCommand,
     NodeCreatedCmd,
     NodeDeletedCmd,
     NodeMovedCmd,
     NodeRenamedCmd,
+    NodePropertyChangedCmd,
     EdgeCreatedCmd,
     EdgeDeletedCmd,
     NodesMovedCmd,
     NodesDeletedCmd,
+    SceneClearedCmd,
 )
 
-# Import MVC Model Layer for robust architecture
+# Import models (MVC Model Layer)
 from nodeeditor.models import (
     NodeModel,
+    NodeIconModel,
     EdgeModel,
     SocketModel,
     SceneModel,
+    GroupNodeModel,
+    EdgeDraggingModel,
 )
 
-# Import MVC Controller Layer for business logic
+# Import controllers (Business Logic Layer)
 from nodeeditor.controllers import (
     NodeController,
     EdgeController,
     SceneController,
+    GroupNodeController,
 )
 
-# Import View Layer for graphics synchronization
+# Import utility functions (from utils package __init__ which re-exports everything)
+from nodeeditor.utils import (
+    qpointf_to_tuple,
+    tuple_to_qpointf,
+    qsizef_to_tuple,
+    tuple_to_qsizef,
+    qrectf_to_dict,
+    dict_to_qrectf,
+    qcolor_to_hex,
+    hex_to_qcolor,
+    normalize_point,
+    normalize_size,
+    normalize_rect,
+    floats_equal,
+    tuples_equal,
+    qpointf_equal,
+    qsizef_equal,
+    qrectf_equal,
+    qcolor_equal,
+    dict_equal,
+    dicts_contain_equal_values,
+    any_values_equal,
+    DEFAULT_FLOAT_TOLERANCE,
+    edge_validator_debug,
+    edge_cannot_connect_two_outputs_or_two_inputs,
+    edge_cannot_connect_input_and_output_of_same_node,
+    edge_cannot_connect_input_and_output_of_different_type,
+    loadStylesheet,
+    loadStylesheets,
+    isCTRLPressed,
+    isSHIFTPressed,
+    isALTPressed,
+)
+
+# Import graphics/views (MVC View Layer)
+from nodeeditor.views import (
+    QDMGraphicsEdge,
+    GraphicsEdgePathBezier,
+    GraphicsEdgePathDirect,
+    GraphicsEdgePathSquare,
+    GraphicsEdgePathImprovedSharp,
+    GraphicsEdgePathImprovedBezier,
+    QDMGraphicsNode,
+    QDMGraphicsSocket,
+    QDMGraphicsView,
+    QDMGraphicsScene,
+    QDMCutLine,
+    QDMGraphicsGroupNode,
+    NodeEditorWindow,
+    QDMNodeContentWidget,
+    QDMNodeIconContentWidget,
+    IconRegistry,
+    get_icon_registry,
+    set_icon_registry,
+)
+
+# Import legacy view layer models
 from nodeeditor.view import (
     QDMGraphicsNodeModel,
     QDMGraphicsEdgeModel,
@@ -103,12 +163,13 @@ from nodeeditor.view import (
     QDMGraphicsSceneModel,
 )
 
-# Import Edge Validator Registration (auto-registers validators)
+# Import Edge Validator Registration
 from nodeeditor import edge_validator_registration  # noqa: F401
 
 
 __all__ = [
-    # Exceptions
+    "__version__",
+    "__author__",
     "NodeEditorException",
     "NodeError",
     "NodeCreationError",
@@ -125,7 +186,6 @@ __all__ = [
     "SceneSerializationError",
     "SerializationError",
     "ValidationError",
-    # Constants
     "NodeZValue",
     "SocketType",
     "EdgeType",
@@ -133,26 +193,76 @@ __all__ = [
     "NodeColors",
     "TimingSettings",
     "SerializationKeys",
-    # Commands (Undo/Redo)
     "BaseCommand",
     "NodeCreatedCmd",
     "NodeDeletedCmd",
     "NodeMovedCmd",
     "NodeRenamedCmd",
+    "NodePropertyChangedCmd",
     "EdgeCreatedCmd",
     "EdgeDeletedCmd",
     "NodesMovedCmd",
     "NodesDeletedCmd",
-    # Models (MVC Layer)
+    "SceneClearedCmd",
     "NodeModel",
+    "NodeIconModel",
     "EdgeModel",
     "SocketModel",
     "SceneModel",
-    # Controllers (Business Logic Layer)
+    "GroupNodeModel",
+    "EdgeDraggingModel",
     "NodeController",
     "EdgeController",
     "SceneController",
-    # View Layer (Graphics Integration)
+    "GroupNodeController",
+    "qpointf_to_tuple",
+    "tuple_to_qpointf",
+    "qsizef_to_tuple",
+    "tuple_to_qsizef",
+    "qrectf_to_dict",
+    "dict_to_qrectf",
+    "qcolor_to_hex",
+    "hex_to_qcolor",
+    "normalize_point",
+    "normalize_size",
+    "normalize_rect",
+    "floats_equal",
+    "tuples_equal",
+    "qpointf_equal",
+    "qsizef_equal",
+    "qrectf_equal",
+    "qcolor_equal",
+    "dict_equal",
+    "dicts_contain_equal_values",
+    "any_values_equal",
+    "DEFAULT_FLOAT_TOLERANCE",
+    "edge_validator_debug",
+    "edge_cannot_connect_two_outputs_or_two_inputs",
+    "edge_cannot_connect_input_and_output_of_same_node",
+    "edge_cannot_connect_input_and_output_of_different_type",
+    "loadStylesheet",
+    "loadStylesheets",
+    "isCTRLPressed",
+    "isSHIFTPressed",
+    "isALTPressed",
+    "QDMGraphicsEdge",
+    "GraphicsEdgePathBezier",
+    "GraphicsEdgePathDirect",
+    "GraphicsEdgePathSquare",
+    "GraphicsEdgePathImprovedSharp",
+    "GraphicsEdgePathImprovedBezier",
+    "QDMGraphicsNode",
+    "QDMGraphicsSocket",
+    "QDMGraphicsView",
+    "QDMGraphicsScene",
+    "QDMCutLine",
+    "QDMGraphicsGroupNode",
+    "NodeEditorWindow",
+    "QDMNodeContentWidget",
+    "QDMNodeIconContentWidget",
+    "IconRegistry",
+    "get_icon_registry",
+    "set_icon_registry",
     "QDMGraphicsNodeModel",
     "QDMGraphicsEdgeModel",
     "QDMGraphicsSocketModel",

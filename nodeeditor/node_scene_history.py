@@ -5,13 +5,13 @@ A module containing all code for working with History (Undo/Redo)
 
 Refactored for MVC architecture - uses model signals and controller methods.
 """
-from nodeeditor.utils import dumpException
+from nodeeditor.utils.utils import dumpException
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, TypedDict
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
 
@@ -56,23 +56,25 @@ class SceneHistory:
         self._history_modified_listeners: List[Callable[[], None]] = []
         self._history_stored_listeners: List[Callable[[], None]] = []
         self._history_restored_listeners: List[Callable[[], None]] = []
-        
+
         # Connect to model signals for automatic history tracking
         self._connect_model_signals()
 
     def _connect_model_signals(self) -> None:
         """Connect to scene model signals for automatic history tracking."""
         if hasattr(self.scene, 'model'):
-            # Track when nodes/edges are modified
-            if hasattr(self.scene.model, 'nodesChanged'):
+            # Track when nodes/edges are modifiedc
+            nodes_changed_signal = getattr(self.scene.model, "nodesChanged", None)
+            if nodes_changed_signal is not None:
                 try:
-                    self.scene.model.nodesChanged.connect(self._on_scene_changed)
+                    nodes_changed_signal.connect(self._on_scene_changed)
                 except (AttributeError, TypeError):
                     pass
-            
-            if hasattr(self.scene.model, 'edgesChanged'):
+
+            edges_changed_signal = getattr(self.scene.model, "edgesChanged", None)
+            if edges_changed_signal is not None:
                 try:
-                    self.scene.model.edgesChanged.connect(self._on_scene_changed)
+                    edges_changed_signal.connect(self._on_scene_changed)
                 except (AttributeError, TypeError):
                     pass
 
@@ -207,7 +209,13 @@ class SceneHistory:
         for callback in self._history_restored_listeners:
             callback()
 
-    def storeHistory(self, desc: str, setModified: bool = False, data: dict = None, callback: 'function' = None) -> None:
+    def storeHistory(
+        self,
+        desc: str,
+        setModified: bool = False,
+        data: Optional[dict] = None,
+        callback: Optional[Callable] = None,
+    ) -> None:
         """
         Store History Stamp into History Stack
 
@@ -275,7 +283,7 @@ class SceneHistory:
             'nodes': [],
             'edges': [],
         }
-        
+
         # Try model-based selection first (MVC)
         if hasattr(self.scene, 'model'):
             for node in getattr(self.scene.model, 'nodes', []):
@@ -284,15 +292,27 @@ class SceneHistory:
             for edge in getattr(self.scene.model, 'edges', []):
                 if getattr(edge, 'selected', False):
                     sel_obj['edges'].append(edge.id)
-        
+
         # Fallback to graphics-based selection (backward compatibility)
         if not sel_obj['nodes'] and not sel_obj['edges'] and hasattr(self.scene, 'grScene'):
+            # Import graphics classes locally to avoid circular imports
+            from nodeeditor.views.graphics.node_graphics_node import QDMGraphicsNode
+            from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
+
             for item in self.scene.grScene.selectedItems():
-                if hasattr(item, 'node'):
+                if (
+                    isinstance(item, QDMGraphicsNode)
+                    and hasattr(item, "node")
+                    and item.node is not None
+                ):
                     sel_obj['nodes'].append(item.node.id)
-                elif hasattr(item, 'edge'):
+                elif (
+                    isinstance(item, QDMGraphicsEdge)
+                    and hasattr(item, "edge")
+                    and item.edge is not None
+                ):
                     sel_obj['edges'].append(item.edge.id)
-        
+
         return sel_obj
 
     def createHistoryStamp(self, desc: str) -> dict:
@@ -337,11 +357,16 @@ class SceneHistory:
 
             # first clear all selection on edges
             for edge in self.scene.edges:
-                edge.grEdge.setSelected(False)
+                if hasattr(edge, "grEdge") and edge.grEdge is not None:
+                    edge.grEdge.setSelected(False)
             # now restore selected edges from history_stamp
             for edge_id in history_stamp['selection']['edges']:
                 for edge in self.scene.edges:
-                    if edge.id == edge_id:
+                    if (
+                        edge.id == edge_id
+                        and hasattr(edge, "grEdge")
+                        and edge.grEdge is not None
+                    ):
                         edge.grEdge.setSelected(True)
                         break
 

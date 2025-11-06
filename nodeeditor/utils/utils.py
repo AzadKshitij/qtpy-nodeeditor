@@ -7,7 +7,7 @@ from nodeeditor import _QT_API_NAME as QT_API
 from qtpy.QtCore import QFile, QByteArray
 from qtpy.QtWidgets import QApplication
 
-from nodeeditor.utils_no_qt import pp, dumpException
+from .utils_no_qt import pp, dumpException
 
 
 def loadStylesheet(filename: str) -> None:

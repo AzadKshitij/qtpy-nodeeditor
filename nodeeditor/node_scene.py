@@ -14,16 +14,16 @@ from orjson import JSONDecodeError, OPT_INDENT_2
 from collections import OrderedDict
 from qtpy.QtCore import QRectF, Qt, QPoint, QObject
 from qtpy.QtWidgets import QGraphicsItem
-from nodeeditor.utils_no_qt import dumpException
+from nodeeditor.utils.utils_no_qt import dumpException
 from nodeeditor.node_serializable import Serializable
-from nodeeditor.node_graphics_scene import QDMGraphicsScene
+from nodeeditor.views.graphics.node_graphics_scene import QDMGraphicsScene
 from nodeeditor.node_scene_history import SceneHistory
 from nodeeditor.node_scene_clipboard import SceneClipboard
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, OrderedDict as OrderedDictType, Type
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_node import Node
     from nodeeditor.node_edge import Edge
@@ -242,11 +242,11 @@ class Scene(QObject, Serializable):
         """Register callback for `Items Deselected` event."""
         self._items_deselected_listeners.append(callback)
 
-    def addDragEnterListener(self, callback: Callable[[], None]) -> None:
+    def addDragEnterListener(self, callback: "function") -> None:
         """Register callback for `Drag Enter` event."""
         self.getView().addDragEnterListener(callback)
 
-    def addDropListener(self, callback: Callable[[], None]) -> None:
+    def addDropListener(self, callback: "function") -> None:
         """Register callback for `Drop` event."""
         self.getView().addDropListener(callback)
 
@@ -255,15 +255,17 @@ class Scene(QObject, Serializable):
     def resetLastSelectedStates(self) -> None:
         """Resets internal `selected flags` in all `Nodes` and `Edges` in the `Scene`."""
         for node in self.nodes:
-            node.grNode._last_selected_state = False
+            if hasattr(node, "grNode") and node.grNode is not None:
+                node.grNode._last_selected_state = False
         for edge in self.edges:
-            edge.grEdge._last_selected_state = False
+            if hasattr(edge, "grEdge") and edge.grEdge is not None:
+                edge.grEdge._last_selected_state = False
 
     # ==================== View/Graphics Access ====================
 
     def getView(self) -> 'QDMGraphicsView':
         """Shortcut for returning `Scene` ``QGraphicsView``."""
-        return self.grScene.views()[0]
+        return self.grScene.views()[0]  # type: ignore
 
     def getItemAt(self, pos: 'QPoint') -> Optional['QGraphicsItem']:
         """Shortcut for retrieving item at provided `Scene` position."""
@@ -357,7 +359,7 @@ class Scene(QObject, Serializable):
         """Set the function which decides what Node class to instantiate when deserializing Scene."""
         self.node_class_selector = class_selecting_function
 
-    def getNodeClassFromData(self, data: dict) -> Type['Node']:
+    def getNodeClassFromData(self, data: dict) -> Type[Any]:
         """Determines which Node Class to instantiate according the serialized Node data."""
         # Check if this is a GroupNode
         if data.get("type") == "GroupNode":

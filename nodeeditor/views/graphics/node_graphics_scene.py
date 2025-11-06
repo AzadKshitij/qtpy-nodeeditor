@@ -8,14 +8,14 @@ from qtpy import PYSIDE2
 from qtpy.QtWidgets import QGraphicsScene, QWidget
 from qtpy.QtCore import Signal, QRectF, QLine, Qt, Property, QObject
 from qtpy.QtGui import QColor, QPen, QFont, QPainter
-from nodeeditor.utils import dumpException
-from nodeeditor.node_graphics_view import STATE_STRING, DEBUG_STATE
+from nodeeditor.utils.utils import dumpException
+from .node_graphics_view import STATE_STRING, DEBUG_STATE
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from .node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene

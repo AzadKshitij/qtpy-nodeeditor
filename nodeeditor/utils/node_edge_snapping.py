@@ -7,13 +7,13 @@ A module containing the Edge Snapping functions which are used in :class:`~nodee
 from qtpy.QtCore import QPointF, QRectF
 from qtpy.QtGui import QMouseEvent
 
-from nodeeditor.node_graphics_socket import QDMGraphicsSocket
+from nodeeditor.views.graphics.node_graphics_socket import QDMGraphicsSocket
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
 

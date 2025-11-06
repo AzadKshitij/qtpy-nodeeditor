@@ -6,7 +6,7 @@ it will intersect that edge.
 from qtpy.QtWidgets import QGraphicsView, QGraphicsItem
 from qtpy.QtCore import QRectF, QPointF
 from nodeeditor.node_edge import Edge
-from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
 
 from typing import TYPE_CHECKING, Union, List
 
@@ -14,9 +14,9 @@ from nodeeditor.node_socket import Socket
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_node import Node
-    from nodeeditor.node_graphics_scene import QDMGraphicsScene
+    from nodeeditor.views.graphics.node_graphics_scene import QDMGraphicsScene
 
 
 class EdgeIntersect:

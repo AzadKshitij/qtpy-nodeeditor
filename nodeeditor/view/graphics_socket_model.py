@@ -27,7 +27,7 @@ from qtpy.QtGui import QColor
 from nodeeditor.models import SocketModel
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_socket import QDMGraphicsSocket
+    from nodeeditor.views.graphics.node_graphics_socket import QDMGraphicsSocket
 
 logger = logging.getLogger(__name__)
 

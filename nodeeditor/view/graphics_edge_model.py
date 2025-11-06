@@ -26,7 +26,7 @@ from qtpy.QtCore import QObject, Signal
 from nodeeditor.models import EdgeModel
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+    from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
     from nodeeditor.controllers import EdgeController
 
 logger = logging.getLogger(__name__)

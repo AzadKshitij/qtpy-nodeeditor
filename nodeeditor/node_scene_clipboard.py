@@ -3,14 +3,14 @@
 A module containing all code for working with Clipboard
 """
 from collections import OrderedDict
-from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_edge import Edge
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
     from nodeeditor.node_node import Node
@@ -51,9 +51,10 @@ class SceneClipboard():
 
         # sort edges and nodes
         for item in self.scene.grScene.selectedItems():
-            if hasattr(item, 'node'):
-                sel_nodes.append(item.node.serialize())
-                for socket in (item.node.inputs + item.node.outputs):
+            node: Optional["Node"] = getattr(item, "node", None)
+            if node is not None:
+                sel_nodes.append(node.serialize())
+                for socket in node.inputs + node.outputs:
                     sel_sockets[socket.id] = socket
             elif isinstance(item, QDMGraphicsEdge):
                 sel_edges.append(item.edge)

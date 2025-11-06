@@ -31,7 +31,7 @@ from nodeeditor.view.graphics_edge_model import QDMGraphicsEdgeModel
 from nodeeditor.view.graphics_socket_model import QDMGraphicsSocketModel
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_scene import QDMGraphicsScene
+    from nodeeditor.views.graphics.node_graphics_scene import QDMGraphicsScene
     from nodeeditor.controllers import SceneController, NodeController, EdgeController
 
 logger = logging.getLogger(__name__)

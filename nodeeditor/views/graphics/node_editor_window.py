@@ -7,13 +7,13 @@ import orjson as json
 from orjson import OPT_INDENT_2, JSONDecodeError
 from qtpy.QtCore import QSize, QSettings, QPoint
 from qtpy.QtWidgets import QMainWindow, QLabel, QAction, QMessageBox, QFileDialog, QApplication, QMenu, QMenuBar
-from nodeeditor.node_editor_widget import NodeEditorWidget
+from .node_editor_widget import NodeEditorWidget
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, cast
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from .node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
 

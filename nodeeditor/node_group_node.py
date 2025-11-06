@@ -7,7 +7,8 @@ It is NOT a Node itself, but rather a visual container that holds references to 
 
 Refactored for MVC: Uses GroupNodeModel and GroupNodeController for state management.
 """
-from PyQt6.QtCore import QPoint
+from qtpy.QtCore import QPoint
+from qtpy.QtWidgets import QGraphicsSceneMouseEvent
 from qtpy.QtCore import QRectF, Qt, QPointF, QSize
 from qtpy.QtGui import QColor, QPainter, QPen, QBrush, QCursor
 from qtpy.QtWidgets import (
@@ -21,7 +22,7 @@ from qtpy.QtWidgets import (
 )
 
 from nodeeditor.node_serializable import Serializable
-from nodeeditor.utils_no_qt import dumpException
+from nodeeditor.utils.utils_no_qt import dumpException
 from nodeeditor.models.group_node_model import GroupNodeModel
 from nodeeditor.controllers.group_node_controller import GroupNodeController
 
@@ -62,11 +63,11 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
         self.scene: 'Scene' = scene
         self.id: int = id(self)
-        
+
         # Create MVC components
         self.model: GroupNodeModel = GroupNodeModel(self.id, title, x, y, width, height)
         self.controller: GroupNodeController = GroupNodeController(self.model, scene.model if hasattr(scene, 'model') else None)
-        
+
         self.scene.addGroup(self)
         self.scene.grScene.addItem(self)  # Add to graphics scene for visual rendering
 
@@ -94,7 +95,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
         # Wrap button in QGraphicsProxyWidget
         self._button_proxy: Optional[QGraphicsProxyWidget] = None
         self._updateButtonProxy()
-        
+
         # Connect model signals to update graphics
         self._connect_model_signals()
 
@@ -209,10 +210,14 @@ class GroupNode(Serializable, QGraphicsRectItem):
         if node not in self.child_nodes:
             self.child_nodes.append(node)
             node.parent_group = self
-            
-            # Add to model
-            if hasattr(self.controller, 'add_node'):
-                self.controller.add_node(node.model if hasattr(node, 'model') else None)
+
+            # Add to model only if node.model is not None
+            if (
+                hasattr(self.controller, "add_node")
+                and hasattr(node, "model")
+                and node.model is not None
+            ):
+                self.controller.add_node(node.model)
 
             # Connect the node's positionChanged signal to our slot
             node.positionChanged.connect(self.onChildNodeMoved)
@@ -231,10 +236,14 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
             self.child_nodes.remove(node)
             node.parent_group = None
-            
-            # Remove from model
-            if hasattr(self.controller, 'remove_node'):
-                self.controller.remove_node(node.model if hasattr(node, 'model') else None)
+
+            # Remove from model only if node.model is not None
+            if (
+                hasattr(self.controller, "remove_node")
+                and hasattr(node, "model")
+                and node.model is not None
+            ):
+                self.controller.remove_node(node.model)
 
             self.scene.has_been_modified = True
             self.updateGroupBoundaries()
@@ -246,19 +255,23 @@ class GroupNode(Serializable, QGraphicsRectItem):
         """
         if self._button_proxy is None:
             # Create proxy widget and add to scene
-            self._button_proxy = self.scene.grScene.addWidget(self._collapse_button)
-            # Set parent so button moves with the group
-            self._button_proxy.setParentItem(self)
+            if hasattr(self.scene, "grScene") and self.scene.grScene is not None:
+                proxy = self.scene.grScene.addWidget(self._collapse_button)
+                if proxy is not None:
+                    self._button_proxy = proxy
+                    # Set parent so button moves with the group
+                    self._button_proxy.setParentItem(self)
 
-        # Position button in the top-right corner of the title bar
-        # Account for button size (25x25) to keep it fully within the group bounds
-        button_x = self.rect().width() - 30  # Button width (25) + padding (5)
-        button_y = 2  # 2px padding from top of title bar
-        self._button_proxy.setPos(button_x, button_y)
+        if self._button_proxy is not None:
+            # Position button in the top-right corner of the title bar
+            # Account for button size (25x25) to keep it fully within the group bounds
+            button_x = self.rect().width() - 30  # Button width (25) + padding (5)
+            button_y = 2  # 2px padding from top of title bar
+            self._button_proxy.setPos(button_x, button_y)
 
-        # Ensure button is visible and on top of the group
-        self._button_proxy.show()
-        self._button_proxy.setZValue(1)  # Higher than group (which is at -1)
+            # Ensure button is visible and on top of the group
+            self._button_proxy.show()
+            self._button_proxy.setZValue(1)  # Higher than group (which is at -1)
 
     def _onCollapseButtonClicked(self) -> None:
         """
@@ -351,7 +364,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
         # Position the group at the top-left of the bounding box in scene coordinates
         self.setPos(bbox.topLeft())
-        
+
         # Update model to reflect changes
         self.controller.set_boundaries(bbox.x(), bbox.y(), normalized_width, normalized_height)
 
@@ -759,7 +772,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
         if needs_expansion:
             self.updateGroupBoundaries()
 
-    def mousePressEvent(self, event) -> None:
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         """
         Handle mouse press events.
         Only allow movement from the header area (title bar).
@@ -788,7 +801,7 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event) -> None:
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         """Handle mouse move to also move child nodes."""
         # Only allow movement if click was on header
         if not getattr(self, "_can_move", False):
@@ -827,26 +840,29 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
     def hoverEnterEvent(self, event) -> None:
         """Handle hover enter event - show hint for header selection."""
-        local_pos = event.pos()
-        if local_pos.y() < self._title_bar_height:
-            self._is_hovering_header = True
-            self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            self.update()
+        # Accept QGraphicsSceneHoverEvent only
+        if event is not None and hasattr(event, "pos"):
+            local_pos = event.pos()
+            if local_pos.y() < self._title_bar_height:
+                self._is_hovering_header = True
+                self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                self.update()
         super().hoverEnterEvent(event)
 
     def hoverMoveEvent(self, event) -> None:
         """Handle hover move event to update cursor based on position."""
-        local_pos = event.pos()
-        if local_pos.y() < self._title_bar_height:
-            if not self._is_hovering_header:
-                self._is_hovering_header = True
-                self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                self.update()
-        else:
-            if self._is_hovering_header:
-                self._is_hovering_header = False
-                self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-                self.update()
+        if event is not None and hasattr(event, "pos"):
+            local_pos = event.pos()
+            if local_pos.y() < self._title_bar_height:
+                if not self._is_hovering_header:
+                    self._is_hovering_header = True
+                    self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    self.update()
+            else:
+                if self._is_hovering_header:
+                    self._is_hovering_header = False
+                    self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+                    self.update()
         super().hoverMoveEvent(event)
 
     def hoverLeaveEvent(self, event) -> None:
@@ -862,14 +878,17 @@ class GroupNode(Serializable, QGraphicsRectItem):
 
         # Add ungroup option
         ungroup_action = menu.addAction("Ungroup")
-        ungroup_action.triggered.connect(self.ungroup)
+        if ungroup_action is not None and hasattr(ungroup_action, "triggered"):
+            ungroup_action.triggered.connect(self.ungroup)
 
         # Add delete option
         delete_action = menu.addAction("Delete Container")
-        delete_action.triggered.connect(self.deleteContainer)
+        if delete_action is not None and hasattr(delete_action, "triggered"):
+            delete_action.triggered.connect(self.deleteContainer)
 
         # Show menu at cursor position
-        menu.exec(event.screenPos())
+        if event is not None and hasattr(event, "screenPos"):
+            menu.exec(event.screenPos())
 
     def ungroup(self) -> None:
         """Remove the container while keeping all child nodes."""

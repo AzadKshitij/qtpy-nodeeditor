@@ -21,7 +21,7 @@ Example:
 """
 
 from nodeeditor.models import EdgeModel
-from nodeeditor.node_edge_validators import (
+from nodeeditor.utils.node_edge_validators import (
     edge_validator_debug,
     edge_cannot_connect_two_outputs_or_two_inputs,
     edge_cannot_connect_input_and_output_of_same_node,

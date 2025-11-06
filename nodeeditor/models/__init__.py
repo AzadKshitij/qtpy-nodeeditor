@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     pass
 
 from .node_model import NodeModel
+from .node_icon_model import NodeIconModel
 from .edge_model import EdgeModel
 from .socket_model import SocketModel
 from .scene_model import SceneModel
@@ -33,10 +34,11 @@ from .group_node_model import GroupNodeModel
 from .edge_dragging_model import EdgeDraggingModel
 
 __all__ = [
-    'NodeModel',
-    'EdgeModel',
-    'SocketModel',
-    'SceneModel',
-    'GroupNodeModel',
-    'EdgeDraggingModel',
+    "NodeModel",
+    "NodeIconModel",
+    "EdgeModel",
+    "SocketModel",
+    "SceneModel",
+    "GroupNodeModel",
+    "EdgeDraggingModel",
 ]

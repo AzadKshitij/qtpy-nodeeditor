@@ -7,20 +7,20 @@ from qtpy.QtCore import Signal, QPoint, Qt, QEvent, QPointF, QRectF
 from qtpy.QtGui import QPainter, QDragEnterEvent, QDropEvent, QMouseEvent, QKeyEvent, QWheelEvent, QInputEvent
 
 from nodeeditor import _QT_API_NAME as QT_API
-from nodeeditor.node_graphics_socket import QDMGraphicsSocket
-from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+from .node_graphics_socket import QDMGraphicsSocket
+from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_edge_dragging import EdgeDragging
-from nodeeditor.node_edge_rerouting import EdgeRerouting
-from nodeeditor.node_edge_intersect import EdgeIntersect
-from nodeeditor.node_edge_snapping import EdgeSnapping
-from nodeeditor.node_graphics_cutline import QDMCutLine
-from nodeeditor.utils import dumpException, pp, isCTRLPressed, isSHIFTPressed, isALTPressed
+from nodeeditor.utils.node_edge_rerouting import EdgeRerouting
+from nodeeditor.utils.node_edge_intersect import EdgeIntersect
+from nodeeditor.utils.node_edge_snapping import EdgeSnapping
+from .node_graphics_cutline import QDMCutLine
+from nodeeditor.utils.utils import dumpException, pp, isCTRLPressed, isSHIFTPressed, isALTPressed
 
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from nodeeditor.node_node import Node
-    from nodeeditor.node_graphics_scene import QDMGraphicsScene
+    from .node_graphics_scene import QDMGraphicsScene
 
 MODE_NOOP = 1               #: Mode representing ready state
 MODE_EDGE_DRAG = 2          #: Mode representing when we drag edge state

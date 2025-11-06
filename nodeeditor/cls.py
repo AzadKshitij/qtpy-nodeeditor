@@ -11,7 +11,7 @@ from qtpy.QtGui import QColor, QPainter, QPen, QBrush
 from qtpy.QtWidgets import QGraphicsRectItem, QGraphicsItem, QGraphicsTextItem, QGraphicsPathItem, QGraphicsProxyWidget, QPushButton
 
 from nodeeditor.node_serializable import Serializable
-from nodeeditor.utils_no_qt import dumpException
+from nodeeditor.utils.utils_no_qt import dumpException
 
 from typing import TYPE_CHECKING, List, Optional, Dict, Tuple
 from nodeeditor.node_socket import Socket

@@ -3,7 +3,7 @@
 Utilities for node grouping operations
 """
 from nodeeditor.node_group_node import GroupNode
-from nodeeditor.utils_no_qt import dumpException
+from nodeeditor.utils.utils_no_qt import dumpException
 
 from typing import TYPE_CHECKING, Optional, List
 

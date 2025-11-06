@@ -4,7 +4,7 @@ Test suite for MVC backward compatibility and integration.
 Tests that refactored classes maintain backward compatibility and integrate properly.
 """
 
-from PyQt6.QtCore import QPointF, QSizeF
+from qtpy.QtCore import QPointF, QSizeF
 import pytest
 from nodeeditor.models import (
     NodeModel, EdgeModel, SocketModel, SceneModel,

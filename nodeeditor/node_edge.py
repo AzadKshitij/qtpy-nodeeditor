@@ -6,15 +6,15 @@ The Edge class wraps EdgeModel and EdgeController to provide MVC-based
 edge management while maintaining the existing public API.
 """
 from collections import OrderedDict
-from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_serializable import Serializable
-from nodeeditor.utils_no_qt import dumpException
+from nodeeditor.utils.utils_no_qt import dumpException
 from qtpy.QtCore import QPointF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
 
@@ -38,14 +38,14 @@ class Edge(Serializable):
     """
 
     # Class variable containing list of registered edge validators
-    edge_validators: List['function'] = []
+    edge_validators: List[Callable[["Socket", "Socket"], bool]] = []
 
     def __init__(
         self,
-        scene: 'Scene',
-        start_socket: 'Socket' = None,
-        end_socket: 'Socket' = None,
-        edge_type=EDGE_TYPE_DIRECT
+        scene: "Scene",
+        start_socket: Optional["Socket"] = None,
+        end_socket: Optional["Socket"] = None,
+        edge_type=EDGE_TYPE_DIRECT,
     ) -> None:
         """
         Initialize an Edge with MVC components.
@@ -91,18 +91,18 @@ class Edge(Serializable):
         self.controller: EdgeController = controller
 
         # Socket references
-        self._start_socket: Optional['Socket'] = None
-        self._end_socket: Optional['Socket'] = None
+        self._start_socket: Optional["Socket"] = None
+        self._end_socket: Optional["Socket"] = None
 
         # Set sockets (this updates model and scene)
-        self.start_socket = start_socket
-        self.end_socket = end_socket
+        self.start_socket = start_socket if start_socket else None
+        self.end_socket = end_socket if end_socket else None
 
         # Edge type
         self._edge_type = edge_type
 
         # Create graphics edge instance
-        self.grEdge: QDMGraphicsEdge = self.createEdgeClassInstance()
+        self.grEdge: Optional[QDMGraphicsEdge] = self.createEdgeClassInstance()
 
         # Add to scene
         self.scene.addEdge(self)
@@ -138,7 +138,7 @@ class Edge(Serializable):
         return self._start_socket if self._start_socket else None
 
     @start_socket.setter
-    def start_socket(self, value: 'Socket') -> None:
+    def start_socket(self, value: Optional["Socket"]) -> None:
         """Set the start socket safely."""
         # Remove edge from old socket
         if self._start_socket is not None:
@@ -187,7 +187,7 @@ class Edge(Serializable):
     def edge_type(self, value: int) -> None:
         """Set edge type and update graphics."""
         self._edge_type = value
-        self.model.type = value
+        self.model.edge_type = value
 
         # Update graphics
         if self.grEdge:
@@ -199,12 +199,14 @@ class Edge(Serializable):
     # ==================== Edge Validation ====================
 
     @classmethod
-    def getEdgeValidators(cls) -> List['function']:
+    def getEdgeValidators(cls) -> List[Callable[["Socket", "Socket"], bool]]:
         """Return the list of Edge Validator Callbacks."""
         return cls.edge_validators
 
     @classmethod
-    def registerEdgeValidator(cls, validator_callback: 'function') -> None:
+    def registerEdgeValidator(
+        cls, validator_callback: Callable[["Socket", "Socket"], bool]
+    ) -> None:
         """
         Register Edge Validator Callback.
 
@@ -271,7 +273,8 @@ class Edge(Serializable):
 
         :param new_state: True to select, False to deselect
         """
-        self.grEdge.doSelect(new_state)
+        if self.grEdge is not None:
+            self.grEdge.doSelect(new_state)
 
     def updatePositions(self) -> None:
         """
@@ -334,7 +337,9 @@ class Edge(Serializable):
         self.end_socket = None
         self.start_socket = None
 
-    def remove(self, silent_for_socket: 'Socket' = None, silent: bool = False) -> None:
+    def remove(
+        self, silent_for_socket: Optional["Socket"] = None, silent: bool = False
+    ) -> None:
         """
         Safely remove this Edge.
 

@@ -9,12 +9,12 @@ from collections import OrderedDict
 from qtpy.QtCore import QObject
 
 from nodeeditor.node_serializable import Serializable
-from nodeeditor.node_graphics_socket import QDMGraphicsSocket
+from nodeeditor.views.graphics.node_graphics_socket import QDMGraphicsSocket
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_scene import Scene
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_node import Node

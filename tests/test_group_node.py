@@ -4,7 +4,7 @@ Test suite for GroupNode MVC integration.
 Tests GroupNodeModel, GroupNodeController, and GroupNode wrapper class.
 """
 
-from PyQt6.QtCore import QSizeF
+from qtpy.QtCore import QSizeF
 import pytest
 from qtpy.QtCore import Qt, QRectF, QPointF
 from nodeeditor.models import GroupNodeModel

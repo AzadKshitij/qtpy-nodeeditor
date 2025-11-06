@@ -6,9 +6,9 @@ This module provides the EdgeDragging class which manages edge dragging operatio
 at the view level. It uses EdgeDraggingModel for state management and signal-based
 updates to graphics components.
 """
-from nodeeditor.node_graphics_socket import QDMGraphicsSocket
+from nodeeditor.views.graphics.node_graphics_socket import QDMGraphicsSocket
 from nodeeditor.node_edge import EDGE_TYPE_DEFAULT
-from nodeeditor.utils import dumpException
+from nodeeditor.utils.utils import dumpException
 from nodeeditor.models import EdgeDraggingModel
 
 from typing import TYPE_CHECKING
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from qtpy.QtWidgets import QGraphicsItem
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_edge import Edge
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
 
 DEBUG = False
 

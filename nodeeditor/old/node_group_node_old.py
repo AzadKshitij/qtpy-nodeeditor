@@ -5,7 +5,7 @@ A module containing the GroupNode class for node grouping functionality.
 GroupNode is a QGraphicsItem-based container for visual grouping of nodes.
 It is NOT a Node itself, but rather a visual container that holds references to child nodes.
 """
-from PyQt6.QtCore import QPoint
+from qtpy.QtCore import QPoint
 from qtpy.QtCore import QRectF, Qt, QPointF, QSize
 from qtpy.QtGui import QColor, QPainter, QPen, QBrush, QCursor
 from qtpy.QtWidgets import (

@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_view import QDMGraphicsView
+    from .node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
-    from nodeeditor.node_graphics_edge import QDMGraphicsEdge
+    from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
 
 
 EDGE_CP_ROUNDNESS = 100     #: Bezier control point distance on the line

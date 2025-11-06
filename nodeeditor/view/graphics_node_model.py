@@ -26,7 +26,7 @@ from qtpy.QtGui import QColor, QPen, QBrush
 from nodeeditor.models import NodeModel
 
 if TYPE_CHECKING:
-    from nodeeditor.node_graphics_node import QDMGraphicsNode
+    from nodeeditor.views.graphics.node_graphics_node import QDMGraphicsNode
     from nodeeditor.controllers import NodeController
 
 logger = logging.getLogger(__name__)

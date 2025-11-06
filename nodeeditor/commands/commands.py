@@ -26,7 +26,6 @@ Example:
 """
 
 from qtpy.QtWidgets import QUndoCommand
-# from PyQt6.QtGui import QUndoCommand
 from qtpy.QtCore import QPointF
 from typing import TYPE_CHECKING, Optional, List, Dict, Any
 import json
