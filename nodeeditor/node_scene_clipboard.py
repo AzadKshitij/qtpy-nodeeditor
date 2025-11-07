@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 """
 A module containing all code for working with Clipboard
+
+Supports:
+- Copying and pasting nodes within the scene
+- Copying and pasting text from line edits and text widgets
+- Copying and pasting data from table widgets
+- Cut/Copy/Paste operations with history tracking
 """
 from collections import OrderedDict
 from nodeeditor.views.graphics.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_edge import Edge
 
-from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
-
+from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, Dict
+import json
 
 if TYPE_CHECKING:
     from nodeeditor.views.graphics.node_graphics_view import QDMGraphicsView
@@ -192,3 +198,378 @@ class SceneClipboard():
             "Pasted elements in scene", setModified=True)
 
         return created_nodes
+
+    # ==================== Enhanced Clipboard Operations ====================
+
+    def copyNodes(self) -> bool:
+        """
+        Copy selected nodes to clipboard (without deleting them).
+        
+        :return: True if copy was successful, False otherwise
+        :rtype: ``bool``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> clipboard.copyNodes()  # Copy selected nodes
+            >>> clipboard.pasteNodes()  # Paste them elsewhere
+        """
+        try:
+            data = self.serializeSelected(delete=False)
+            if not data.get('nodes'):
+                if DEBUG:
+                    print("No nodes to copy")
+                return False
+            
+            # Store in scene clipboard buffer
+            self.scene._clipboard_data = data
+            if DEBUG:
+                print(f"Copied {len(data['nodes'])} node(s) to clipboard")
+            return True
+        except Exception as e:
+            if DEBUG:
+                print(f"Error copying nodes: {e}")
+            return False
+
+    def cutNodes(self) -> bool:
+        """
+        Cut selected nodes (copy and delete).
+        
+        :return: True if cut was successful, False otherwise
+        :rtype: ``bool``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> clipboard.cutNodes()  # Cut selected nodes
+            >>> clipboard.pasteNodes()  # Paste them elsewhere
+        """
+        try:
+            data = self.serializeSelected(delete=True)
+            if not data.get('nodes'):
+                if DEBUG:
+                    print("No nodes to cut")
+                return False
+            
+            # Store in scene clipboard buffer
+            self.scene._clipboard_data = data
+            if DEBUG:
+                print(f"Cut {len(data['nodes'])} node(s)")
+            return True
+        except Exception as e:
+            if DEBUG:
+                print(f"Error cutting nodes: {e}")
+            return False
+
+    def pasteNodes(self) -> List['Node']:
+        """
+        Paste nodes from clipboard.
+        
+        :return: List of pasted nodes, empty list if nothing to paste
+        :rtype: ``List[Node]``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> clipboard.copyNodes()
+            >>> pasted_nodes = clipboard.pasteNodes()
+            >>> print(f"Pasted {len(pasted_nodes)} nodes")
+        """
+        try:
+            if not hasattr(self.scene, '_clipboard_data') or not self.scene._clipboard_data:
+                if DEBUG:
+                    print("Clipboard is empty")
+                return []
+            
+            data = self.scene._clipboard_data
+            pasted_nodes = self.deserializeFromClipboard(data)
+            if DEBUG:
+                print(f"Pasted {len(pasted_nodes)} node(s)")
+            return pasted_nodes
+        except Exception as e:
+            if DEBUG:
+                print(f"Error pasting nodes: {e}")
+            return []
+
+    def hasClipboardData(self) -> bool:
+        """
+        Check if clipboard has data to paste.
+        
+        :return: True if clipboard has nodes, False otherwise
+        :rtype: ``bool``
+        """
+        return (hasattr(self.scene, '_clipboard_data') and 
+                bool(self.scene._clipboard_data and 
+                self.scene._clipboard_data.get('nodes')))
+
+    def clearClipboard(self) -> None:
+        """
+        Clear the clipboard buffer.
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> clipboard.clearClipboard()
+        """
+        if hasattr(self.scene, '_clipboard_data'):
+            self.scene._clipboard_data = None
+        if DEBUG:
+            print("Clipboard cleared")
+
+    # ==================== Text Clipboard Operations ====================
+
+    def copyText(self, text: str) -> bool:
+        """
+        Copy text to clipboard buffer.
+        
+        :param text: Text to copy
+        :type text: ``str``
+        :return: True if copy was successful
+        :rtype: ``bool``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> clipboard.copyText("Some text from line edit")
+        """
+        try:
+            if not hasattr(self.scene, '_text_clipboard'):
+                self.scene._text_clipboard = None
+            
+            self.scene._text_clipboard = text
+            if DEBUG:
+                print(f"Copied text: {text[:50]}...")
+            return True
+        except Exception as e:
+            if DEBUG:
+                print(f"Error copying text: {e}")
+            return False
+
+    def pasteText(self) -> Optional[str]:
+        """
+        Paste text from clipboard buffer.
+        
+        :return: Pasted text or None if clipboard is empty
+        :rtype: ``Optional[str]``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> text = clipboard.pasteText()
+            >>> if text:
+            ...     line_edit.setText(text)
+        """
+        try:
+            if not hasattr(self.scene, '_text_clipboard'):
+                return None
+            
+            text = self.scene._text_clipboard
+            if DEBUG and text:
+                print(f"Pasted text: {text[:50]}...")
+            return text
+        except Exception as e:
+            if DEBUG:
+                print(f"Error pasting text: {e}")
+            return None
+
+    def hasTextData(self) -> bool:
+        """
+        Check if clipboard has text data.
+        
+        :return: True if clipboard has text
+        :rtype: ``bool``
+        """
+        return (hasattr(self.scene, '_text_clipboard') and 
+                bool(self.scene._text_clipboard))
+
+    # ==================== Table Clipboard Operations ====================
+
+    def copyTableData(self, table_data: List[List[Any]]) -> bool:
+        """
+        Copy table data to clipboard buffer.
+        
+        :param table_data: 2D list of table data (rows and columns)
+        :type table_data: ``List[List[Any]]``
+        :return: True if copy was successful
+        :rtype: ``bool``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> table_data = [['Name', 'Value'], ['Item1', 100], ['Item2', 200]]
+            >>> clipboard.copyTableData(table_data)
+        """
+        try:
+            if not hasattr(self.scene, '_table_clipboard'):
+                self.scene._table_clipboard = None
+            
+            self.scene._table_clipboard = table_data
+            if DEBUG:
+                print(f"Copied table data: {len(table_data)} rows, "
+                      f"{len(table_data[0]) if table_data else 0} columns")
+            return True
+        except Exception as e:
+            if DEBUG:
+                print(f"Error copying table data: {e}")
+            return False
+
+    def pasteTableData(self) -> Optional[List[List[Any]]]:
+        """
+        Paste table data from clipboard buffer.
+        
+        :return: Pasted table data or None if clipboard is empty
+        :rtype: ``Optional[List[List[Any]]]``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> data = clipboard.pasteTableData()
+            >>> if data:
+            ...     for row in data:
+            ...         table.insertRow(row)
+        """
+        try:
+            if not hasattr(self.scene, '_table_clipboard'):
+                return None
+            
+            data = self.scene._table_clipboard
+            if DEBUG and data:
+                print(f"Pasted table data: {len(data)} rows")
+            return data
+        except Exception as e:
+            if DEBUG:
+                print(f"Error pasting table data: {e}")
+            return None
+
+    def hasTableData(self) -> bool:
+        """
+        Check if clipboard has table data.
+        
+        :return: True if clipboard has table data
+        :rtype: ``bool``
+        """
+        return (hasattr(self.scene, '_table_clipboard') and 
+                bool(self.scene._table_clipboard))
+
+    def exportTableToCSV(self, table_data: List[List[Any]], delimiter: str = ',') -> str:
+        """
+        Export table data to CSV format string.
+        
+        :param table_data: 2D list of table data
+        :type table_data: ``List[List[Any]]``
+        :param delimiter: CSV delimiter (default: ',')
+        :type delimiter: ``str``
+        :return: CSV formatted string
+        :rtype: ``str``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> csv_string = clipboard.exportTableToCSV(table_data)
+            >>> print(csv_string)
+        """
+        try:
+            if not table_data:
+                return ""
+            
+            lines = []
+            for row in table_data:
+                # Convert to strings and escape if needed
+                cells = []
+                for cell in row:
+                    cell_str = str(cell)
+                    # Escape quotes and wrap in quotes if contains delimiter
+                    if delimiter in cell_str or '"' in cell_str or '\n' in cell_str:
+                        cell_str = '"' + cell_str.replace('"', '""') + '"'
+                    cells.append(cell_str)
+                lines.append(delimiter.join(cells))
+            
+            return '\n'.join(lines)
+        except Exception as e:
+            if DEBUG:
+                print(f"Error exporting to CSV: {e}")
+            return ""
+
+    def importTableFromCSV(self, csv_string: str, delimiter: str = ',') -> Optional[List[List[str]]]:
+        """
+        Import table data from CSV format string.
+        
+        :param csv_string: CSV formatted string
+        :type csv_string: ``str``
+        :param delimiter: CSV delimiter (default: ',')
+        :type delimiter: ``str``
+        :return: 2D list of table data or None if error
+        :rtype: ``Optional[List[List[str]]]``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> csv_string = "Name,Value\nItem1,100\nItem2,200"
+            >>> data = clipboard.importTableFromCSV(csv_string)
+        """
+        try:
+            if not csv_string:
+                return None
+            
+            lines = csv_string.strip().split('\n')
+            table_data = []
+            
+            for line in lines:
+                # Simple CSV parsing (doesn't handle all edge cases)
+                cells = []
+                current_cell = ""
+                in_quotes = False
+                
+                for char in line:
+                    if char == '"':
+                        in_quotes = not in_quotes
+                    elif char == delimiter and not in_quotes:
+                        cells.append(current_cell.strip())
+                        current_cell = ""
+                    else:
+                        current_cell += char
+                
+                cells.append(current_cell.strip())
+                table_data.append(cells)
+            
+            if DEBUG:
+                print(f"Imported {len(table_data)} rows from CSV")
+            return table_data
+        except Exception as e:
+            if DEBUG:
+                print(f"Error importing from CSV: {e}")
+            return None
+
+    # ==================== Utility Methods ====================
+
+    def getClipboardInfo(self) -> Dict[str, Any]:
+        """
+        Get information about what's currently in the clipboard.
+        
+        :return: Dictionary with clipboard contents info
+        :rtype: ``Dict[str, Any]``
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> info = clipboard.getClipboardInfo()
+            >>> print(f"Nodes: {info['node_count']}, Text: {info['has_text']}, Table: {info['has_table']}")
+        """
+        info = {
+            'has_nodes': self.hasClipboardData(),
+            'node_count': len(self.scene._clipboard_data.get('nodes', [])) 
+                         if (hasattr(self.scene, '_clipboard_data') and self.scene._clipboard_data) else 0,
+            'edge_count': len(self.scene._clipboard_data.get('edges', [])) 
+                         if (hasattr(self.scene, '_clipboard_data') and self.scene._clipboard_data) else 0,
+            'has_text': self.hasTextData(),
+            'text_length': len(self.scene._text_clipboard) if (self.hasTextData() and self.scene._text_clipboard) else 0,
+            'has_table': self.hasTableData(),
+            'table_rows': len(self.scene._table_clipboard) if (self.hasTableData() and self.scene._table_clipboard) else 0,
+            'table_cols': len(self.scene._table_clipboard[0]) if (self.hasTableData() and self.scene._table_clipboard) else 0,
+        }
+        return info
+
+    def clearAllClipboards(self) -> None:
+        """
+        Clear all clipboard buffers (nodes, text, and table data).
+        
+        Example:
+            >>> clipboard = scene.clipboard
+            >>> clipboard.clearAllClipboards()
+        """
+        self.clearClipboard()
+        if hasattr(self.scene, '_text_clipboard'):
+            self.scene._text_clipboard = None
+        if hasattr(self.scene, '_table_clipboard'):
+            self.scene._table_clipboard = None
+        if DEBUG:
+            print("All clipboards cleared")

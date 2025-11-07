@@ -187,13 +187,11 @@ class QDMGraphicsSocketModel(QObject):
 
     def set_validation_error(self, error_msg: str) -> None:
         """Set a validation error on this socket."""
-        self.model.is_valid = False
-        self.model.validation_error = error_msg
+        self.model.set_valid(False, error_msg)
 
     def clear_validation(self) -> None:
         """Clear validation errors."""
-        self.model.is_valid = True
-        self.model.validation_error = ""
+        self.model.set_valid(True, "")
 
     def set_validation_color_valid(self, color: QColor) -> None:
         """Set the color to use for valid sockets."""

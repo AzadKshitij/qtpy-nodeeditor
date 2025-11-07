@@ -4,7 +4,7 @@ MVC Calculator Operation Nodes
 Demonstrates operation nodes (Add, Sub, Mul, Div) implementation in the MVC architecture.
 """
 
-from nodeeditor.node_content_widget import QDMNodeContentWidget
+from nodeeditor import QDMNodeContentWidget
 from qtpy.QtWidgets import QLabel
 from qtpy.QtCore import Qt
 
@@ -172,9 +172,12 @@ class MvcCalcNode_Div(MvcCalcOperationNode):
         Args:
             scene: The scene this node belongs to
         """
+        # Call parent init with standard single output first
         super().__init__(scene, "Divide")
-        # Override to have two outputs
-        self.outputs = [1, 1]  # Two outputs
+        # Then re-initialize sockets with two outputs
+        self.initSockets(
+            inputs=[2, 2], outputs=[1, 1], output_text=["Quotient", "Remainder"]
+        )
 
     def evalImplementation(self):
         """

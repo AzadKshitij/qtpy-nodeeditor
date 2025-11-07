@@ -12,7 +12,7 @@ from qtpy.QtWidgets import QAction, QMenu
 from qtpy.QtCore import QDataStream, QIODevice
 from qtpy.QtGui import QPixmap
 
-from nodeeditor.node_editor_widget import NodeEditorWidget
+from nodeeditor.views import NodeEditorWidget
 from nodeeditor.node_edge import EDGE_TYPE_DIRECT
 from nodeeditor.node_node import Node
 from nodeeditor.utils import dumpException

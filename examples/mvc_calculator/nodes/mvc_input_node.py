@@ -7,7 +7,7 @@ Demonstrates input node implementation in the MVC architecture.
 from qtpy.QtWidgets import QLineEdit
 from qtpy.QtCore import Qt
 
-from nodeeditor.node_content_widget import QDMNodeContentWidget
+from nodeeditor import QDMNodeContentWidget
 from nodeeditor.utils import dumpException
 
 from examples.mvc_calculator.mvc_calc_node_base import MvcCalcNode, MvcCalcGraphicsNode

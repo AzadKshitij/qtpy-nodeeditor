@@ -139,12 +139,12 @@ class Node(QObject, Serializable):
         if self.grNode:
             self.grNode.setPos(x, y)
 
-        # # Guard: Only process edges if sockets have been initialized as Socket objects
-        # # During initialization, self.inputs/outputs may still contain integer socket types
-        # if hasattr(self, 'inputs') and hasattr(self, 'outputs') and self.inputs and self.outputs:
-        #     # Check if the first item is actually a Socket object (has 'edges' attribute)
-        #     if hasattr(self.inputs[0] if self.inputs else self.outputs[0], 'edges'):
+        # Guard: Only process edges if sockets are actual Socket objects
+        # During initialization or edge cases, self.inputs/outputs may contain non-Socket items
         for socket in self.inputs + self.outputs:
+            # Type guard: ensure socket is a Socket object with edges attribute
+            if not hasattr(socket, "edges"):
+                continue
             for edge in socket.edges:
                 # Guard against edges being removed during updates
                 if edge.grEdge is None:

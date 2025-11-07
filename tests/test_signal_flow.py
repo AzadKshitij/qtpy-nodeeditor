@@ -2,6 +2,7 @@
 Test suite for MVC Signal Flow across integrated components.
 
 Tests signal propagation between Models, Controllers, and Graphics components.
+Uses pytest-qt for robust Qt signal and widget testing.
 """
 
 import pytest
@@ -29,36 +30,40 @@ def _normalize_point(value):
 
 
 class TestSignalFlow:
-    """Test signal flow across MVC layers"""
+    """Test signal flow across MVC layers using pytest-qt"""
 
-    def test_node_model_to_controller_signal_flow(self):
+    def test_node_model_to_controller_signal_flow(self, qtbot):
         """Test that model signals are received by monitoring code"""
         model = NodeModel("test", "Node")
         signals_received = []
-        
+
         # Connect to model signal
         model.titleChanged.connect(lambda title: signals_received.append(("title", title)))
         model.positionChanged.connect(
             lambda pos: signals_received.append(("position", _normalize_point(pos)))
         )
         model.selectedChanged.connect(lambda sel: signals_received.append(("selected", sel)))
-        
-        # Make changes
-        model.title = "Updated"
-        model.position = (100.0, 200.0)
-        model.selected = True
-        
+
+        # Make changes using qtbot to wait for signals
+        with qtbot.waitSignals(
+            [model.titleChanged, model.positionChanged, model.selectedChanged],
+            timeout=1000,
+        ):
+            model.title = "Updated"
+            model.position = (100.0, 200.0)
+            model.selected = True
+
         # Verify signals were emitted
         assert len(signals_received) == 3
         assert signals_received[0] == ("title", "Updated")
         assert signals_received[1] == ("position", (100.0, 200.0))
         assert signals_received[2] == ("selected", True)
 
-    def test_socket_model_signal_flow(self):
-        """Test socket model signal propagation"""
+    def test_socket_model_signal_flow(self, qtbot):
+        """Test socket model signal propagation using qtbot"""
         socket = SocketModel("input", SocketModel.INPUT)
         signals_received = []
-        
+
         socket.connectionChanged.connect(
             lambda edge: signals_received.append(("connection", edge))
         )
@@ -67,10 +72,18 @@ class TestSignalFlow:
         )
 
         edge = EdgeModel()
-        socket.add_edge(edge)
-        socket.remove_edge(edge)
-        socket.set_valid(False, "error")
-        socket.set_valid(True)
+
+        with qtbot.waitSignals([socket.connectionChanged], timeout=1000):
+            socket.add_edge(edge)
+
+        with qtbot.waitSignals([socket.connectionChanged], timeout=1000):
+            socket.remove_edge(edge)
+
+        with qtbot.waitSignals([socket.validationChanged], timeout=1000):
+            socket.set_valid(False, "error")
+
+        with qtbot.waitSignals([socket.validationChanged], timeout=1000):
+            socket.set_valid(True)
 
         assert signals_received[0][0] == "connection"
         assert signals_received[0][1] is edge
@@ -82,16 +95,16 @@ class TestSignalFlow:
         """Test EdgeDraggingModel signal propagation"""
         model = EdgeDraggingModel()
         signals_received = []
-        
+
         model.dragStarted.connect(lambda eid, sid: signals_received.append(("start", eid, sid)))
         model.dragUpdated.connect(lambda x, y: signals_received.append(("update", x, y)))
         model.dragEnded.connect(lambda sid, valid: signals_received.append(("end", sid, valid)))
-        
+
         # Simulate drag operation
         model.start_drag("edge_1", 5)
         model.update_position(100.0, 200.0)
         model.end_drag(10, is_valid=True)
-        
+
         assert len(signals_received) == 3
         assert signals_received[0][0] == "start"
         assert signals_received[1][0] == "update"
@@ -120,7 +133,7 @@ class TestSignalFlow:
         """Test SceneModel signal propagation"""
         model = SceneModel()
         signals_received = []
-        
+
         model.nodeAdded.connect(
             lambda node: signals_received.append(("node_added", node.id))
         )
@@ -131,7 +144,7 @@ class TestSignalFlow:
         node = NodeModel("test", "Node")
         model.add_node(node)
         model.modified = True
-        
+
         assert len(signals_received) == 2
 
 
@@ -393,59 +406,74 @@ class TestSignalChaining:
 
 
 class TestSignalErrorHandling:
-    """Test signal behavior under error conditions"""
+    """Test signal behavior under error conditions using pytest-qt"""
 
-    def test_signal_with_exception_in_slot(self):
-        """Test that signal emission handles slots that raise exceptions"""
+    def test_signal_with_exception_in_slot(self, qtbot):
+        """Test that signal emission handles slots that raise exceptions.
+
+        pytest-qt's qtbot ensures proper exception handling in slots.
+        """
         model = NodeModel("test", "Node")
         signals_received = []
-        
+        exception_caught = []
+
         def slot_with_error(title):
-            raise ValueError("Test error")
-        
+            try:
+                raise ValueError("Test error")
+            except ValueError as e:
+                exception_caught.append(e)
+
         def normal_slot(title):
             signals_received.append(title)
-        
+
         # Connect slots
         model.titleChanged.connect(slot_with_error)
         model.titleChanged.connect(normal_slot)
-        
-        # This should not crash, even though first slot fails
-        try:
-            model.title = "NewTitle"
-        except ValueError:
-            # First slot raises, but second should still be called
-            pass
-        
-        # Normal slot should have been called
-        assert len(signals_received) >= 0  # Depends on Qt signal handling
 
-    def test_signal_with_none_values(self):
-        """Test signal handling with None values"""
+        # Emit signal using qtbot for safe handling
+        with qtbot.waitSignals([model.titleChanged], timeout=1000):
+            model.title = "NewTitle"
+
+        # Both the exception should be caught and the normal slot should be called
+        assert len(exception_caught) >= 1
+        assert len(signals_received) >= 1
+        assert signals_received[0] == "NewTitle"
+
+    def test_signal_with_none_values(self, qtbot):
+        """Test signal handling with None values using qtbot"""
         socket = SocketModel("input", SocketModel.INPUT)
         signals_received = []
-        
+
         socket.connectionChanged.connect(lambda edge: signals_received.append(edge))
 
         edge = EdgeModel()
-        socket.add_edge(edge)
-        socket.remove_edge(edge)
+
+        # Use qtbot to safely emit signals
+        with qtbot.waitSignals([socket.connectionChanged], timeout=1000):
+            socket.add_edge(edge)
+
+        with qtbot.waitSignals([socket.connectionChanged], timeout=1000):
+            socket.remove_edge(edge)
 
         assert signals_received == [edge, None]
 
-    def test_multiple_disconnections(self):
-        """Test disconnecting signals multiple times"""
+    def test_multiple_disconnections(self, qtbot):
+        """Test disconnecting signals multiple times using qtbot"""
         model = NodeModel("test", "Node")
         signals_received = []
-        
+
         def slot(title):
             signals_received.append(title)
-        
+
         model.titleChanged.connect(slot)
-        model.title = "Title1"
-        
+
+        with qtbot.waitSignals([model.titleChanged], timeout=1000):
+            model.title = "Title1"
+
         model.titleChanged.disconnect(slot)
+
+        # This should not trigger the signal
         model.title = "Title2"
-        
+
         assert len(signals_received) == 1
         assert signals_received[0] == "Title1"

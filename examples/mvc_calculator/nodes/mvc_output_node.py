@@ -7,7 +7,7 @@ Demonstrates output node implementation in the MVC architecture.
 from qtpy.QtWidgets import QLabel
 from qtpy.QtCore import Qt
 
-from nodeeditor.node_content_widget import QDMNodeContentWidget
+from nodeeditor import QDMNodeContentWidget
 from examples.mvc_calculator.mvc_calc_node_base import MvcCalcNode, MvcCalcGraphicsNode
 
 from examples.mvc_calculator.mvc_conf import register_node, OP_NODE_OUTPUT

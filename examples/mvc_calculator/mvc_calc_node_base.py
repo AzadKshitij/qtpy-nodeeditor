@@ -7,8 +7,8 @@ Mirrors the legacy CalcNode pattern but using MVC Node architecture.
 
 from nodeeditor.node_node import Node
 from nodeeditor.node_socket import LEFT_CENTER, RIGHT_CENTER
-from nodeeditor.node_graphics_node import QDMGraphicsNode
-from nodeeditor.node_content_widget import QDMNodeContentWidget
+from nodeeditor import QDMGraphicsNode
+from nodeeditor import QDMNodeContentWidget
 from nodeeditor.utils import dumpException
 
 

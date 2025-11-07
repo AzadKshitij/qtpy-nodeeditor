@@ -38,6 +38,11 @@ from .icons import (
     set_icon_registry,
 )
 
+# Import debug widget
+from .debug_dock_widget import (
+    DebugDockWidget,
+)
+
 __all__ = [
     # Graphics
     "QDMGraphicsEdge",
@@ -61,4 +66,6 @@ __all__ = [
     "IconRegistry",
     "get_icon_registry",
     "set_icon_registry",
+    # Debug
+    "DebugDockWidget",
 ]

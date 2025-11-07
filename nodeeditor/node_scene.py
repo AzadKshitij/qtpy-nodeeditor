@@ -87,6 +87,11 @@ class Scene(QObject, Serializable):
         # here we can store callback for retrieving the class for Nodes
         self.node_class_selector: Optional['NodeClassType'] = None
 
+        # Initialize clipboard buffers for copy/paste operations
+        self._clipboard_data: Optional[dict] = None  # For node copy/paste
+        self._text_clipboard: Optional[str] = None  # For text copy/paste
+        self._table_clipboard: Optional[list] = None  # For table copy/paste
+
         self.initUI()
 
         # Connect MVC signals

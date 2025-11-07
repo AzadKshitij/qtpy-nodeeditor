@@ -7,7 +7,7 @@ Tests EdgeDraggingModel, EdgeDragging refactored class, and validator integratio
 import pytest
 from qtpy.QtCore import Qt
 from nodeeditor.models import EdgeDraggingModel, EdgeModel
-from nodeeditor.node_edge_validators import (
+from nodeeditor.utils.node_edge_validators import (
     edge_cannot_connect_two_outputs_or_two_inputs,
     edge_cannot_connect_input_and_output_of_same_node,
     edge_cannot_connect_input_and_output_of_different_type,

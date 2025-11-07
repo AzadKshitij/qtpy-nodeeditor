@@ -12,14 +12,15 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt, QSignalMapper
 
-from nodeeditor.node_editor_window import NodeEditorWindow
+from nodeeditor import NodeEditorWindow
 from nodeeditor.node_edge import Edge
-from nodeeditor.node_edge_validators import (
+from nodeeditor import (
     edge_validator_debug,
     edge_cannot_connect_two_outputs_or_two_inputs,
-    edge_cannot_connect_input_and_output_of_same_node
+    edge_cannot_connect_input_and_output_of_same_node,
 )
 from nodeeditor.utils import loadStylesheets, dumpException, pp
+from nodeeditor.views import DebugDockWidget
 
 from examples.mvc_calculator.mvc_conf import CALC_NODES
 from examples.mvc_calculator.mvc_sub_window import MvcCalculatorSubWindow
@@ -75,6 +76,9 @@ class MvcCalculatorWindow(NodeEditorWindow):
 
         # Create nodes dock
         self.createNodesDock()
+
+        # Create debug dock
+        self.createDebugDock()
 
         # Create UI elements
         self.createActions()
@@ -329,6 +333,12 @@ class MvcCalculatorWindow(NodeEditorWindow):
         self.nodesDock.setFloating(False)
 
         self.addDockWidget(Qt.RightDockWidgetArea, self.nodesDock)
+
+    def createDebugDock(self):
+        """Create the debug dock widget for logging and debugging."""
+        self.debugDock = DebugDockWidget(self)
+        self.debugDock.setFloating(False)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.debugDock)
 
     def createStatusBar(self):
         """Create the status bar."""
