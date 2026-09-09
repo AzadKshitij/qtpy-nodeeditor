@@ -258,8 +258,15 @@ class Group(Serializable, QGraphicsRectItem):
     # ------------------------------------------------------------------
     def _classifyEdges(self) -> Tuple[List['Edge'], List['Edge'], List['Edge']]:
         """Return (incoming, outgoing, internal). Incoming=end inside, outgoing=start inside."""
-        child_set: Set[int] = set(id(n) for n in self.child_nodes)
-        # map id(node) -> node for quick lookup
+        # Use persistent node.id (not id(node)) so classification survives
+        # deserialize detach/relink, GC id() reuse, and stale socket.node refs.
+        child_set: Set[int] = set()
+        for n in self.child_nodes:
+            try:
+                nid = getattr(n, 'id', None)
+                child_set.add(nid if nid is not None else id(n))
+            except Exception:
+                continue
         seen: Dict[int, 'Edge'] = {}
         try:
             for node in self.child_nodes:
@@ -286,8 +293,18 @@ class Group(Serializable, QGraphicsRectItem):
                 t = getattr(e, 'end_socket', None)
                 sn = getattr(s, 'node', None) if s is not None else None
                 en = getattr(t, 'node', None) if t is not None else None
-                s_in = sn is not None and id(sn) in child_set
-                e_in = en is not None and id(en) in child_set
+                try:
+                    sn_key = getattr(sn, 'id', None) if sn is not None else None
+                    sn_key = sn_key if sn_key is not None else (id(sn) if sn is not None else None)
+                except Exception:
+                    sn_key = None
+                try:
+                    en_key = getattr(en, 'id', None) if en is not None else None
+                    en_key = en_key if en_key is not None else (id(en) if en is not None else None)
+                except Exception:
+                    en_key = None
+                s_in = sn_key is not None and sn_key in child_set
+                e_in = en_key is not None and en_key in child_set
                 if s_in and e_in:
                     internal.append(e)
                 elif (not s_in) and e_in:
@@ -454,6 +471,53 @@ class Group(Serializable, QGraphicsRectItem):
             self.update()
         except Exception:
             dumpException()
+
+    def restoreExpandedVisuals(self) -> None:
+        """Idempotent expanded visuals for undo/redo/load (mirrors expand without toggling)."""
+        try:
+            for node in list(self.child_nodes):
+                try:
+                    gr = getattr(node, 'grNode', None)
+                    if gr is not None:
+                        gr.show()
+                except Exception:
+                    continue
+            try:
+                for node in list(self.child_nodes):
+                    try:
+                        sockets = list(getattr(node, 'inputs', [])) + list(getattr(node, 'outputs', []))
+                    except Exception:
+                        continue
+                    for sock in sockets:
+                        try:
+                            for e in list(getattr(sock, 'edges', [])):
+                                try:
+                                    if getattr(e, 'grEdge', None) is not None:
+                                        e.grEdge.show()
+                                except Exception:
+                                    pass
+                        except Exception:
+                            continue
+                    try:
+                        node.updateConnectedEdges()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            try:
+                self.updateBounds()
+            except Exception:
+                pass
+            try:
+                self.refreshExternalEdges()
+            except Exception:
+                pass
+            try:
+                self.update()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def toggleCollapse(self) -> None:
         if self._collapsed:

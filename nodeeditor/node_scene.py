@@ -550,12 +550,49 @@ class Scene(Serializable):
                     break
 
             if not found_edge:
-                new_edge = self.getEdgeClass()(self).deserialize(
-                    edge_data, hashmap, restore_id, *args, **kwargs)
+                new_edge = None
+                try:
+                    new_edge = self.getEdgeClass()(self)
+                    ok = new_edge.deserialize(
+                        edge_data, hashmap, restore_id, *args, **kwargs)
+                    if not ok:
+                        # clean up half-created edge so groups phase still runs
+                        try:
+                            try:
+                                if getattr(new_edge, 'grEdge', None) is not None:
+                                    self.grScene.removeItem(new_edge.grEdge)
+                            except Exception:
+                                pass
+                            if new_edge in self.edges:
+                                self.edges.remove(new_edge)
+                        except Exception:
+                            pass
+                except Exception:
+                    try:
+                        dumpException()
+                    except Exception:
+                        pass
+                    try:
+                        if new_edge is not None:
+                            try:
+                                if getattr(new_edge, 'grEdge', None) is not None:
+                                    self.grScene.removeItem(new_edge.grEdge)
+                            except Exception:
+                                pass
+                            if new_edge in self.edges:
+                                self.edges.remove(new_edge)
+                    except Exception:
+                        pass
                 # print("New edge for", edge_data)
             else:
-                found_edge.deserialize(edge_data, hashmap,
-                                       restore_id, *args, **kwargs)
+                try:
+                    found_edge.deserialize(edge_data, hashmap,
+                                           restore_id, *args, **kwargs)
+                except Exception:
+                    try:
+                        dumpException()
+                    except Exception:
+                        pass
                 all_edges.remove(found_edge)
 
         # remove nodes which are left in the scene and were NOT in the serialized data!
@@ -671,16 +708,10 @@ class Scene(Serializable):
                 if getattr(group, '_collapsed', False):
                     group.applyCollapsedAfterLoad()
                 else:
-                    # ensure expanded visuals (nodes/edges visible) after undo/load
+                    # mirror expand() visuals so internal edges don't stay hidden
+                    # after undo/redo from collapsed -> expanded
                     try:
-                        for node in list(getattr(group, 'child_nodes', [])):
-                            try:
-                                gr = getattr(node, 'grNode', None)
-                                if gr is not None:
-                                    gr.show()
-                            except Exception:
-                                pass
-                        group.updateBounds()
+                        group.restoreExpandedVisuals()
                     except Exception:
                         pass
             except Exception:
