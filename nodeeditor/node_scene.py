@@ -320,16 +320,17 @@ class Scene(Serializable):
                       "from self.edges but it's not in the list!")
 
     def addGroup(self, group) -> None:
-        """Add GroupNode to this `Scene`
+        """Add Group to this `Scene`
 
-        :param group: GroupNode to be added to this `Scene`
+        :param group: Group to be added to this `Scene`
         """
-        self.groups.append(group)
+        if group not in self.groups:
+            self.groups.append(group)
 
     def removeGroup(self, group) -> None:
-        """Remove GroupNode from this `Scene`
+        """Remove Group from this `Scene`
 
-        :param group: GroupNode to be removed from this `Scene`
+        :param group: Group to be removed from this `Scene`
         """
         if group in self.groups:
             self.groups.remove(group)
@@ -343,10 +344,44 @@ class Scene(Serializable):
                     "from self.groups but it's not in the list!",
                 )
 
+    def getGroupById(self, group_id: int):
+        for group in self.groups:
+            if getattr(group, 'id', None) == group_id:
+                return group
+        return None
+
+    def findCollapsedGroupForNode(self, node):
+        """Return collapsed Group containing `node`, or None."""
+        try:
+            grp = getattr(node, 'parent_group', None)
+            if grp is not None and grp in self.groups and getattr(grp, '_collapsed', False):
+                return grp
+        except Exception:
+            pass
+        return None
+
     def clear(self) -> None:
-        """Remove all `Nodes` from this `Scene`. This causes also to remove all `Edges`"""
+        """Remove all `Nodes`, `Edges` and `Groups` from this `Scene`"""
         while len(self.nodes) > 0:
-            self.nodes[0].remove()
+            try:
+                self.nodes[0].remove()
+            except Exception:
+                # ensure progress even if a node is broken
+                try:
+                    self.nodes.pop(0)
+                except Exception:
+                    break
+        # nodes detach from groups on remove; drop any remaining group graphics
+        for group in list(self.groups):
+            try:
+                try:
+                    if self.grScene is not None and group in self.grScene.items():
+                        self.grScene.removeItem(group)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        self.groups.clear()
 
         self.has_been_modified = False
 
@@ -417,11 +452,12 @@ class Scene(Serializable):
         :return: Instance of `Node` class to be used in this Scene
         :rtype: `Node` class instance
         """
-        # Check if this is a GroupNode
-        if data.get("type") == "GroupNode":
-            from nodeeditor.node_group_node import GroupNode
+        # Groups are first-class (Scene.groups), never created via node path.
+        # Keep a guard so group payloads accidentally routed here don't crash.
+        if data.get("type") in ("Group", "GroupNode"):
+            from nodeeditor.node_group import Group
 
-            return GroupNode
+            return Group  # type: ignore[return-value]
 
         return Node if self.node_class_selector is None else self.node_class_selector(data)
 
@@ -528,32 +564,32 @@ class Scene(Serializable):
             edge = all_edges.pop()
             edge.remove()
 
-        # -- deserialize GROUPS
-
-        # Instead of recreating all the groups, reuse existing ones...
-        # get list of all current groups:
+        # -- deserialize GROUPS (v2 clean break, best-effort old load as expanded)
         all_groups = self.groups.copy()
 
-        # go through deserialized groups:
         for group_data in data.get("groups", []):
-            # can we find this group in the scene?
             found_group = None
+            try:
+                gid = group_data.get("id", None)
+            except Exception:
+                gid = None
             for group in all_groups:
-                if group.id == group_data["id"]:
+                if getattr(group, 'id', None) == gid:
                     found_group = group
                     break
 
             if not found_group:
                 try:
-                    from nodeeditor.node_group_node import GroupNode
+                    from nodeeditor.node_group import Group
 
-                    new_group = GroupNode(self)
+                    new_group = Group(self)
                     new_group.deserialize(
                         group_data, hashmap, restore_id, *args, **kwargs
                     )
-                    self.groups.append(new_group)
-                    # print("New group for", group_data['title'])
-                except:
+                    # Group.__init__ already added itself; guard double-add
+                    if new_group not in self.groups:
+                        self.groups.append(new_group)
+                except Exception:
                     dumpException()
             else:
                 try:
@@ -561,40 +597,104 @@ class Scene(Serializable):
                         group_data, hashmap, restore_id, *args, **kwargs
                     )
                     all_groups.remove(found_group)
-                    # print("Reused", group_data['title'])
-                except:
+                except Exception:
                     dumpException()
 
-        # remove groups which are left in the scene and were NOT in the serialized data!
-        # that means they were not in the graph before...
         while all_groups != []:
             group = all_groups.pop()
-            if hasattr(group, "remove"):
-                group.remove()
+            try:
+                # dispose graphics + list entry (no child deletion on undo/load)
+                # clear dangling parent_group pointers first
+                try:
+                    for n in list(getattr(group, 'child_nodes', [])):
+                        try:
+                            if getattr(n, 'parent_group', None) is group:
+                                n.parent_group = None
+                        except Exception:
+                            pass
+                    try:
+                        group.child_nodes.clear()
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                try:
+                    if self.grScene is not None and group in self.grScene.items():
+                        self.grScene.removeItem(group)
+                except Exception:
+                    pass
+                if group in self.groups:
+                    self.groups.remove(group)
+            except Exception:
+                pass
 
         # -- restore child node relationships for groups
+        # detach all first to handle moves between groups reliably
+        try:
+            for grp in list(self.groups):
+                try:
+                    for n in list(getattr(grp, 'child_nodes', [])):
+                        try:
+                            if getattr(n, 'parent_group', None) is grp:
+                                n.parent_group = None
+                        except Exception:
+                            pass
+                    grp.child_nodes.clear()
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
         for group_data in data.get("groups", []):
-            # Find the group
             group = None
+            try:
+                gid = group_data.get("id", None)
+            except Exception:
+                gid = None
             for g in self.groups:
-                if g.id == group_data["id"]:
+                if getattr(g, 'id', None) == gid:
                     group = g
                     break
+            if group is None:
+                continue
+            # v2 key "children", old key "child_node_ids" (clean break: old loads expanded)
+            child_ids = group_data.get("children", group_data.get("child_node_ids", []))
+            try:
+                node_by_id = {getattr(n, 'id', None): n for n in self.nodes}
+                for child_id in list(child_ids or []):
+                    node = node_by_id.get(child_id, None)
+                    if node is not None:
+                        group.addNode(node)
+            except Exception:
+                pass
+            try:
+                if getattr(group, '_collapsed', False):
+                    group.applyCollapsedAfterLoad()
+                else:
+                    # ensure expanded visuals (nodes/edges visible) after undo/load
+                    try:
+                        for node in list(getattr(group, 'child_nodes', [])):
+                            try:
+                                gr = getattr(node, 'grNode', None)
+                                if gr is not None:
+                                    gr.show()
+                            except Exception:
+                                pass
+                        group.updateBounds()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
-            if group and "child_node_ids" in group_data:
-                # Clear existing child nodes first
-                group.child_nodes.clear()
-
-                # Reconnect child nodes
-                for child_id in group_data["child_node_ids"]:
-                    # Find the node by id
-                    for node in self.nodes:
-                        if node.id == child_id:
-                            group.addNode(node)
-                            break
-
-                # Apply collapsed state if the group was collapsed when serialized
-                if group._is_collapsed:
-                    group.applyCollapsedStateFromDeserialization()
+        # final pass: collapsed proxy positions need real socket scenePos; refresh
+        try:
+            for grp in list(self.groups):
+                try:
+                    if getattr(grp, '_collapsed', False):
+                        grp.refreshExternalEdges()
+                except Exception:
+                    continue
+        except Exception:
+            pass
 
         return True

@@ -119,33 +119,8 @@ class QDMGraphicsNode(QGraphicsItem):
             self.onSelected()
 
     def mousePressEvent(self, event) -> None:
-        """
-        Override to restrict movement to header when node is in a collapsed container.
-        Only allow dragging from the title bar area for collapsed nodes.
-        """
-        # Check if this node is inside a collapsed container
-        if (
-            self.node.parent_group
-            and self.node.parent_group.isCollapsed()
-            and self.node.grNode.isVisible()
-        ):
-            # Node is in a collapsed container
-            # Only allow movement if click is on the header (top part of the node)
-            local_y = event.pos().y()
-            # Allow movement only from top portion (header area, roughly 25px)
-            if local_y > 25:
-                # Click is not on header - disable movable flag to allow selection only
-                was_movable = (
-                    self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable
-                )
-                self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
-                super().mousePressEvent(event)
-                self.setFlag(
-                    QGraphicsItem.GraphicsItemFlag.ItemIsMovable, bool(was_movable)
-                )
-                return
-
-        # Allow normal press event handling for movement
+        # Collapsed groups hide child grNodes, so no special guard needed.
+        # Keep default Qt behavior (move/select).
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
@@ -165,8 +140,10 @@ class QDMGraphicsNode(QGraphicsItem):
 
         # handle when grNode moved
         if self._was_moved:
-            self.node.positionChanged.emit(self.node)
-            print("Emitted positionChanged for node:", self.node.title)
+            try:
+                self.node.positionChanged.emit(self.node)
+            except Exception:
+                pass
 
             self._was_moved = False
             self.node.scene.history.storeHistory(

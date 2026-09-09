@@ -48,13 +48,18 @@ class SceneClipboard():
             print("-- COPY TO CLIPBOARD ---")
 
         sel_nodes, sel_edges, sel_sockets = [], [], {}
+        sel_node_ids = set()
 
-        # sort edges and nodes
+        # sort edges and nodes (groups handled below; Group has neither .node nor .edge)
         for item in self.scene.grScene.selectedItems():
             if hasattr(item, 'node'):
-                sel_nodes.append(item.node.serialize())
-                for socket in (item.node.inputs + item.node.outputs):
-                    sel_sockets[socket.id] = socket
+                try:
+                    sel_nodes.append(item.node.serialize())
+                    sel_node_ids.add(item.node.id)
+                    for socket in (item.node.inputs + item.node.outputs):
+                        sel_sockets[socket.id] = socket
+                except Exception:
+                    continue
             elif isinstance(item, QDMGraphicsEdge):
                 sel_edges.append(item.edge)
 
@@ -85,9 +90,27 @@ class SceneClipboard():
         if DEBUG:
             print("our final edge list:", edges_final)
 
+        # groups: include a group iff ALL its children are selected (avoids half-groups).
+        # This covers both "group box selected" and "rubber-banded all children" cases.
+        groups_final = []
+        try:
+            from nodeeditor.node_group import Group
+            for grp in list(getattr(self.scene, 'groups', [])):
+                try:
+                    children = list(getattr(grp, 'child_nodes', []))
+                    if not children:
+                        continue
+                    if all(getattr(n, 'id', None) in sel_node_ids for n in children):
+                        groups_final.append(grp.serialize())
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
         data = OrderedDict([
             ('nodes', sel_nodes),
             ('edges', edges_final),
+            ('groups', groups_final),
         ])
 
         # if CUT (aka delete) remove selected items
@@ -153,10 +176,20 @@ class SceneClipboard():
 
         self.scene.doDeselectItems()
 
-        for node_data in data['nodes']:
+        node_id_map = {}  # old node id -> new Node (for group relink)
+        for node_data in data.get('nodes', []):
+            try:
+                old_id = node_data.get('id', None)
+            except Exception:
+                old_id = None
             new_node = self.scene.getNodeClassFromData(node_data)(self.scene)
             new_node.deserialize(node_data, hashmap, False, *args, **kwargs)
             created_nodes.append(new_node)
+            if old_id is not None:
+                try:
+                    node_id_map[old_id] = new_node
+                except Exception:
+                    pass
 
             # readjust the new nodeeditor's position
 
@@ -183,6 +216,38 @@ class SceneClipboard():
                 #     del kwargs_copy['restore_id']
                 new_edge.deserialize(edge_data, hashmap,
                                      False, *args, **kwargs)
+
+        # create each group (v2 "children", old "child_node_ids" best-effort)
+        if 'groups' in data:
+            try:
+                from nodeeditor.node_group import Group
+                for group_data in list(data.get('groups', []) or []):
+                    try:
+                        title = group_data.get('title', 'Group')
+                        grp = Group(self.scene, title=title)
+                        # link remapped children
+                        child_ids = group_data.get('children', group_data.get('child_node_ids', []))
+                        for cid in list(child_ids or []):
+                            nn = node_id_map.get(cid, None)
+                            if nn is not None:
+                                grp.addNode(nn)
+                        grp.updateBounds()
+                        # preserve collapsed flag (old payloads forced expanded in Group.deserialize,
+                        # but clipboard groups are always v2 so collapsed is honored)
+                        try:
+                            want_collapsed = bool(group_data.get('collapsed', group_data.get('is_collapsed', False)))
+                        except Exception:
+                            want_collapsed = False
+                        if want_collapsed and grp.getChildNodes():
+                            grp.collapse()
+                        try:
+                            grp.setSelected(True)
+                        except Exception:
+                            pass
+                    except Exception:
+                        continue
+            except Exception:
+                pass
 
         self.scene.setSilentSelectionEvents(False)
 

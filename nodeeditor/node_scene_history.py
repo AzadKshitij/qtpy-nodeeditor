@@ -16,10 +16,11 @@ DEBUG = False
 DEBUG_SELECTION = False
 
 
-class SelectionDict(TypedDict):
+class SelectionDict(TypedDict, total=False):
     """Define the TypedDict for selection objects"""
     nodes: List[str]  # list of node IDs
     edges: List[str]  # list of edge IDs
+    groups: List[str]  # list of group IDs
 
 
 class SceneHistory():
@@ -116,14 +117,14 @@ class SceneHistory():
         return self.history_current_step + 1 < len(self.history_stack)
 
     def undo(self) -> None:
-        """Undo operation"""
+        """Undo operation (restore previous snapshot)."""
         if DEBUG:
             print("UNDO")
 
         if self.canUndo():
             self.if_undo = True
-            self.restoreHistory()
             self.history_current_step -= 1
+            self.restoreHistory()
             self.scene.has_been_modified = True
 
     def redo(self) -> None:
@@ -227,8 +228,17 @@ class SceneHistory():
         sel_obj: SelectionDict = {
             'nodes': [],
             'edges': [],
+            'groups': [],
         }
         for item in self.scene.grScene.selectedItems():
+            try:
+                # Groups are QGraphicsRectItem without .node/.edge; check first
+                groups = getattr(self.scene, 'groups', [])
+                if groups and item in groups:
+                    sel_obj['groups'].append(item.id)
+                    continue
+            except Exception:
+                pass
             if hasattr(item, 'node'):
                 sel_obj['nodes'].append(item.node.id)
             elif hasattr(item, 'edge'):
@@ -274,23 +284,55 @@ class SceneHistory():
 
             # first clear all selection on edges
             for edge in self.scene.edges:
-                edge.grEdge.setSelected(False)
+                try:
+                    if getattr(edge, 'grEdge', None) is not None:
+                        edge.grEdge.setSelected(False)
+                except Exception:
+                    pass
             # now restore selected edges from history_stamp
-            for edge_id in history_stamp['selection']['edges']:
+            for edge_id in history_stamp['selection'].get('edges', []):
                 for edge in self.scene.edges:
                     if edge.id == edge_id:
-                        edge.grEdge.setSelected(True)
+                        try:
+                            edge.grEdge.setSelected(True)
+                        except Exception:
+                            pass
                         break
 
             # first clear all selection on nodes
             for node in self.scene.nodes:
-                node.grNode.setSelected(False)
+                try:
+                    if getattr(node, 'grNode', None) is not None:
+                        node.grNode.setSelected(False)
+                except Exception:
+                    pass
             # now restore selected nodes from history_stamp
-            for node_id in history_stamp['selection']['nodes']:
+            for node_id in history_stamp['selection'].get('nodes', []):
                 for node in self.scene.nodes:
                     if node.id == node_id:
-                        node.grNode.setSelected(True)
+                        try:
+                            node.grNode.setSelected(True)
+                        except Exception:
+                            pass
                         break
+
+            # groups (new; old stamps may lack the key)
+            try:
+                for grp in list(getattr(self.scene, 'groups', [])):
+                    try:
+                        grp.setSelected(False)
+                    except Exception:
+                        pass
+                for gid in history_stamp['selection'].get('groups', []):
+                    for grp in list(getattr(self.scene, 'groups', [])):
+                        if getattr(grp, 'id', None) == gid:
+                            try:
+                                grp.setSelected(True)
+                            except Exception:
+                                pass
+                            break
+            except Exception:
+                pass
 
             current_selection = self.captureCurrentSelection()
             if DEBUG_SELECTION:
@@ -301,7 +343,7 @@ class SceneHistory():
             self.scene._last_selected_items = self.scene.getSelectedItems()
 
             # if the selection of nodes differ before and after restoration, set flag
-            if current_selection['nodes'] != previous_selection['nodes'] or current_selection['edges'] != previous_selection['edges']:
+            if current_selection.get('nodes') != previous_selection.get('nodes') or current_selection.get('edges') != previous_selection.get('edges') or current_selection.get('groups') != previous_selection.get('groups'):
                 if DEBUG_SELECTION:
                     print("\nSCENE: Selection has changed")
                 self.undo_selection_has_changed = True

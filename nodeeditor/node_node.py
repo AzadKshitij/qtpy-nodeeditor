@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_scene import Scene
-    from nodeeditor.node_group_node import GroupNode
+    from nodeeditor.node_group import Group
 
 DEBUG = False
 
@@ -79,8 +79,8 @@ class Node(QObject,  Serializable):
         self._is_dirty = False
         self._is_invalid = False
 
-        # grouping support
-        self.parent_group: Optional["GroupNode"] = None
+        # grouping support (single parent Group or None; see nodeeditor.node_group)
+        self.parent_group: Optional["Group"] = None
 
     def __str__(self) -> str:
         return "<%s:%s %s..%s>" % (self.title, self.__class__.__name__, hex(id(self))[2:5], hex(id(self))[-3:])
@@ -338,8 +338,21 @@ class Node(QObject,  Serializable):
 
     def remove(self) -> None:
         """
-        Safely remove this Node
+        Safely remove this Node (detaches from parent Group first)
         """
+        # detach from group first so bounds/stubs update without this node
+        try:
+            grp = getattr(self, 'parent_group', None)
+            if grp is not None:
+                try:
+                    grp.removeNode(self, update_bounds=False)
+                except Exception:
+                    try:
+                        self.parent_group = None
+                    except Exception:
+                        pass
+        except Exception:
+            pass
         if DEBUG:
             print("> Removing Node", self)
         if DEBUG:
@@ -352,7 +365,11 @@ class Node(QObject,  Serializable):
                 edge.remove()
         if DEBUG:
             print(" - remove grNode")
-        self.scene.grScene.removeItem(self.grNode)
+        try:
+            if self.grNode is not None:
+                self.scene.grScene.removeItem(self.grNode)
+        except Exception:
+            pass
         self.grNode = None
         if DEBUG:
             print(" - remove node from the scene")

@@ -6,7 +6,6 @@ from collections import OrderedDict
 from nodeeditor.node_graphics_edge import QDMGraphicsEdge
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
-from qtpy.QtCore import QPointF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable
 
@@ -217,56 +216,86 @@ class Edge(Serializable):
 
     def updatePositions(self) -> None:
         """
-        Updates the internal `Graphics Edge` positions according to the start and end :class:`~nodeeditor.node_socket.Socket`.
-        This should be called if you update ``Edge`` positions.
+        Updates the internal `Graphics Edge` positions.
+
+        Collapsed-group aware: if an endpoint lives in a collapsed Group,
+        the endpoint is overridden to that group's per-edge stub row.
+        Logical sockets are never mutated. Internal edges of a collapsed
+        group stay hidden.
         """
-        # Use actual graphics socket position instead of calculated position
-        # This is crucial for collapsed containers where sockets are manually positioned
+        try:
+            if self.start_socket is None:
+                return
+            if getattr(self, 'grEdge', None) is None:
+                return
 
-        # For collapsed nodes (width=5), calculate position manually to avoid timing issues
-        if (
-            self.start_socket
-            and self.start_socket.node
-            and self.start_socket.node.grNode
-            and hasattr(self.start_socket.node.grNode, "width")
-            and self.start_socket.node.grNode.width == 5
-        ):
-            # Collapsed node - socket is at center (2.5, 2.5) relative to node
-            node_scene_pos = self.start_socket.node.grNode.scenePos()
-            source_pos = [node_scene_pos.x() + 2.5, node_scene_pos.y() + 2.5]
-        else:
-            # Normal node - use socket's scene position
-            source_scene_pos = self.start_socket.grSocket.scenePos()
-            source_pos = [source_scene_pos.x(), source_scene_pos.y()]
+            start_node = getattr(self.start_socket, 'node', None)
+            end_node = getattr(self.end_socket, 'node', None) if self.end_socket is not None else None
 
-        # Normalize coordinates to ensure proper handling of negative values
-        normalized_source = QPointF(source_pos[0], source_pos[1])
-        source_pos = [normalized_source.x(), normalized_source.y()]
-        self.grEdge.setSource(*source_pos)
+            start_group = None
+            end_group = None
+            try:
+                if start_node is not None:
+                    start_group = self.scene.findCollapsedGroupForNode(start_node)
+                if end_node is not None:
+                    end_group = self.scene.findCollapsedGroupForNode(end_node)
+            except Exception:
+                start_group = end_group = None
 
-        if self.end_socket is not None:
-            # For collapsed nodes (width=5), calculate position manually to avoid timing issues
-            if (
-                self.end_socket.node
-                and self.end_socket.node.grNode
-                and hasattr(self.end_socket.node.grNode, "width")
-                and self.end_socket.node.grNode.width == 5
-            ):
-                # Collapsed node - socket is at center (2.5, 2.5) relative to node
-                node_scene_pos = self.end_socket.node.grNode.scenePos()
-                end_pos = [node_scene_pos.x() + 2.5, node_scene_pos.y() + 2.5]
+            # internal edge of a collapsed group -> keep hidden
+            try:
+                if start_group is not None and start_group is end_group and end_group is not None:
+                    try:
+                        self.grEdge.hide()
+                    except Exception:
+                        pass
+                    return
+            except Exception:
+                pass
+
+            # source
+            source_pos = None
+            try:
+                if start_group is not None:
+                    p = start_group.stubPosFor(self)
+                    if p is not None:
+                        source_pos = [p.x(), p.y()]
+                if source_pos is None:
+                    gs = getattr(self.start_socket, 'grSocket', None)
+                    if gs is None:
+                        return
+                    sp = gs.scenePos()
+                    source_pos = [sp.x(), sp.y()]
+            except Exception:
+                return
+            self.grEdge.setSource(*source_pos)
+
+            if self.end_socket is not None:
+                end_pos = None
+                try:
+                    if end_group is not None:
+                        p = end_group.stubPosFor(self)
+                        if p is not None:
+                            end_pos = [p.x(), p.y()]
+                    if end_pos is None:
+                        gs = getattr(self.end_socket, 'grSocket', None)
+                        if gs is None:
+                            self.grEdge.setDestination(*source_pos)
+                            self.grEdge.update()
+                            return
+                        ep = gs.scenePos()
+                        end_pos = [ep.x(), ep.y()]
+                except Exception:
+                    end_pos = list(source_pos)
+                self.grEdge.setDestination(*end_pos)
             else:
-                # Normal node - use socket's scene position
-                end_scene_pos = self.end_socket.grSocket.scenePos()
-                end_pos = [end_scene_pos.x(), end_scene_pos.y()]
-
-            # Normalize coordinates to ensure proper handling of negative values
-            normalized_end = QPointF(end_pos[0], end_pos[1])
-            end_pos = [normalized_end.x(), normalized_end.y()]
-            self.grEdge.setDestination(*end_pos)
-        else:
-            self.grEdge.setDestination(*source_pos)
-        self.grEdge.update()
+                self.grEdge.setDestination(*source_pos)
+            self.grEdge.update()
+        except Exception:
+            try:
+                dumpException()
+            except Exception:
+                pass
 
     def remove_from_sockets(self) -> None:
         """

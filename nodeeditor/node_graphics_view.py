@@ -576,8 +576,20 @@ class QDMGraphicsView(QGraphicsView):
             # we could cut 3 edges leading to a single nodeeditor this will notify it 3x
             # maybe we could use some Notifier class with methods collect() and dispatch()
             for edge in self.grScene.scene.edges.copy():
-                if edge.grEdge.intersectsWith(p1, p2):
-                    edge.remove()
+                try:
+                    gr = getattr(edge, 'grEdge', None)
+                    if gr is None:
+                        continue
+                    # never cut hidden internal edges of collapsed groups
+                    try:
+                        if not gr.isVisible():
+                            continue
+                    except Exception:
+                        pass
+                    if gr.intersectsWith(p1, p2):
+                        edge.remove()
+                except Exception:
+                    continue
         self.grScene.scene.history.storeHistory(
             "Delete cutted edges", setModified=True)
 
@@ -602,12 +614,40 @@ class QDMGraphicsView(QGraphicsView):
         return socket_items
 
     def deleteSelected(self) -> None:
-        """Shortcut for safe deleting every object selected in the `Scene`."""
-        for item in self.grScene.selectedItems():
-            if isinstance(item, QDMGraphicsEdge):
-                item.edge.remove()
-            elif hasattr(item, 'node'):
-                item.node.remove()
+        """Delete selected items. Delete-key on a Group = delete Group + Children."""
+        try:
+            from nodeeditor.node_group import Group
+        except Exception:
+            Group = None  # type: ignore
+
+        selected = list(self.grScene.selectedItems())
+        groups = [it for it in selected if Group is not None and isinstance(it, Group)]
+        # delete groups + children first
+        for grp in groups:
+            try:
+                grp.deleteWithChildren()
+            except Exception:
+                continue
+        # delete remaining nodes/edges that still exist (nodes from deleted groups are gone)
+        scene = self.grScene.scene
+        for item in selected:
+            try:
+                if Group is not None and isinstance(item, Group):
+                    continue
+                if isinstance(item, QDMGraphicsEdge):
+                    try:
+                        if getattr(item, 'edge', None) in scene.edges:
+                            item.edge.remove()
+                    except Exception:
+                        pass
+                elif hasattr(item, 'node'):
+                    try:
+                        if getattr(item, 'node', None) in scene.nodes:
+                            item.node.remove()
+                    except Exception:
+                        pass
+            except Exception:
+                continue
         self.grScene.scene.history.storeHistory(
             "Delete selected", setModified=True)
 

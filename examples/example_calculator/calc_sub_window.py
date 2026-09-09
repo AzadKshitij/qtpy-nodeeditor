@@ -7,7 +7,7 @@ from nodeeditor.node_editor_widget import NodeEditorWidget
 from nodeeditor.node_edge import EDGE_TYPE_DIRECT, EDGE_TYPE_BEZIER, EDGE_TYPE_SQUARE
 from nodeeditor.node_graphics_view import MODE_EDGE_DRAG
 from nodeeditor.node_graphics_node import QDMGraphicsNode
-from nodeeditor.node_group_node import GroupNode
+from nodeeditor.node_group import Group
 from nodeeditor.utils import dumpException
 
 from typing import TYPE_CHECKING, List
@@ -110,7 +110,7 @@ class CalculatorSubWindow(NodeEditorWidget):
             if isinstance(item, QDMGraphicsNode):
                 if hasattr(item, "node"):
                     nodes.append(item.node)
-            elif isinstance(item, GroupNode):
+            elif isinstance(item, Group):
                 # Don't add groups to the selection, only actual nodes
                 pass
         return nodes
@@ -122,7 +122,10 @@ class CalculatorSubWindow(NodeEditorWidget):
 
         context_menu = QMenu(self)
         group_act = context_menu.addAction("Group Selected Nodes")
-        action = context_menu.exec_(self.mapToGlobal(event.pos()))
+        try:
+            action = context_menu.exec(self.mapToGlobal(event.pos()))
+        except Exception:
+            action = None
 
         if action == group_act:
             self.onGroupSelectedNodes(nodes_selected)
@@ -133,21 +136,18 @@ class CalculatorSubWindow(NodeEditorWidget):
             if len(nodes) < 2:
                 return
 
-            # Create group
-            group = GroupNode(self.scene, title=f"Group ({len(nodes)} nodes)")
+            # Create group (Group.__init__ already registers with scene+grScene)
+            group = Group(self.scene, title=f"Group ({len(nodes)} nodes)")
 
             # Add nodes to group
             for node in nodes:
                 group.addNode(node)
 
-            # Update group boundaries to fit all nodes
-            group.updateGroupBoundaries()
-
-            # Add group to scene's graphics scene
-            self.scene.grScene.addItem(group)
+            # Auto-fit to children
+            group.updateBounds()
 
             # Store in history
-            self.scene.history.storeHistory(f"Created group with {len(nodes)} nodes")
+            self.scene.history.storeHistory(f"Created group with {len(nodes)} nodes", setModified=True)
 
             if DEBUG_CONTEXT:
                 print(f"Created group with {len(nodes)} nodes")
@@ -248,7 +248,10 @@ class CalculatorSubWindow(NodeEditorWidget):
         unmarkInvalidAct = context_menu.addAction("Unmark Invalid")
         group_nodes = context_menu.addAction("Group Selected Nodes")
         evalAct = context_menu.addAction("Eval")
-        action = context_menu.exec_(self.mapToGlobal(event.pos()))
+        try:
+            action = context_menu.exec(self.mapToGlobal(event.pos()))
+        except Exception:
+            action = None
 
         selected = None
         item = self.scene.getItemAt(event.pos())
@@ -294,7 +297,10 @@ class CalculatorSubWindow(NodeEditorWidget):
         bezierAct = context_menu.addAction("Bezier Edge")
         directAct = context_menu.addAction("Direct Edge")
         squareAct = context_menu.addAction("Square Edge")
-        action = context_menu.exec_(self.mapToGlobal(event.pos()))
+        try:
+            action = context_menu.exec(self.mapToGlobal(event.pos()))
+        except Exception:
+            action = None
 
         selected = None
         item = self.scene.getItemAt(event.pos())
@@ -329,7 +335,10 @@ class CalculatorSubWindow(NodeEditorWidget):
         if DEBUG_CONTEXT:
             print("CONTEXT: EMPTY SPACE")
         context_menu = self.initNodesContextMenu()
-        action = context_menu.exec_(self.mapToGlobal(event.pos()))
+        try:
+            action = context_menu.exec(self.mapToGlobal(event.pos()))
+        except Exception:
+            action = None
 
         if action is not None:
             new_calc_node = get_class_from_opcode(action.data())(self.scene)
