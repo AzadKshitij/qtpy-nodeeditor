@@ -16,7 +16,7 @@ Design notes (v2, clean break):
 - Stub stacking: per-edge rows, left=incoming (end inside), right=outgoing (start inside).
 """
 from qtpy.QtCore import QRectF, Qt, QPointF
-from qtpy.QtGui import QColor, QPainter, QPen, QBrush, QCursor
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QPen, QBrush, QCursor
 from qtpy.QtWidgets import QGraphicsRectItem, QGraphicsItem, QMenu
 
 from nodeeditor.node_serializable import Serializable
@@ -591,6 +591,30 @@ class Group(Serializable, QGraphicsRectItem):
         except Exception:
             return QRectF()
 
+    def shape(self):
+        """Hit-testing only: expanded = header (+toggle) only, collapsed = full rect.
+
+        boundingRect()/paint() stay full so the background still draws; only
+        clicks/selection/rubber-band/itemAt ignore the expanded body, making it
+        behave like plain canvas.
+        """
+        try:
+            path = QPainterPath()
+            r = self.rect()
+            if self._collapsed:
+                path.addRoundedRect(0, 0, r.width(), r.height(), 8.0, 8.0)
+            else:
+                path.addRect(0, 0, r.width(), float(self.TITLE_BAR_HEIGHT))
+                try:
+                    tog = self._toggleRectLocal()
+                    if tog.isValid():
+                        path.addRect(tog)
+                except Exception:
+                    pass
+            return path
+        except Exception:
+            return super().shape()
+
     def mousePressEvent(self, event) -> None:
         try:
             lp = event.pos()
@@ -627,11 +651,16 @@ class Group(Serializable, QGraphicsRectItem):
                     pass
                 super().mousePressEvent(event)
             else:
+                # Expanded body is click-through: behave as if the group is not
+                # there (plain canvas -> deselect, rubber-band, canvas menu).
+                # Children are in front (z) so child clicks still hit children.
                 self._can_move = False
                 self._last_scene_pos = None
-                # select group on body click but don't start a move; children
-                # are in front (z) so child clicks go to children first
-                super().mousePressEvent(event)
+                try:
+                    event.ignore()
+                except Exception:
+                    pass
+                return
         except Exception:
             try:
                 super().mousePressEvent(event)
@@ -672,6 +701,16 @@ class Group(Serializable, QGraphicsRectItem):
 
     def mouseReleaseEvent(self, event) -> None:
         moved = self._can_move
+        if not moved:
+            # Press was ignored (expanded body click-through): don't let
+            # release select the group; let view handle rubber-band/deselect.
+            self._can_move = False
+            self._last_scene_pos = None
+            try:
+                event.ignore()
+            except Exception:
+                pass
+            return
         self._can_move = False
         self._last_scene_pos = None
         try:
@@ -736,6 +775,19 @@ class Group(Serializable, QGraphicsRectItem):
 
     def contextMenuEvent(self, event) -> None:
         try:
+            # Expanded body is click-through: let canvas context menu handle it.
+            # (shape() already excludes the body; this is belt-and-suspenders.)
+            try:
+                lp = event.pos()
+                if (not self._collapsed and lp.y() >= float(self.TITLE_BAR_HEIGHT)
+                        and not self._toggleRectLocal().contains(lp)):
+                    try:
+                        event.ignore()
+                    except Exception:
+                        pass
+                    return
+            except Exception:
+                pass
             menu = QMenu()
             toggle_act = menu.addAction("Expand" if self._collapsed else "Collapse")
             ungroup_act = menu.addAction("Ungroup (keep nodes)")
