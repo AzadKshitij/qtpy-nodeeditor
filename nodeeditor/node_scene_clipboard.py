@@ -49,11 +49,26 @@ class SceneClipboard():
 
         sel_nodes, sel_edges, sel_sockets = [], [], {}
         sel_node_ids = set()
+        sel_groups = []
 
-        # sort edges and nodes (groups handled below; Group has neither .node nor .edge)
+        try:
+            from nodeeditor.node_group import Group
+        except Exception:
+            Group = None  # type: ignore
+
+        # sort edges, nodes, and groups (Group has neither .node nor .edge)
         for item in self.scene.grScene.selectedItems():
+            try:
+                if Group is not None and isinstance(item, Group):
+                    if item not in sel_groups:
+                        sel_groups.append(item)
+                    continue
+            except Exception:
+                pass
             if hasattr(item, 'node'):
                 try:
+                    if getattr(item.node, 'id', None) in sel_node_ids:
+                        continue
                     sel_nodes.append(item.node.serialize())
                     sel_node_ids.add(item.node.id)
                     for socket in (item.node.inputs + item.node.outputs):
@@ -62,6 +77,39 @@ class SceneClipboard():
                     continue
             elif isinstance(item, QDMGraphicsEdge):
                 sel_edges.append(item.edge)
+
+        # wholesale: header-selected group pulls in all children + internal edges
+        try:
+            for grp in list(sel_groups):
+                try:
+                    for node in list(getattr(grp, 'child_nodes', [])):
+                        try:
+                            if getattr(node, 'id', None) in sel_node_ids:
+                                continue
+                            sel_nodes.append(node.serialize())
+                            sel_node_ids.add(node.id)
+                            for socket in (node.inputs + node.outputs):
+                                sel_sockets[socket.id] = socket
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+            # auto-include internal edges of selected groups (both ends now present)
+            seen_edge_ids = set(id(e) for e in sel_edges)
+            for grp in list(sel_groups):
+                try:
+                    _, _, internal = grp._classifyEdges()
+                except Exception:
+                    internal = []
+                for e in list(internal or []):
+                    try:
+                        if id(e) not in seen_edge_ids:
+                            sel_edges.append(e)
+                            seen_edge_ids.add(id(e))
+                    except Exception:
+                        continue
+        except Exception:
+            pass
 
         # debug
         if DEBUG:
@@ -90,13 +138,21 @@ class SceneClipboard():
         if DEBUG:
             print("our final edge list:", edges_final)
 
-        # groups: include a group iff ALL its children are selected (avoids half-groups).
-        # This covers both "group box selected" and "rubber-banded all children" cases.
+        # groups: header-selected groups always included (children auto-pulled above);
+        # otherwise include a group iff ALL its children are selected (rubber-band case).
         groups_final = []
         try:
-            from nodeeditor.node_group import Group
+            included = set()
+            for grp in list(sel_groups):
+                try:
+                    groups_final.append(grp.serialize())
+                    included.add(id(grp))
+                except Exception:
+                    continue
             for grp in list(getattr(self.scene, 'groups', [])):
                 try:
+                    if id(grp) in included:
+                        continue
                     children = list(getattr(grp, 'child_nodes', []))
                     if not children:
                         continue

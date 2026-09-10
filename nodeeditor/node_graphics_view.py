@@ -464,6 +464,14 @@ class QDMGraphicsView(QGraphicsView):
             if self.mode == MODE_NODE_DRAG:
                 scenepos = self.mapToScene(event.pos())
                 self.edgeIntersect.leaveState(scenepos.x(), scenepos.y())
+                try:
+                    self._dropNodesIntoGroupAt(scenepos)
+                except Exception:
+                    pass
+                try:
+                    self._clearGroupDropHighlight()
+                except Exception:
+                    pass
                 self.mode = MODE_NOOP
                 self.update()
 
@@ -528,6 +536,10 @@ class QDMGraphicsView(QGraphicsView):
 
             if self.mode == MODE_NODE_DRAG:
                 self.edgeIntersect.update(scenepos.x(), scenepos.y())
+                try:
+                    self._updateGroupDropHighlight(scenepos)
+                except Exception:
+                    pass
 
             if self.mode == MODE_EDGES_REROUTING:
                 self.rerouting.updateScenePos(scenepos.x(), scenepos.y())
@@ -612,6 +624,75 @@ class QDMGraphicsView(QGraphicsView):
             grSocket.isHighlighted = highlighted
 
         return socket_items
+
+    def _draggedNodes(self):
+        """Nodes being dragged (selected .node items, fallback to edgeIntersect)."""
+        nodes = []
+        try:
+            for item in list(self.grScene.selectedItems()):
+                try:
+                    n = getattr(item, 'node', None)
+                    if n is not None and n not in nodes:
+                        nodes.append(n)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        if not nodes:
+            try:
+                dn = getattr(getattr(self, 'edgeIntersect', None), 'draggedNode', None)
+                if dn is not None:
+                    nodes = [dn]
+            except Exception:
+                pass
+        return nodes
+
+    def _clearGroupDropHighlight(self) -> None:
+        try:
+            scene = self.grScene.scene
+            for grp in list(getattr(scene, 'groups', [])):
+                try:
+                    if getattr(grp, '_drop_highlight', False):
+                        grp.setDropHighlight(False)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    def _updateGroupDropHighlight(self, scenepos) -> None:
+        try:
+            scene = self.grScene.scene
+            nodes = self._draggedNodes()
+            if not nodes:
+                self._clearGroupDropHighlight()
+                return
+            try:
+                target = scene.findGroupForDrop(scenepos, exclude_nodes=nodes)
+            except Exception:
+                target = None
+            for grp in list(getattr(scene, 'groups', [])):
+                try:
+                    grp.setDropHighlight(grp is target)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    def _dropNodesIntoGroupAt(self, scenepos) -> bool:
+        try:
+            scene = self.grScene.scene
+            nodes = self._draggedNodes()
+            if not nodes:
+                return False
+            changed = scene.dropNodesIntoGroup(nodes, scenepos)
+            if changed:
+                try:
+                    scene.history.storeHistory("Moved nodes into group", setModified=True)
+                except Exception:
+                    pass
+            return changed
+        except Exception:
+            return False
 
     def deleteSelected(self) -> None:
         """Delete selected items. Delete-key on a Group = delete Group + Children."""

@@ -17,7 +17,7 @@ Design notes (v2, clean break):
 """
 from qtpy.QtCore import QRectF, Qt, QPointF
 from qtpy.QtGui import QColor, QPainter, QPainterPath, QPen, QBrush, QCursor
-from qtpy.QtWidgets import QGraphicsRectItem, QGraphicsItem, QMenu
+from qtpy.QtWidgets import QGraphicsRectItem, QGraphicsItem, QMenu, QInputDialog, QColorDialog
 
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.utils_no_qt import dumpException
@@ -63,8 +63,10 @@ class Group(Serializable, QGraphicsRectItem):
 
         self._hover_header: bool = False
         self._can_move: bool = False
+        self._moved: bool = False
         self._last_scene_pos: Optional[QPointF] = None
         self._toggle_rect = QRectF()
+        self._drop_highlight: bool = False
 
         self.setPos(x, y)
         self.setZValue(-1)
@@ -224,32 +226,20 @@ class Group(Serializable, QGraphicsRectItem):
             dumpException()
 
     def onChildMoved(self, node: 'Node') -> None:
-        """Auto-expand only. Never auto-remove (explicit Ungroup instead)."""
+        """Recalculate the group boundary whenever a child node moves.
+
+        Tight refit (may grow, shrink, or shift the origin). Never removes
+        nodes — use Ungroup/detach explicitly. Collapsed groups ignore child
+        moves (children are hidden and move with the container instead).
+        """
         try:
             if self._collapsed:
                 return
             if node not in self.child_nodes:
                 return
-            gr = getattr(node, 'grNode', None)
-            if gr is None:
+            if getattr(node, 'grNode', None) is None:
                 return
-            try:
-                lb = gr.boundingRect()
-            except Exception:
-                return
-            nx = node.pos.x() + lb.left()
-            ny = node.pos.y() + lb.top()
-            nr = node.pos.x() + lb.right()
-            nb = node.pos.y() + lb.bottom()
-            gp = self.pos()
-            grct = self.rect()
-            gl = gp.x()
-            gt = gp.y()
-            grr = gp.x() + grct.width()
-            gbb = gp.y() + grct.height()
-            content_top = gt + float(self.TITLE_BAR_HEIGHT)
-            if nx < gl or nr > grr or ny < content_top or nb > gbb:
-                self.updateBounds()
+            self.updateBounds()
         except Exception:
             pass
 
@@ -532,6 +522,102 @@ class Group(Serializable, QGraphicsRectItem):
             self.expand()
 
     # ------------------------------------------------------------------
+    # title + colors (rename via double-click header, recolor via menu)
+    # ------------------------------------------------------------------
+    GROUP_COLOR_PRESETS = {
+        "Gray": (QColor(100, 100, 100, 200), QColor(60, 60, 60)),
+        "Blue": (QColor(70, 110, 180, 200), QColor(45, 70, 120)),
+        "Green": (QColor(80, 160, 100, 200), QColor(45, 95, 60)),
+        "Purple": (QColor(140, 100, 180, 200), QColor(85, 60, 110)),
+        "Orange": (QColor(200, 130, 60, 200), QColor(120, 75, 35)),
+        "Red": (QColor(180, 80, 80, 200), QColor(110, 45, 45)),
+    }
+
+    def setTitle(self, title: str) -> bool:
+        """Set group title. Returns True if changed."""
+        try:
+            title = (title or "").strip()
+            if not title or title == self.title:
+                return False
+            self.title = title
+            try:
+                self.scene.has_been_modified = True
+            except Exception:
+                pass
+            try:
+                self.update()
+            except Exception:
+                pass
+            return True
+        except Exception:
+            return False
+
+    def renameInteractive(self, parent=None) -> bool:
+        """Open rename dialog. Returns True if renamed (caller stores history)."""
+        try:
+            text, ok = QInputDialog.getText(parent, "Rename Group", "Group title:", text=self.title)
+            if not ok:
+                return False
+            return self.setTitle(text)
+        except Exception:
+            return False
+
+    def setColors(self, color=None, title_color=None, border_color=None) -> bool:
+        """Set group colors. Any None arg is left unchanged. Returns True if changed."""
+        changed = False
+        try:
+            if color is not None:
+                c = QColor(color) if not isinstance(color, QColor) else color
+                if c.isValid() and c != self._color:
+                    self._color = c
+                    changed = True
+            if title_color is not None:
+                c = QColor(title_color) if not isinstance(title_color, QColor) else title_color
+                if c.isValid() and c != self._title_color:
+                    self._title_color = c
+                    changed = True
+            if border_color is not None:
+                c = QColor(border_color) if not isinstance(border_color, QColor) else border_color
+                if c.isValid() and c != self._border_color:
+                    self._border_color = c
+                    changed = True
+            if changed:
+                try:
+                    self.setPen(QPen(self._border_color, self._border_width))
+                    self.setBrush(QBrush(self._color))
+                except Exception:
+                    pass
+                try:
+                    self.scene.has_been_modified = True
+                except Exception:
+                    pass
+                try:
+                    self.update()
+                except Exception:
+                    pass
+            return changed
+        except Exception:
+            return False
+
+    def recolorInteractive(self, parent=None) -> bool:
+        """Open color dialog for fill color. Returns True if changed."""
+        try:
+            c = QColorDialog.getColor(self._color, parent, "Group fill color")
+            if not c.isValid():
+                return False
+            return self.setColors(color=c)
+        except Exception:
+            return False
+
+    def setDropHighlight(self, enabled: bool) -> None:
+        try:
+            if self._drop_highlight != bool(enabled):
+                self._drop_highlight = bool(enabled)
+                self.update()
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
     # removal: Delete-key = delete children; context menu Ungroup = keep nodes
     # ------------------------------------------------------------------
     def ungroup(self) -> None:
@@ -600,6 +686,12 @@ class Group(Serializable, QGraphicsRectItem):
         """
         try:
             path = QPainterPath()
+            # WindingFill: overlapping subpaths (toggle lives inside the header
+            # rect) must UNION, not punch an odd-even hole that swallows clicks.
+            try:
+                path.setFillRule(Qt.FillRule.WindingFill)
+            except Exception:
+                pass
             r = self.rect()
             if self._collapsed:
                 path.addRoundedRect(0, 0, r.width(), r.height(), 8.0, 8.0)
@@ -641,12 +733,41 @@ class Group(Serializable, QGraphicsRectItem):
         try:
             if lp.y() < float(self.TITLE_BAR_HEIGHT):
                 self._can_move = True
+                self._moved = False
                 try:
                     self._last_scene_pos = self.mapToScene(lp)
                 except Exception:
                     self._last_scene_pos = None
                 try:
+                    # Exclusive selection (unless Shift): a header click must NOT
+                    # leave nodes + group jointly selected, otherwise a later
+                    # node drag moves the group along (and a group drag
+                    # double-moves selected children via Qt's selection move).
+                    mods = None
+                    try:
+                        mods = event.modifiers()
+                    except Exception:
+                        mods = None
+                    additive = False
+                    try:
+                        additive = bool(mods is not None and (mods & Qt.KeyboardModifier.ShiftModifier))
+                    except Exception:
+                        additive = False
+                    if not additive:
+                        try:
+                            for it in list(self.scene.grScene.selectedItems()):
+                                try:
+                                    if it is not self:
+                                        it.setSelected(False)
+                                except Exception:
+                                    continue
+                        except Exception:
+                            pass
                     self.setSelected(True)
+                    try:
+                        self.scene._last_selected_items = self.scene.getSelectedItems()
+                    except Exception:
+                        pass
                 except Exception:
                     pass
                 super().mousePressEvent(event)
@@ -667,6 +788,30 @@ class Group(Serializable, QGraphicsRectItem):
             except Exception:
                 pass
 
+    def mouseDoubleClickEvent(self, event) -> None:
+        # Double-click header renames; body is click-through like press.
+        try:
+            lp = event.pos()
+            if self._toggleRectLocal().contains(lp):
+                return
+            if lp.y() < float(self.TITLE_BAR_HEIGHT) or self._collapsed:
+                if self.renameInteractive():
+                    try:
+                        self.scene.history.storeHistory("Renamed group", setModified=True)
+                    except Exception:
+                        pass
+                try:
+                    event.accept()
+                except Exception:
+                    pass
+                return
+            try:
+                event.ignore()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def mouseMoveEvent(self, event) -> None:
         if not self._can_move:
             return
@@ -682,9 +827,22 @@ class Group(Serializable, QGraphicsRectItem):
                 return
             delta = new_scene - self._last_scene_pos
             self._last_scene_pos = new_scene
-            # move hidden or visible children by same delta to preserve layout
+            try:
+                if not delta.isNull():
+                    self._moved = True
+            except Exception:
+                self._moved = True
+            # move hidden or visible children by same delta to preserve layout,
+            # skipping selected ones: Qt's selection move already shifts them
+            # (otherwise selected children move 2x per drag).
             for node in list(self.child_nodes):
                 try:
+                    try:
+                        gr = getattr(node, 'grNode', None)
+                        if gr is not None and gr.isSelected():
+                            continue
+                    except Exception:
+                        pass
                     p = node.pos
                     node.setPos(p.x() + delta.x(), p.y() + delta.y())
                 except Exception:
@@ -701,11 +859,16 @@ class Group(Serializable, QGraphicsRectItem):
 
     def mouseReleaseEvent(self, event) -> None:
         moved = self._can_move
+        actually_moved = bool(moved and getattr(self, '_moved', False))
         if not moved:
             # Press was ignored (expanded body click-through): don't let
             # release select the group; let view handle rubber-band/deselect.
             self._can_move = False
             self._last_scene_pos = None
+            try:
+                self._moved = False
+            except Exception:
+                pass
             try:
                 event.ignore()
             except Exception:
@@ -714,12 +877,17 @@ class Group(Serializable, QGraphicsRectItem):
         self._can_move = False
         self._last_scene_pos = None
         try:
+            self._moved = False
+        except Exception:
+            pass
+        try:
             super().mouseReleaseEvent(event)
         except Exception:
             pass
-        if moved:
+        if actually_moved:
             try:
-                # children setPos already updated edges; ensure stubs + history
+                # children setPos already updated edges; ensure stubs + history.
+                # No history stamp for a plain header click without movement.
                 if self._collapsed:
                     self.refreshExternalEdges()
                 self.scene.history.storeHistory("Moved group", setModified=True)
@@ -790,6 +958,12 @@ class Group(Serializable, QGraphicsRectItem):
                 pass
             menu = QMenu()
             toggle_act = menu.addAction("Expand" if self._collapsed else "Collapse")
+            rename_act = menu.addAction("Rename…")
+            color_menu = menu.addMenu("Set color")
+            color_actions = {}
+            for name in self.GROUP_COLOR_PRESETS:
+                color_actions[color_menu.addAction(name)] = name
+            custom_color_act = color_menu.addAction("Custom…")
             ungroup_act = menu.addAction("Ungroup (keep nodes)")
             delete_act = menu.addAction("Delete Group + Children")
             try:
@@ -804,6 +978,25 @@ class Group(Serializable, QGraphicsRectItem):
                         setModified=True)
                 except Exception:
                     pass
+            elif action == rename_act:
+                if self.renameInteractive():
+                    try:
+                        self.scene.history.storeHistory("Renamed group", setModified=True)
+                    except Exception:
+                        pass
+            elif action in color_actions:
+                try:
+                    fill, _title = self.GROUP_COLOR_PRESETS[color_actions[action]]
+                    if self.setColors(color=fill):
+                        self.scene.history.storeHistory("Recolored group", setModified=True)
+                except Exception:
+                    pass
+            elif action == custom_color_act:
+                if self.recolorInteractive():
+                    try:
+                        self.scene.history.storeHistory("Recolored group", setModified=True)
+                    except Exception:
+                        pass
             elif action == ungroup_act:
                 self.ungroup()
                 try:
@@ -848,6 +1041,18 @@ class Group(Serializable, QGraphicsRectItem):
             painter.drawRect(tog)
             painter.setPen(QPen(QColor(255, 255, 255)))
             painter.drawText(tog, int(Qt.AlignmentFlag.AlignCenter), "+" if self._collapsed else "\u2212")
+
+            # drop-target highlight (drag node into group)
+            if self._drop_highlight:
+                try:
+                    hl = QPen(QColor(255, 200, 0), 3)
+                    hl.setStyle(Qt.PenStyle.DashLine)
+                    painter.setPen(hl)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), 8.0, 8.0)
+                    painter.setPen(self.pen())
+                except Exception:
+                    pass
 
             # per-edge stub dots on collapsed box
             if self._collapsed:

@@ -360,6 +360,103 @@ class Scene(Serializable):
             pass
         return None
 
+    def findGroupForDrop(self, scenepos, exclude_nodes=None):
+        """Topmost smallest group whose *bounding* rect contains `scenepos`.
+
+        Uses boundingRect (not header-only shape) so drops onto the body work.
+        Returns None if no candidate. `exclude_nodes` skips groups that already
+        contain all dragged nodes (avoids redundant history stamps).
+        """
+        try:
+            from qtpy.QtCore import QPointF
+            if not isinstance(scenepos, QPointF):
+                try:
+                    scenepos = QPointF(scenepos.x(), scenepos.y())
+                except Exception:
+                    return None
+            best = None
+            best_area = None
+            exclude_ids = set()
+            try:
+                for n in list(exclude_nodes or []):
+                    nid = getattr(n, 'id', None)
+                    exclude_ids.add(nid if nid is not None else id(n))
+            except Exception:
+                pass
+            for grp in list(getattr(self, 'groups', [])):
+                try:
+                    gr = grp
+                    # map scene pos into group local coords, test full rect
+                    try:
+                        lp = gr.mapFromScene(scenepos)
+                    except Exception:
+                        continue
+                    if not gr.rect().contains(lp):
+                        continue
+                    if exclude_ids:
+                        try:
+                            members = set()
+                            for n in list(getattr(grp, 'child_nodes', [])):
+                                nid = getattr(n, 'id', None)
+                                members.add(nid if nid is not None else id(n))
+                            if members and members.issuperset(exclude_ids):
+                                # all dragged nodes already inside; still allow
+                                # highlight? No - skip to avoid noop stamps.
+                                all_inside = True
+                                for n in list(exclude_nodes or []):
+                                    if n not in list(getattr(grp, 'child_nodes', [])):
+                                        all_inside = False
+                                        break
+                                if all_inside:
+                                    continue
+                        except Exception:
+                            pass
+                    try:
+                        area = gr.rect().width() * gr.rect().height()
+                    except Exception:
+                        area = float('inf')
+                    if best is None or area < best_area:
+                        best, best_area = grp, area
+                except Exception:
+                    continue
+            return best
+        except Exception:
+            return None
+
+    def dropNodesIntoGroup(self, nodes, scenepos) -> bool:
+        """Move `nodes` into group under `scenepos`. Returns True if changed."""
+        try:
+            grp = self.findGroupForDrop(scenepos, exclude_nodes=nodes)
+            if grp is None:
+                return False
+            changed = False
+            for node in list(nodes or []):
+                try:
+                    if node is None or getattr(node, 'grNode', None) is None:
+                        continue
+                    if getattr(node, 'parent_group', None) is grp:
+                        continue
+                    grp.addNode(node)
+                    changed = True
+                except Exception:
+                    continue
+            if changed:
+                try:
+                    if getattr(grp, '_collapsed', False):
+                        grp._updateCollapsedSize()
+                        grp.refreshExternalEdges()
+                    else:
+                        grp.updateBounds()
+                except Exception:
+                    pass
+                try:
+                    self.has_been_modified = True
+                except Exception:
+                    pass
+            return changed
+        except Exception:
+            return False
+
     def clear(self) -> None:
         """Remove all `Nodes`, `Edges` and `Groups` from this `Scene`"""
         while len(self.nodes) > 0:

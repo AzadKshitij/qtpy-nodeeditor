@@ -91,6 +91,17 @@ class NodeEditorWindow(QMainWindow):
         self.actDelete = QAction('&Delete', self, shortcut='Del',
                                  statusTip="Delete selected items", triggered=self.onEditDelete)
 
+        self.actGroup = QAction('&Group selected', self, shortcut='G',
+                                statusTip="Group selected nodes", triggered=self.onGroupSelected)
+        self.actUngroup = QAction('&Ungroup', self, shortcut='U',
+                                  statusTip="Ungroup selected groups (keep nodes)", triggered=self.onUngroupSelected)
+        try:
+            self.actUngroup.setShortcuts(['U', 'Shift+G'])
+        except Exception:
+            pass
+        self.actCollapseGroup = QAction('&Collapse/Expand group', self, shortcut='C',
+                                        statusTip="Collapse/expand selected groups", triggered=self.onToggleCollapseSelected)
+
     def createMenus(self) -> None:
         """Create Menus for `File` and `Edit`"""
         self.createFileMenu()
@@ -118,6 +129,10 @@ class NodeEditorWindow(QMainWindow):
         self.editMenu.addAction(self.actPaste)
         self.editMenu.addSeparator()
         self.editMenu.addAction(self.actDelete)
+        self.editMenu.addSeparator()
+        self.editMenu.addAction(self.actGroup)
+        self.editMenu.addAction(self.actUngroup)
+        self.editMenu.addAction(self.actCollapseGroup)
 
     def setTitle(self) -> None:
         """Function responsible for setting window title"""
@@ -265,6 +280,106 @@ class NodeEditorWindow(QMainWindow):
         """Handle Delete Selected operation"""
         if self.getCurrentNodeEditorWidget():
             self.getCurrentNodeEditorWidget().scene.getView().deleteSelected()
+
+    def _groupingFocusInTextEdit(self) -> bool:
+        """Guard plain-letter group shortcuts so typing in node widgets still works."""
+        try:
+            from qtpy.QtWidgets import QLineEdit, QTextEdit, QPlainTextEdit
+            w = QApplication.focusWidget()
+            return isinstance(w, (QLineEdit, QTextEdit, QPlainTextEdit))
+        except Exception:
+            return False
+
+    def _selectedLogicNodes(self, scene):
+        nodes = []
+        try:
+            for item in list(scene.getSelectedItems()):
+                try:
+                    n = getattr(item, 'node', None)
+                    if n is not None and n not in nodes:
+                        nodes.append(n)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return nodes
+
+    def _selectedGroups(self, scene):
+        try:
+            from nodeeditor.node_group import Group
+        except Exception:
+            return []
+        try:
+            return [it for it in list(scene.getSelectedItems()) if isinstance(it, Group)]
+        except Exception:
+            return []
+
+    def onGroupSelected(self) -> None:
+        """Group currently selected nodes (needs 2+). Shortcut G."""
+        if self._groupingFocusInTextEdit():
+            return
+        editor = self.getCurrentNodeEditorWidget()
+        if not editor:
+            return
+        scene = editor.scene
+        nodes = self._selectedLogicNodes(scene)
+        if len(nodes) < 2:
+            try:
+                self.statusBar().showMessage("Select 2+ nodes to group", 3000)
+            except Exception:
+                pass
+            return
+        try:
+            from nodeeditor.node_group import Group
+            group = Group(scene, title=f"Group ({len(nodes)} nodes)")
+            for node in nodes:
+                group.addNode(node)
+            group.updateBounds()
+            scene.history.storeHistory(f"Created group with {len(nodes)} nodes", setModified=True)
+        except Exception:
+            pass
+
+    def onUngroupSelected(self) -> None:
+        """Ungroup selected groups, keep nodes. Shortcut U / Shift+G."""
+        if self._groupingFocusInTextEdit():
+            return
+        editor = self.getCurrentNodeEditorWidget()
+        if not editor:
+            return
+        scene = editor.scene
+        groups = self._selectedGroups(scene)
+        if not groups:
+            return
+        for grp in list(groups):
+            try:
+                grp.ungroup()
+            except Exception:
+                continue
+        try:
+            scene.history.storeHistory("Ungrouped", setModified=True)
+        except Exception:
+            pass
+
+    def onToggleCollapseSelected(self) -> None:
+        """Collapse/expand selected groups. Shortcut C."""
+        if self._groupingFocusInTextEdit():
+            return
+        editor = self.getCurrentNodeEditorWidget()
+        if not editor:
+            return
+        scene = editor.scene
+        groups = self._selectedGroups(scene)
+        if not groups:
+            return
+        for grp in list(groups):
+            try:
+                grp.toggleCollapse()
+            except Exception:
+                continue
+        try:
+            scene.history.storeHistory("Toggled group collapse", setModified=True)
+        except Exception:
+            pass
 
     def onEditCut(self) -> None:
         """Handle Edit Cut to clipboard operation"""

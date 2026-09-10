@@ -237,22 +237,22 @@ class CalculatorSubWindow(NodeEditorWidget):
         except Exception as e:
             dumpException(e)
 
+    def onDetachNodeFromGroup(self, node: "Node"):
+        """Detach `node` from its parent group so it moves freely."""
+        try:
+            grp = getattr(node, 'parent_group', None)
+            if grp is None:
+                return
+            grp.removeNode(node)
+            self.scene.history.storeHistory("Detached node from group", setModified=True)
+        except Exception as e:
+            dumpException(e)
+
     def handleNodeContextMenu(self, event):
         if DEBUG_CONTEXT:
             print("CONTEXT: NODE")
-        context_menu = QMenu(self)
-        markDirtyAct = context_menu.addAction("Mark Dirty")
-        markDirtyDescendantsAct = context_menu.addAction(
-            "Mark Descendant Dirty")
-        markInvalidAct = context_menu.addAction("Mark Invalid")
-        unmarkInvalidAct = context_menu.addAction("Unmark Invalid")
-        group_nodes = context_menu.addAction("Group Selected Nodes")
-        evalAct = context_menu.addAction("Eval")
-        try:
-            action = context_menu.exec(self.mapToGlobal(event.pos()))
-        except Exception:
-            action = None
-
+        # Resolve the right-clicked node BEFORE building the menu so entries
+        # can be gated on actual state.
         selected = None
         item = self.scene.getItemAt(event.pos())
         if type(item) == QGraphicsProxyWidget:
@@ -262,6 +262,32 @@ class CalculatorSubWindow(NodeEditorWidget):
             selected = item.node
         if hasattr(item, 'socket'):
             selected = item.socket.node
+
+        # Nodes available for grouping = current selection (+ clicked node,
+        # in case right-click hasn't selected it yet).
+        nodes_for_grouping = list(self.scene.getSelectedNodes())
+        if selected is not None and selected not in nodes_for_grouping:
+            nodes_for_grouping.append(selected)
+
+        context_menu = QMenu(self)
+        markDirtyAct = context_menu.addAction("Mark Dirty")
+        markDirtyDescendantsAct = context_menu.addAction(
+            "Mark Descendant Dirty")
+        markInvalidAct = context_menu.addAction("Mark Invalid")
+        unmarkInvalidAct = context_menu.addAction("Unmark Invalid")
+        # Only offer grouping when it can actually do something (>1 node).
+        group_nodes = None
+        if len(nodes_for_grouping) > 1:
+            group_nodes = context_menu.addAction("Group Selected Nodes")
+        # Only offer detach when the clicked node actually lives in a group.
+        detach_act = None
+        if selected is not None and getattr(selected, 'parent_group', None) is not None:
+            detach_act = context_menu.addAction("Detach from Group")
+        evalAct = context_menu.addAction("Eval")
+        try:
+            action = context_menu.exec(self.mapToGlobal(event.pos()))
+        except Exception:
+            action = None
 
         if DEBUG_CONTEXT:
             print("got item:", selected)
@@ -273,10 +299,12 @@ class CalculatorSubWindow(NodeEditorWidget):
             selected.markInvalid()
         if selected and action == unmarkInvalidAct:
             selected.markInvalid(False)
-        if selected and action == group_nodes:
+        if group_nodes is not None and selected and action == group_nodes:
             print("Context menu for empty space")
             # Check if we have selected nodes for grouping
             nodes_selected = self.scene.getSelectedNodes()
+            if selected not in nodes_selected:
+                nodes_selected.append(selected)
             print(
                 "🐍 File: example_calculator/calc_sub_window.py | Line: 277 | handleNodeContextMenu ~ nodes_selected",
                 nodes_selected,
@@ -285,6 +313,8 @@ class CalculatorSubWindow(NodeEditorWidget):
             if len(nodes_selected) > 1:
                 # Show grouping context menu for multiple selected nodes
                 self.onGroupSelectedNodes(nodes_selected)
+        if detach_act is not None and selected and action == detach_act:
+            self.onDetachNodeFromGroup(selected)
         if selected and action == evalAct:
             val = selected.eval()
             if DEBUG_CONTEXT:
