@@ -83,18 +83,41 @@ class EdgeIntersect:
             socket_start = edge.end_socket
             socket_end = edge.start_socket
 
+        new_node_socket_in = node.inputs[0]
+        new_node_socket_out = node.outputs[0]
+
+        # Validate like manual drag does before touching the original edge.
+        if not Edge.validateEdge(socket_start, new_node_socket_in):
+            return
+        if not Edge.validateEdge(new_node_socket_out, socket_end):
+            return
+
+        # Use the Scene's Edge class so subclasses survive splits
+        # (hardcoded Edge() would silently downgrade them).
+        edge_class = self.grScene.scene.getEdgeClass()
+
         # The new edges will have the same edge_type as the intersected edge
         edge_type = edge.edge_type
         edge.remove()
         self.grView.grScene.scene.history.storeHistory(
             'Delete existing edge', setModified=True)
 
-        new_node_socket_in = node.inputs[0]
-        Edge(self.grScene.scene, socket_start,
-             new_node_socket_in, edge_type=edge_type)
-        new_node_socket_out = node.outputs[0]
-        Edge(self.grScene.scene, new_node_socket_out,
-             socket_end, edge_type=edge_type)
+        e1 = edge_class(self.grScene.scene, socket_start,
+                        new_node_socket_in, edge_type=edge_type)
+        e2 = edge_class(self.grScene.scene, new_node_socket_out,
+                        socket_end, edge_type=edge_type)
+
+        # Notify exactly like manual drag (EdgeDragging.edgeDragEnd) so nodes
+        # relying on onEdgeConnectionChanged/onInputChanged (dirty marking,
+        # re-eval, cached input data) behave identically for auto-splits.
+        for socket, new_edge in ((socket_start, e1), (new_node_socket_in, e1),
+                                 (new_node_socket_out, e2), (socket_end, e2)):
+            try:
+                socket.node.onEdgeConnectionChanged(new_edge)
+                if socket.is_input:
+                    socket.node.onInputChanged(socket)
+            except Exception:
+                continue
 
         self.grView.grScene.scene.history.storeHistory(
             'Created new edges by dropping node', setModified=True)

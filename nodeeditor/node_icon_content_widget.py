@@ -22,7 +22,7 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
     """Base class for representation of the Node's graphics content. This class also provides layout
     for other widgets inside of a :py:class:`~nodeeditor.node_node.Node`"""
 
-    def __init__(self, node: 'Node', parent: QWidget = None) -> None:
+    def __init__(self, node: 'Node', parent: Optional[QWidget] = None) -> None:
         """
         :param node: reference to the :py:class:`~nodeeditor.node_node.Node`
         :type node: :py:class:`~nodeeditor.node_node.Node`

@@ -792,7 +792,8 @@ class Scene(Serializable):
             if group is None:
                 continue
             # v2 key "children", old key "child_node_ids" (clean break: old loads expanded)
-            child_ids = group_data.get("children", group_data.get("child_node_ids", []))
+            child_ids = group_data.get(
+                "children", group_data.get("child_node_ids", []))
             try:
                 node_by_id = {getattr(n, 'id', None): n for n in self.nodes}
                 for child_id in list(child_ids or []):
