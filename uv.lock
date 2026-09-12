@@ -130,7 +130,7 @@ wheels = [
 
 [[package]]
 name = "qtpy-nodeeditor"
-version = "0.1.0"
+version = "0.3"
 source = { virtual = "." }
 dependencies = [
     { name = "orjson" },
