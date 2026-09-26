@@ -66,6 +66,11 @@ class QDMNodeContentWidget(QWidget, Serializable):
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
         return True
 
+    # NOTE: deliberately no `history_stamp_callback` here. SceneHistory's
+    # dispatch resolves the hook with getattr and tolerates its absence, and
+    # defining a no-op base would shadow the real implementation in any
+    # content class whose MRO puts this Qt base ahead of its own mixin.
+
 
 class QDMTextEdit(QTextEdit):
     """

@@ -1,358 +1,307 @@
-# Node Grouping Feature
+# Node Grouping — Complete Usage Guide
 
-This document describes the node grouping feature that has been added to the qtpy-nodeeditor project.
+This guide covers the `Group` feature of `qtpy-nodeeditor`: how to create groups,
+manage membership, collapse/expand, style, serialize, and integrate grouping into
+your own application's menus, shortcuts, and context menus.
 
-## Overview
+> Import path: `from nodeeditor.node_group import Group`
+> (`nodeeditor.node_group_node.GroupNode` is a backward-compatible alias.)
 
-Node grouping allows you to visually group related nodes together into a single container, similar to node grouping in Blender or other node-based editors. Groups can be:
-- **Collapsed** - to hide child nodes and edges, reducing visual clutter
-- **Expanded** - to show all child nodes
-- **Moved** - all child nodes move together with the group
-- **Serialized** - groups persist in saved files
+## 1. Overview
 
-## Architecture
+A `Group` is a **pure visual container** (`QGraphicsRectItem` + `Serializable`).
+It is deliberately **not** a `Node`:
 
-### Core Components
+- No sockets, no evaluation, no `content` widget.
+- It holds references to child nodes; nodes keep their positions, sizes, sockets,
+  and edges at all times — collapsing only **hides** things, never resizes them.
+- Logical `Edge` objects are never mutated by grouping. When collapsed, only the
+  *graphics* endpoints of external edges are rerouted to per-edge stub rows on
+  the collapsed box. Internal edges (both ends inside) are hidden until expand.
 
-#### 1. **GroupNode** (`nodeeditor/node_group_node.py`)
-- **Extends**: `QGraphicsRectItem` (not `Node`) - pure visual container
-- **Purpose**: Container for grouping nodes together
-- **Key attributes**:
-  - `child_nodes` - list of nodes in the group
-  - `_is_collapsed` - collapse state
-  - `title` - group title (shown in title bar)
+Groups can be **moved** (children follow), **collapsed/expanded**,
+**renamed/recolored**, **serialized** (saved/loaded, undo/redo, clipboard),
+**ungrouped** (keep nodes) or **deleted with children**.
 
-#### 2. **Node Enhancement** (`nodeeditor/node_node.py`)
-- **New attribute**: `parent_group: Optional['GroupNode'] = None`
-- **Purpose**: Tracks which group (if any) contains the node
+## 2. Quick start
 
-#### 3. **Scene Integration** (`nodeeditor/node_scene.py`)
-- **Modified**: `getNodeClassFromData()` method
-- **Purpose**: Handles deserialization of GroupNode objects from JSON
-
-## Features
-
-### Basic Operations
-
-#### Creating a Group
 ```python
-from nodeeditor.node_group_node import GroupNode
+import sys
+from qtpy.QtWidgets import QApplication
+from nodeeditor.node_editor_widget import NodeEditorWidget
+from nodeeditor.node_node import Node
+from nodeeditor.node_edge import Edge, EDGE_TYPE_BEZIER
+from nodeeditor.node_group import Group
 
-# Create a group
-group = GroupNode(scene, title="My Group", x=100, y=100, width=300, height=200)
+app = QApplication(sys.argv)
+editor = NodeEditorWidget()
+scene = editor.scene
 
-# Add nodes to the group
+a = Node(scene, "A", inputs=[], outputs=[1]); a.setPos(-200, 0)
+b = Node(scene, "B", inputs=[1], outputs=[1]); b.setPos(0, 0)
+c = Node(scene, "C", inputs=[1], outputs=[]); c.setPos(250, 0)
+Edge(scene, a.outputs[0], b.inputs[0], edge_type=EDGE_TYPE_BEZIER)
+Edge(scene, b.outputs[0], c.inputs[0], edge_type=EDGE_TYPE_BEZIER)
+
+# Group.__init__ already registers with scene.groups AND the graphics scene.
+group = Group(scene, title="My Group")
+group.addNode(a)
+group.addNode(b)
+group.updateBounds()  # auto-fit the box around its children
+
+scene.history.storeHistory("Created group", setModified=True)
+editor.show()
+sys.exit(app.exec())
+```
+
+## 3. Core concepts
+
+| Concept | Rule |
+|---|---|
+| Single parent | A node belongs to at most one group (`node.parent_group` or `None`). `addNode` automatically removes it from its previous group. |
+| No nesting | Groups cannot contain groups (`addNode` takes `Node`s only). |
+| No auto-remove | Dragging a node out does **not** eject it — the box grows/shrinks to follow (see §6). Removal is always explicit (Ungroup / Detach / Delete). |
+| Z-order | Groups paint at `z = -1`, behind nodes, so child clicks hit children first. |
+| Header vs body | Only the **title bar** is interactive (select, drag, collapse button, context menu). The expanded **body is click-through**: clicks, rubber-band, and right-clicks there behave exactly like plain canvas. The small **collapsed** box is fully clickable. |
+| Selection | Clicking the header selects **only** the group (deselects everything else). `Shift`+click adds to the selection instead. |
+
+## 4. Creating groups
+
+### 4.1 Programmatically
+
+```python
+group = Group(scene, title="Math", x=0, y=0, width=200, height=150)
 group.addNode(node1)
 group.addNode(node2)
-
-# Update group boundaries to fit all nodes
-group.updateGroupBoundaries()
-
-# Add to graphics scene
-scene.grScene.addItem(group)
+group.updateBounds()
+scene.history.storeHistory("Created group", setModified=True)
 ```
 
-#### Collapsing/Expanding Groups
+### 4.2 From the user's selection (needs 2+ nodes)
+
 ```python
-# Collapse - hides child nodes and edges
-group.collapse()
+nodes = [item.node for item in scene.getSelectedItems() if hasattr(item, "node")]
+if len(nodes) >= 2:
+    group = Group(scene, title=f"Group ({len(nodes)} nodes)")
+    for node in nodes:
+        group.addNode(node)
+    group.updateBounds()
+    scene.history.storeHistory("Created group", setModified=True)
+```
 
-# Expand - shows child nodes and edges
-group.expand()
+The built-in main window already does this: **`G`** groups the selection
+(`NodeEditorWindow.onGroupSelected`). The calculator example exposes the same
+via right-click → *Group Selected Nodes* (only shown when >1 node is selected).
 
-# Toggle
+### 4.3 Drag-and-drop
+
+Dragging node(s) over a group highlights it (dashed gold border) and drops them
+in on release — handled automatically by `QDMGraphicsView` + `Scene.dropNodesIntoGroup`.
+No code needed. Dropping never removes nodes from their previous group membership
+ambiguously: a node is *moved* into the new group (single-parent rule).
+
+## 5. Membership
+
+```python
+group.addNode(node)          # move into group (removes from previous group)
+group.removeNode(node)       # detach, keep node; group keeps its size
+group.getChildNodes()        # copy of the member list
+group.contains(node)         # membership test
+node.parent_group            # the Group or None
+```
+
+`removeNode` disconnects the `positionChanged` tracking signal and flags the
+scene modified. Removing the *last* child leaves an empty box behind — delete it
+explicitly if unwanted (`group.ungroup()` on an empty group just disposes it).
+
+## 6. Moving and auto-fit
+
+- **Drag the title bar**: the box and all children move together by the same delta
+  (selected children are moved once — Qt's selection move and the group follower
+  never double-apply). External edge stubs stay glued while dragging collapsed groups.
+- **Drag a child node**: `node.positionChanged` → `Group.onChildMoved` →
+  `updateBounds()`, i.e. the boundary is **recalculated on every child move**
+  (grows, shrinks, or shifts origin to tightly fit). Children themselves are never
+  moved by a refit — only the box rect/position changes.
+- A plain header click (no drag) stores no history; only a real move stamps
+  `"Moved group"`.
+
+## 7. Collapse / expand and edge stubs
+
+```python
+group.collapse()        # hide children + internal edges, show stubs
+group.expand()          # restore everything exactly (positions were preserved)
 group.toggleCollapse()
-
-# Check state
-if group.isCollapsed():
-    print("Group is collapsed")
+group.setCollapsed(True)
+group.isCollapsed()     # state check
 ```
 
-#### Managing Group Membership
-```python
-# Add a node
-group.addNode(node)
+Collapse mechanics, per edge (never per node):
 
-# Remove a node
-group.removeNode(node)
+- **Internal** edges (both ends inside) → `grEdge.hide()`.
+- **Incoming** edges (end inside) → stub row on the **left** box edge.
+- **Outgoing** edges (start inside) → stub row on the **right** box edge.
+- Rows are ordered deterministically by `edge.id`, so stubs are stable across
+  undo/redo and save/load. Box height grows to fit the row count.
+- `Edge.updatePositions()` is collapse-aware: endpoints inside a collapsed group
+  resolve to `Group.stubPosFor(edge)`; logic sockets are untouched.
 
-# Get all child nodes
-children = group.getChildNodes()
+Toggle via the painted `+`/`−` button (top-right of the title bar), the header
+context menu, or the **`C`** shortcut for header-selected groups.
 
-# Check if node is in a group
-if node.parent_group is not None:
-    print(f"Node is in group: {node.parent_group.title}")
-```
-
-### Automatic Boundary Management
-
-The group automatically:
-- **Removes** nodes that move completely outside the group boundary
-- **Expands** to fit nodes that partially move outside the boundary
+## 8. Appearance: rename and colors
 
 ```python
-# Triggered automatically when:
-# 1. Nodes are moved
-# 2. Nodes are removed
-# 3. Group boundaries are updated
-
-group.checkAndAutoAdjustBoundaries()
+group.setTitle("Prefilter")                        # False if empty/unchanged
+group.setColors(color=QColor(70, 110, 180, 200))   # fill; title/border optional
+group.setColors(title_color=..., border_color=...) # any None arg is kept
 ```
 
-### Serialization
-
-Groups are fully serializable and persist in saved files:
+Interactive variants (used by the header menu; each caller stamps history):
 
 ```python
-# Serialize
-data = group.serialize()
-# Returns: {
-#     'type': 'GroupNode',
-#     'title': 'Group Title',
-#     'x': 100.0,
-#     'y': 100.0,
-#     'width': 300.0,
-#     'height': 200.0,
-#     'is_collapsed': False,
-#     'child_node_ids': [node_id1, node_id2, ...],
-#     'color': (r, g, b, a),
-#     'title_color': (r, g, b, a),
-#     'border_color': (r, g, b, a)
-# }
-
-# Deserialize
-group = GroupNode(scene)
-success = group.deserialize(data)
+group.renameInteractive()    # QInputDialog; True if renamed
+group.recolorInteractive()   # QColorDialog for the fill color
 ```
 
-## Calculator Example Integration
+Presets live in `Group.GROUP_COLOR_PRESETS`
+(`Gray/Blue/Green/Purple/Orange/Red`). Double-clicking the header renames.
+The header context menu offers *Collapse/Expand, Rename…, Set color ▸,
+Ungroup (keep nodes), Delete Group + Children*.
 
-The calculator example now includes grouping functionality:
+## 9. Selection model (important for app code)
 
-### Using Grouping in Calculator
+- Header click = **exclusive** selection of the group. This is what prevents the
+  classic bug where a later node drag also drags the group (mixed selections move
+  together in Qt).
+- `Shift`+header-click = additive selection (advanced use; dragging such a mixed
+  selection moves everything once — selected children are skipped by the group
+  follower).
+- Clicking a node normally deselects the group (standard Qt exclusive click).
+- `scene.getSelectedItems()` may contain `Group` items — filter with
+  `hasattr(item, "node")` when you only want nodes (as the calculator's
+  `getSelectedNodes` does). History snapshots include group selection.
 
-1. **Create nodes** - drag nodes from the node list
-2. **Select multiple nodes** - click nodes while holding Shift/Ctrl
-3. **Right-click** - on the selected nodes
-4. **Select "Group Selected Nodes"** - from the context menu
-5. **Group is created** - automatically sized to contain all nodes
+## 10. Deleting: three distinct operations
 
-### Visual Feedback
-
-- Groups appear as **rounded rectangles** with a title bar
-- Title bar shows group name and collapse/expand button
-- Groups have **semi-transparent background** (configurable color)
-- Groups display a **+/-** indicator for collapse state
-- Groups are **selectable and movable** like regular nodes
-
-## Customization
-
-### Custom Group Appearance
+| Action | Effect | Trigger |
+|---|---|---|
+| **Ungroup** | Deletes only the box; all nodes (and edges) survive. Expands first if collapsed. | Header menu, **`U`** / `Shift+G` on selected groups |
+| **Delete Group + Children** | Deletes the box **and** every child node (their edges go with the nodes). | Header menu, **`Del`** on a selected group (`deleteSelected` → `deleteWithChildren`) |
+| **Detach node** | Removes one node from its group; node stays, group stays. | Your node context menu (see §13) |
 
 ```python
-from qtpy.QtGui import QColor
-
-group = GroupNode(scene, title="Custom Group")
-
-# Customize colors
-group._color = QColor(150, 100, 200, 200)           # Fill color
-group._title_color = QColor(255, 255, 255)         # Title text color
-group._border_color = QColor(100, 50, 150)         # Border color
-group._border_width = 3                             # Border width
-group._title_bar_height = 40                        # Title bar height
-group._corner_radius = 10                           # Corner radius
-
-group.update()  # Refresh display
+group.ungroup()              # keep nodes
+group.deleteWithChildren()   # Del-key semantics
+group.dispose()              # low-level: drop graphics + scene entry (used internally)
 ```
 
-### Custom Group Factory
+## 11. Serialization (v2 format)
 
-For more complex scenarios, use the `GroupNodeFactory`:
+`Scene.serialize()` includes `groups`; each group stores:
+
+```json
+{
+  "id": 123, "type": "Group", "version": 2, "title": "My Group",
+  "x": -20.0, "y": -50.0, "w": 470.0, "h": 310.0,
+  "collapsed": true, "children": [11, 22],
+  "style": {"color": [100,100,100,200], "title_color": [255,255,255,255],
+            "border_color": [50,50,50,255]}
+}
+```
+
+Notes:
+
+- Positions/sizes of *nodes* are never altered by collapse, so expand restores exactly.
+- Old files (`type: "GroupNode"`, `child_node_ids`, `original_node_states`) load
+  **best-effort as expanded** — re-collapse them once and re-save to migrate.
+- `Scene.clear()` removes nodes, edges, **and** groups. `Node.remove()` detaches
+  from its group first.
+
+## 12. History (undo/redo) and clipboard
+
+- Group create/move/collapse/rename/recolor/ungroup/delete all stamp history, so
+  undo/redo restores membership, bounds, collapsed state, **and** internal-edge
+  visibility (expanded restores mirror `expand()`; collapsed restores re-hide
+  internals and refresh stubs).
+- **Copy rule (wholesale):** selecting just a group header copies the *whole*
+  group — children and internal edges are pulled in automatically. External edges
+  are kept only if both ends are in the copy. Rubber-banding all children of a
+  group (without the header) also preserves the group on paste. Cut uses the same
+  rule, then deletes via `deleteSelected`.
+
+## 13. Wiring your own app
+
+### 13.1 Main-window menus + shortcuts (built in)
+
+`NodeEditorWindow` provides Edit-menu actions and handlers — reuse or override:
+
+| Shortcut | Action | Handler |
+|---|---|---|
+| `G` | Group selected (2+ nodes) | `onGroupSelected` |
+| `U` / `Shift+G` | Ungroup selected groups | `onUngroupSelected` |
+| `C` | Collapse/expand selected groups | `onToggleCollapseSelected` |
+
+Single-letter shortcuts ignore keystrokes typed into node text fields
+(focus guard in `_groupingFocusInTextEdit`). MDI apps (like the calculator)
+inherit these via `super().createActions()/createMenus()`.
+
+### 13.2 Node context menu: Detach + gated Group item
+
+`Group Selected Nodes` must only appear when it can act (>1 node), and grouped
+nodes should offer detach. Pattern (as in `calc_sub_window.py`):
 
 ```python
-from nodeeditor.node_group_utils import GroupNodeFactory
+def handleNodeContextMenu(self, event):
+    selected = ...  # resolve right-clicked node FIRST
+    candidates = list(self.scene.getSelectedNodes())
+    if selected is not None and selected not in candidates:
+        candidates.append(selected)
 
-# Create a group with nodes
-group = GroupNodeFactory.createGroup(
-    scene=scene,
-    title="My Group",
-    nodes=[node1, node2, node3]
-)
-
-# Create from selected nodes
-group = GroupNodeFactory.groupSelectedNodes(
-    scene=scene,
-    title="Selected Group"
-)
+    menu = QMenu(self)
+    ...
+    group_act = menu.addAction("Group Selected Nodes") if len(candidates) > 1 else None
+    detach_act = (menu.addAction("Detach from Group")
+                  if selected is not None and selected.parent_group is not None else None)
+    ...
+    if group_act is not None and action == group_act and len(candidates) > 1:
+        self.onGroupSelectedNodes(candidates)
+    if detach_act is not None and action == detach_act:
+        selected.parent_group.removeNode(selected)
+        self.scene.history.storeHistory("Detached node from group", setModified=True)
 ```
 
-## API Reference
+## 14. Rules & edge cases reference
 
-### GroupNode Methods
+- Dropping a node into a group while an edge-split (`EdgeIntersect`) is armed:
+  edge-split runs first, group-drop second — both can apply to one release.
+- Cutting (`Ctrl`+drag) skips hidden internal edges of collapsed groups.
+- Connecting *new* edges to a collapsed group isn't possible by mouse (sockets are
+  hidden) — expand first; existing externals keep working through stubs.
+- `Scene.findGroupForDrop(pos, exclude_nodes)` picks the smallest overlapping box;
+  `Scene.dropNodesIntoGroup(nodes, pos)` returns whether anything changed.
+- `Scene.getGroupById(id)` / `findCollapsedGroupForNode(node)` helpers exist for
+  custom tools (e.g. routing `Edge.updatePositions`-style overrides).
 
-#### Creation & Management
-- `__init__(scene, title, x, y, width, height)` - Create group
-- `addNode(node)` - Add node to group
-- `removeNode(node)` - Remove node from group
-- `getChildNodes()` - Get list of child nodes
+## 15. Troubleshooting
 
-#### Boundaries
-- `calculateBoundingBox()` - Calculate bbox of all children
-- `updateGroupBoundaries()` - Resize group to fit children
-- `checkAndAutoAdjustBoundaries()` - Auto-remove/expand
+| Symptom | Cause / fix |
+|---|---|
+| Clicks inside the box do nothing to the group | By design (click-through body). Use the title bar. |
+| Group moves when dragging a node | Mixed `{node, group}` selection — header clicks are exclusive by default; check for code calling `setSelected(True)` additively or `Shift` held. |
+| Box jumps when a node moves | `onChildMoved` tight-refits by design; children never move, only the rect. |
+| Group missing after load | Old-format file: loads expanded; check `groups` array and `children` ids match `nodes` ids. |
+| Pasted group lost its box | Only the header (or *all* children) was selected — see §12 copy rule. |
+| `G` types into a field instead of grouping | Focus is in a text edit — by design; click the canvas first. |
 
-#### State Management
-- `collapse()` - Hide child nodes and edges
-- `expand()` - Show child nodes and edges
-- `toggleCollapse()` - Toggle collapse state
-- `isCollapsed()` - Check if collapsed
+## 16. API reference (quick index)
 
-#### Serialization
-- `serialize()` - Export to dict
-- `deserialize(data, hashmap, restore_id)` - Import from dict
-
-#### Graphics
-- `paint(painter, option, widget)` - Custom painting
-- `mouseMoveEvent(event)` - Group + children movement
-- `mouseReleaseEvent(event)` - Cleanup
-
-### Node Enhancement
-
-#### New Attribute
-- `node.parent_group` - Reference to parent group (or None)
-
-## Implementation Details
-
-### Why GroupNode extends QGraphicsRectItem
-
-GroupNode is intentionally **not** a Node subclass because:
-
-1. **No evaluation** - Groups don't have inputs/outputs/sockets
-2. **Pure container** - Groups hold references to nodes, not evaluation data
-3. **Graphics layer** - Groups live purely in the graphics scene
-4. **No signals** - Groups don't participate in node evaluation signals
-5. **Lightweight** - Minimal overhead compared to full Node implementation
-
-### Edge Visibility Management
-
-When collapsing/expanding groups:
-- All edges connected to child nodes are hidden/shown
-- Edges are found via `node.inputs[i].edges` and `node.outputs[i].edges`
-- External edges (connecting to nodes outside the group) remain visible
-- Internal edges (between child nodes) are also affected
-
-### Performance Considerations
-
-- **Lazy boundary updates** - Boundaries only recalculate when needed
-- **Efficient storage** - Groups store only node references, not copies
-- **Graphics optimization** - GroupNode uses QGraphicsRectItem's efficient painting
-- **Serialization** - Groups only store node IDs, not full node data
-
-## Testing
-
-### Unit Tests
-```bash
-python test_groupnode_basic.py
-```
-
-### Calculator Example Tests
-```bash
-python test_grouping_calculator.py
-```
-
-### Manual Testing in Calculator
-1. Run: `python examples/example_calculator/main.py`
-2. Create several nodes
-3. Select 2+ nodes (Shift+click)
-4. Right-click → "Group Selected Nodes"
-5. Test collapse/expand by right-clicking group
-6. Save file and reload to verify serialization
-
-## Limitations & Future Enhancements
-
-### Current Limitations
-- Groups cannot be nested (groups inside groups)
-- No built-in "Ungroup" context menu option
-- Groups require manual scene.grScene.addItem() after creation
-- Collapse button is visual only (no click handler in current version)
-
-### Planned Enhancements
-- [ ] Nested group support
-- [ ] Click-to-collapse button
-- [ ] Group color/style customization UI
-- [ ] Ungroup context menu option
-- [ ] Group properties dialog
-- [ ] Multi-select group operations
-- [ ] Group templates/presets
-
-## Troubleshooting
-
-### Group not appearing
-- Ensure `scene.grScene.addItem(group)` is called
-- Verify `group.updateGroupBoundaries()` is called before display
-
-### Nodes not moving with group
-- Check that `node.parent_group` is set correctly
-- Verify `mouseMoveEvent()` is being triggered
-
-### Collapse/expand not working
-- Ensure group has child nodes with valid `grNode` graphics items
-- Check that edges have valid `grEdge` graphics items
-
-### Serialization issues
-- Verify all child nodes are properly serialized
-- Check that `child_node_ids` matches actual nodes in scene
-- Ensure Scene deserialization recognizes `type: 'GroupNode'`
-
-## Examples
-
-### Complete Example: Group Calculator Nodes
-
-```python
-from qtpy.QtWidgets import QApplication
-from nodeeditor.node_scene import Scene
-from nodeeditor.node_group_node import GroupNode
-from examples.example_calculator.nodes.input import CalcNode_Input
-from examples.example_calculator.nodes.operations import CalcNode_Add, CalcNode_Multiply
-from examples.example_calculator.nodes.output import CalcNode_Output
-
-app = QApplication([])
-scene = Scene()
-
-# Create nodes
-inp = CalcNode_Input(scene)
-inp.setPos(0, 0)
-
-add = CalcNode_Add(scene)
-add.setPos(200, 0)
-
-mul = CalcNode_Multiply(scene)
-mul.setPos(400, 0)
-
-out = CalcNode_Output(scene)
-out.setPos(600, 0)
-
-# Connect
-scene.createEdge(inp.outputs[0], add.inputs[0])
-scene.createEdge(add.outputs[0], mul.inputs[0])
-scene.createEdge(mul.outputs[0], out.inputs[0])
-
-# Create group
-group = GroupNode(scene, title="Math Operations")
-group.addNode(add)
-group.addNode(mul)
-group.updateGroupBoundaries()
-scene.grScene.addItem(group)
-
-# Now the group contains Add and Multiply nodes
-# Collapse the group to hide them
-group.collapse()
-```
-
-## See Also
-
-- `nodeeditor/node_group_node.py` - Main GroupNode implementation
-- `nodeeditor/node_group_utils.py` - Factory and utility functions
-- `examples/example_calculator/calc_sub_window.py` - Calculator integration
-- `test_groupnode_basic.py` - Unit tests
-- `test_grouping_calculator.py` - Integration tests
+`Group`: `addNode / removeNode / getChildNodes / contains`,
+`calculateBounds / updateBounds`, `collapse / expand / toggleCollapse /
+setCollapsed / isCollapsed / restoreExpandedVisuals / applyCollapsedAfterLoad`,
+`setTitle / renameInteractive / setColors / recolorInteractive /
+GROUP_COLOR_PRESETS / setDropHighlight`, `ungroup / deleteWithChildren / dispose`,
+`externalEdges / stubPosFor / refreshExternalEdges`, `serialize / deserialize`,
+`shape (header-only hit-test) / paint`.
+`Scene`: `addGroup / removeGroup / getGroupById / findCollapsedGroupForNode /
+findGroupForDrop / dropNodesIntoGroup`, `groups` list, `parent_group` on `Node`.

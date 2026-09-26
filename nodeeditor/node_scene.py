@@ -210,6 +210,29 @@ class Scene(Serializable):
         if not silent:
             self.onItemsDeselected()
 
+    # ------------------------------------------------------------------
+    # Undo / Redo entry points
+    # ------------------------------------------------------------------
+
+    def undo(self) -> None:
+        """Revert the most recent recorded change.
+
+        Routed through the scene rather than called on ``history`` directly so
+        subclasses can layer an alternative undo backend underneath the
+        default snapshot implementation.
+        """
+        self.history.undo()
+
+    def redo(self) -> None:
+        """Reapply the most recently reverted change."""
+        self.history.redo()
+
+    def canUndo(self) -> bool:
+        return self.history.canUndo()
+
+    def canRedo(self) -> bool:
+        return self.history.canRedo()
+
     # our helper listener functions
     def addHasBeenModifiedListener(self, callback: Callable[[], None]) -> None:
         """

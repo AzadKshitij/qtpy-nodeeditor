@@ -269,12 +269,12 @@ class NodeEditorWindow(QMainWindow):
     def onEditUndo(self) -> None:
         """Handle Edit Undo operation"""
         if self.getCurrentNodeEditorWidget():
-            self.getCurrentNodeEditorWidget().scene.history.undo()
+            self.getCurrentNodeEditorWidget().scene.undo()
 
     def onEditRedo(self) -> None:
         """Handle Edit Redo operation"""
         if self.getCurrentNodeEditorWidget():
-            self.getCurrentNodeEditorWidget().scene.history.redo()
+            self.getCurrentNodeEditorWidget().scene.redo()
 
     def onEditDelete(self) -> None:
         """Handle Delete Selected operation"""
