@@ -154,14 +154,44 @@ class Socket(QObject, Serializable):
         """
         return edge in self.edges
 
-    def addEdge(self, edge: 'Edge') -> None:
+    def addEdge(self, edge: 'Edge', index: Optional[int] = None) -> None:
         """
         Append an Edge to the list of connected Edges
 
+        On an **input** socket the `Edge` also gets a *read position* (see
+        :attr:`~nodeeditor.node_edge.Edge.input_index`). Pass ``index`` to
+        place it at a specific slot; when ``index`` is ``None`` a value
+        already set on the `Edge` (``Edge(..., input_index=n)`` or
+        deserialization) is used, and otherwise the `Edge` is appended, i.e.
+        it is read last. Output sockets are not ordered and ignore ``index``.
+
         :param edge: :class:`~nodeeditor.node_edge.Edge` to connect to this `Socket`
         :type edge: :class:`~nodeeditor.node_edge.Edge`
+        :param index: 0-based read position on an input socket or ``None`` to
+            append at the end (default: order of connection)
+        :type index: ``int`` or ``None``
         """
-        self.edges.append(edge)
+        if edge in self.edges:
+            return
+
+        if not self.is_input:
+            # output sockets keep plain connection order
+            self.edges.append(edge)
+            return
+
+        if index is None:
+            index = getattr(edge, "input_index", -1)
+
+        try:
+            index = int(index)
+        except (TypeError, ValueError):
+            index = -1
+
+        if 0 <= index <= len(self.edges):
+            self.edges.insert(index, edge)
+        else:
+            self.edges.append(edge)
+        self._reindexEdges()
 
     def removeEdge(self, edge: 'Edge') -> None:
         """
@@ -171,6 +201,9 @@ class Socket(QObject, Serializable):
         """
         if edge in self.edges:
             self.edges.remove(edge)
+            if self.is_input:
+                # close the gap the removed edge left behind
+                self._reindexEdges()
         else:
             if DEBUG_REMOVE_WARNINGS:
                 print("!W:", "Socket::removeEdge", "wanna remove edge", edge,
@@ -184,6 +217,151 @@ class Socket(QObject, Serializable):
                 edge.remove(silent_for_socket=self)
             else:
                 edge.remove()       # just remove all with notifications
+        if self.is_input:
+            self._reindexEdges()
+
+    # ordered input helpers
+
+    def _reindexEdges(self) -> None:
+        """
+        Compact the read order of this **input** `Socket`.
+
+        Writes ``0..len(edges)-1`` back onto every connected `Edge` so read
+        positions are always gap free. No-op for output sockets, whose `Edges`
+        carry no meaningful :attr:`~nodeeditor.node_edge.Edge.input_index`.
+        """
+        if not self.is_input:
+            return
+        for position, edge in enumerate(self.edges):
+            edge.input_index = position
+
+    def orderedEdges(self) -> List['Edge']:
+        """
+        Connected `Edges` in read order.
+
+        On an input `Socket` this is the connection order maintained by
+        :meth:`addEdge`; on an output `Socket` it is the plain connection list.
+
+        :return: `Edges` connected to this `Socket`, first read position first
+        :rtype: List[:class:`~nodeeditor.node_edge.Edge`]
+        """
+        if not self.is_input:
+            return list(self.edges)
+        # stable sort: edges sharing an input_index keep their relative order
+        return sorted(self.edges, key=lambda edge: edge.input_index)
+
+    def edgeIndex(self, edge: 'Edge') -> int:
+        """
+        Read position of ``edge`` on this input `Socket`.
+
+        :param edge: :class:`~nodeeditor.node_edge.Edge` to look up
+        :type edge: :class:`~nodeeditor.node_edge.Edge`
+        :return: 0-based read position or ``-1`` if not connected to this `Socket`
+        :rtype: ``int``
+        """
+        if edge not in self.edges:
+            return -1
+        return self.orderedEdges().index(edge)
+
+    def compactEdgeOrder(self) -> bool:
+        """
+        Re-sort and renumber this input `Socket`'s `Edges` to a gap free
+        ``0..n-1`` sequence. Useful after assigning
+        :attr:`~nodeeditor.node_edge.Edge.input_index` directly from code.
+
+        :return: ``True`` if anything actually changed
+        :rtype: ``bool``
+        """
+        if not self.is_input:
+            return False
+        ordered = self.orderedEdges()
+        changed = ordered != self.edges
+        self.edges[:] = ordered
+        for position, edge in enumerate(ordered):
+            if edge.input_index != position:
+                changed = True
+            edge.input_index = position
+        return changed
+
+    def setEdgeOrder(self, edges: List['Edge']) -> bool:
+        """
+        Set the read order of the `Edges` connected to this input `Socket`.
+
+        ``edges`` may be a partial list; connected `Edges` missing from it are
+        appended afterwards keeping their current relative order. Duplicates
+        and `Edges` of other sockets are ignored, so passing a stale or
+        reordered reference is safe.
+
+        :param edges: `Edges` of this socket, first read position first
+        :type edges: List[:class:`~nodeeditor.node_edge.Edge`]
+        :return: ``True`` if the order changed
+        :rtype: ``bool``
+        """
+        if not self.is_input:
+            return False
+
+        ordered: List['Edge'] = []
+        for edge in edges or []:
+            # skip foreign edges and duplicates instead of failing, so a stale
+            # reference to a disconnected edge cannot corrupt the order
+            if edge in self.edges and edge not in ordered:
+                ordered.append(edge)
+        ordered += [edge for edge in self.orderedEdges() if edge not in ordered]
+
+        if ordered == self.orderedEdges():
+            return False
+        self.edges[:] = ordered
+        self._reindexEdges()
+        return True
+
+    def moveEdgeTo(self, edge: 'Edge', position: int) -> bool:
+        """
+        Move ``edge`` to read position ``position`` on this input `Socket`.
+
+        :param edge: :class:`~nodeeditor.node_edge.Edge` to move
+        :type edge: :class:`~nodeeditor.node_edge.Edge`
+        :param position: target read position
+        :type position: ``int``
+        :return: ``True`` if the order changed
+        :rtype: ``bool``
+        """
+        if not self.is_input or edge not in self.edges:
+            return False
+        try:
+            position = int(position)
+        except (TypeError, ValueError):
+            return False
+
+        ordered = self.orderedEdges()
+        if not 0 <= position < len(ordered):
+            return False
+        ordered.remove(edge)
+        ordered.insert(position, edge)
+        self.edges[:] = ordered
+        self._reindexEdges()
+        return True
+
+    def swapEdges(self, edge_a: 'Edge', edge_b: 'Edge') -> bool:
+        """
+        Swap the read positions of two `Edges` of this input `Socket`.
+
+        :param edge_a: first :class:`~nodeeditor.node_edge.Edge` to swap
+        :type edge_a: :class:`~nodeeditor.node_edge.Edge`
+        :param edge_b: second :class:`~nodeeditor.node_edge.Edge` to swap
+        :type edge_b: :class:`~nodeeditor.node_edge.Edge`
+        :return: ``True`` if the order changed
+        :rtype: ``bool``
+        """
+        if not self.is_input or edge_a not in self.edges or edge_b not in self.edges:
+            return False
+        ordered = self.orderedEdges()
+        first, second = ordered.index(edge_a), ordered.index(edge_b)
+        if first == second:
+            return False
+        ordered[first], ordered[second] = ordered[second], ordered[first]
+        self.edges[:] = ordered
+        self._reindexEdges()
+        return True
 
     def determineMultiEdges(self, data: dict) -> bool:
         """

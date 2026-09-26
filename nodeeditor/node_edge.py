@@ -34,7 +34,8 @@ class Edge(Serializable):
     #: class variable containing list of registered edge validators
     edge_validators: List['function'] = []
 
-    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT, label: str = "") -> None:
+    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None,
+                 edge_type=EDGE_TYPE_DIRECT, label: str = "", input_index: int = -1) -> None:
         """
 
         :param scene: Reference to the :py:class:`~nodeeditor.node_scene.Scene`
@@ -47,6 +48,11 @@ class Edge(Serializable):
         :param label: Code-set text drawn on top of the edge. Not editable by
             the user in the view; change it from code via ``edge.label = ...``
             or ``edge.setLabel(...)`` at creation time or runtime.
+        :param input_index: Read position of this `Edge` on its **end** (input)
+            :class:`~nodeeditor.node_socket.Socket`, ``0`` being read first.
+            Only meaningful when ``end_socket`` is an input socket accepting
+            multiple `Edges`; pass ``-1`` (the default) to append the `Edge`,
+            i.e. read it last. See :ref:`multi-input-nodes`.
 
         :Instance Attributes:
 
@@ -59,6 +65,11 @@ class Edge(Serializable):
         # default init
         self._start_socket = None
         self._end_socket = None
+
+        # Must be set *before* attaching the sockets: an ordered input
+        # `Socket` reads it in `addEdge()` to place this Edge at the right
+        # slot instead of appending it.
+        self.input_index = input_index
 
         self.start_socket = start_socket
         self.end_socket = end_socket
@@ -77,6 +88,32 @@ class Edge(Serializable):
             hex(id(self))[2:5], hex(id(self))[-3:],
             self.start_socket, self.end_socket
         )
+
+    @property
+    def input_index(self) -> int:
+        """
+        Read position of this `Edge` on its end (input) :class:`~nodeeditor.node_socket.Socket`.
+
+        ``0`` is read first, ``1`` next, and so on. Only meaningful for `Edges`
+        whose ``end_socket`` is an input socket; the owning
+        :class:`~nodeeditor.node_socket.Socket` owns and compacts the value, so
+        assign it from code only together with
+        :meth:`~nodeeditor.node_socket.Socket.compactEdgeOrder`. Use
+        :class:`~nodeeditor.node_multi_input_node.MultiInputNode` for a safe
+        reordering API.
+
+        :getter: current read position, or ``-1`` when not attached to an input socket
+        :setter: coerces to ``int``; anything invalid becomes ``-1``
+        :type: ``int``
+        """
+        return self._input_index
+
+    @input_index.setter
+    def input_index(self, value) -> None:
+        try:
+            self._input_index = int(value)
+        except (TypeError, ValueError):
+            self._input_index = -1
 
     @property
     def start_socket(self) -> Optional["Socket"]:
@@ -123,6 +160,9 @@ class Edge(Serializable):
         # addEdge to the Socket class
         if self.end_socket is not None:
             self.end_socket.addEdge(self)
+            if not self.end_socket.is_input:
+                # a read position is only meaningful on an input socket
+                self.input_index = -1
 
     @property
     def edge_type(self):
@@ -334,6 +374,8 @@ class Edge(Serializable):
         """
         self.end_socket = None
         self.start_socket = None
+        # forget the read position; re-attaching appends at the end by default
+        self.input_index = -1
 
     def remove(self, silent_for_socket: 'Socket' = None, silent: bool=False) -> None:
         """
@@ -408,12 +450,17 @@ class Edge(Serializable):
             ('start', self.start_socket.id if self.start_socket is not None else None),
             ('end', self.end_socket.id if self.end_socket is not None else None),
             ('label', self.getLabel()),
+            ('input_index', self.input_index),
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
         try:
             if restore_id:
                 self.id = data['id']
+            # Restore the read position *before* attaching the sockets: an
+            # ordered input `Socket` inserts the `Edge` at this slot. Old files
+            # without the key load as -1, i.e. order of connection in the file.
+            self.input_index = data.get('input_index', -1)
             try:
                 start_id = data.get('start', None)
                 end_id = data.get('end', None)

@@ -7,6 +7,63 @@ This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
 
+0.6 - 2026-09-27
+----------------
+
+**Features**
+
+- Added ``MultiInputNode``: a node whose input `Socket` accepts any number of
+  `Edges` and reads them in an explicit, persisted order. It defines no
+  ``__init__``, so it can be mixed into an existing node hierarchy without
+  changing its constructor chain. Every input socket is multi-edged by default;
+  set ``multi_input_socket`` with ``multi_input_all_inputs = False`` to make
+  only one socket do so.
+- Reading: ``getOrderedEdges``, ``getOrderedSources``, ``getOrderedValues``,
+  ``getOrderedNodes``, and ``describeInputOrder``. ``getOrderedValues`` returns
+  one entry per connected `Edge`, substituting ``None`` for a source that fails
+  to evaluate, so its length always matches the connection count.
+- Reordering: ``setEdgeOrder``, ``setEdgeOrderByNodes``, ``moveEdgeTo``,
+  ``moveEdgeBy`` (clamped at both ends), ``swapEdges``, ``reverseEdgeOrder``,
+  and ``compactEdgeOrder``. A partial order list is accepted; the remaining
+  `Edges` keep their relative order. Successful reorders mark the node and its
+  descendants dirty so they re-evaluate.
+- Order labels: when ``show_input_order_labels`` is ``True`` (the default), each
+  `Edge` on the ordered input is labeled ``#1``, ``#2``, ... Labels are kept in
+  sync on connection, reorder, and removal, and are cleared on detach only when
+  they still match the ``#N`` pattern, so a custom label set from code is never
+  destroyed. Set the flag to ``False`` to opt out.
+- ``Edge.input_index``: the 0-based read position of an `Edge` on its end
+  (input) `Socket`, settable at construction as ``Edge(..., input_index=n)`` to
+  insert at a slot instead of appending. Output sockets are never ordered and
+  reset the value to ``-1``.
+- ``Socket`` ordering API: ``addEdge`` accepts an ``index``, and
+  ``orderedEdges``, ``edgeIndex``, ``compactEdgeOrder``, ``setEdgeOrder``,
+  ``moveEdgeTo``, and ``swapEdges`` round out the set. The owning input `Socket`
+  keeps read positions gap free after every add and remove, so the order stays
+  compact through every connection path without per-path plumbing.
+- ``input_index`` is persisted by ``Edge.serialize()`` / ``deserialize()``.
+  Because the number travels on the `Edge`, the order survives save/load,
+  copy/paste, and undo/redo even when the file's ``"edges"`` array is shuffled.
+  Files written before this release load in connection order.
+- Calculator example: new ``Sum`` node (op code ``OP_NODE_SUM``), plus
+  *Reverse Input Order*, *Move First/Last Input to Last/First* in the node
+  context menu and *Move Input Earlier/Later* in the edge context menu. Each
+  action stores an undo-history entry. Menu entries are gated on the target
+  actually being a ``MultiInputNode`` with 2+ edges.
+
+**Fixes**
+
+- Rerouting an `Edge` onto a multi-edged input no longer drops the socket's
+  other `Edges`; each moved `Edge` lands at the read position it held on the
+  old socket. Single-edged inputs still replace, as before.
+
+**Docs and tests**
+
+- Added ``docs/MULTI_INPUT_NODES.md`` and the Sphinx page for
+  ``nodeeditor.node_multi_input_node``.
+- Added ``tests/test_100_multi_input.py`` covering read order, reordering,
+  label handling, and persistence.
+
 0.5 - 2026-09-27
 ----------------
 

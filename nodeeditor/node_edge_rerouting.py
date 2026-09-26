@@ -169,7 +169,10 @@ class EdgeRerouting:
                     if node not in affected_nodes:
                         affected_nodes.append((node, edge))
 
-                if target.is_input:
+                if target.is_input and not target.is_multi_edges:
+                    # single-edged input: the new edge replaces the old one.
+                    # Multi-edged inputs keep every other edge, and each moved
+                    # edge lands at the read position it had on the old socket.
                     target.removeAllEdges(silent=True)
 
                 if edge.end_socket == self.start_socket:

@@ -8,6 +8,7 @@ from nodeeditor.node_edge import EDGE_TYPE_DIRECT, EDGE_TYPE_BEZIER, EDGE_TYPE_S
 from nodeeditor.node_graphics_view import MODE_EDGE_DRAG
 from nodeeditor.node_graphics_node import QDMGraphicsNode
 from nodeeditor.node_group import Group
+from nodeeditor.node_multi_input_node import MultiInputNode
 from nodeeditor.utils import dumpException
 
 from typing import TYPE_CHECKING, List
@@ -284,6 +285,16 @@ class CalculatorSubWindow(NodeEditorWidget):
         if selected is not None and getattr(selected, 'parent_group', None) is not None:
             detach_act = context_menu.addAction("Detach from Group")
         evalAct = context_menu.addAction("Eval")
+        # Ordered multi-input actions: only when the clicked node actually
+        # has something to reorder (a MultiInputNode with 2+ edges).
+        reverseOrderAct = firstToLastAct = lastToFirstAct = None
+        if isinstance(selected, MultiInputNode):
+            socket = selected.getMultiSocket()
+            if socket is not None and len(socket.edges) > 1:
+                context_menu.addSeparator()
+                reverseOrderAct = context_menu.addAction("Reverse Input Order")
+                firstToLastAct = context_menu.addAction("Move First Input to Last")
+                lastToFirstAct = context_menu.addAction("Move Last Input to First")
         try:
             action = context_menu.exec(self.mapToGlobal(event.pos()))
         except Exception:
@@ -319,23 +330,53 @@ class CalculatorSubWindow(NodeEditorWidget):
             val = selected.eval()
             if DEBUG_CONTEXT:
                 print("EVALUATED:", val)
+        if selected and action == reverseOrderAct:
+            if selected.reverseEdgeOrder():
+                self.scene.history.storeHistory(
+                    "Reversed input order", setModified=True)
+        if selected and action == firstToLastAct:
+            socket = selected.getMultiSocket()
+            if socket is not None and socket.orderedEdges():
+                if selected.moveEdgeTo(socket.orderedEdges()[0], len(socket.edges) - 1):
+                    self.scene.history.storeHistory(
+                        "Reordered inputs", setModified=True)
+        if selected and action == lastToFirstAct:
+            socket = selected.getMultiSocket()
+            if socket is not None and socket.orderedEdges():
+                if selected.moveEdgeTo(socket.orderedEdges()[-1], 0):
+                    self.scene.history.storeHistory(
+                        "Reordered inputs", setModified=True)
 
     def handleEdgeContextMenu(self, event):
         if DEBUG_CONTEXT:
             print("CONTEXT: EDGE")
-        context_menu = QMenu(self)
-        bezierAct = context_menu.addAction("Bezier Edge")
-        directAct = context_menu.addAction("Direct Edge")
-        squareAct = context_menu.addAction("Square Edge")
-        try:
-            action = context_menu.exec(self.mapToGlobal(event.pos()))
-        except Exception:
-            action = None
-
+        # Resolve the right-clicked edge BEFORE building the menu so entries
+        # can be gated on actual state (same pattern as handleNodeContextMenu).
         selected = None
         item = self.scene.getItemAt(event.pos())
         if hasattr(item, 'edge'):
             selected = item.edge
+
+        context_menu = QMenu(self)
+        bezierAct = context_menu.addAction("Bezier Edge")
+        directAct = context_menu.addAction("Direct Edge")
+        squareAct = context_menu.addAction("Square Edge")
+        # Per-edge order actions: only when this edge feeds the ordered input
+        # of a MultiInputNode alongside at least one other edge.
+        earlierAct = laterAct = None
+        order_node = None
+        if (selected is not None and selected.end_socket is not None
+                and selected.end_socket.is_input
+                and isinstance(selected.end_socket.node, MultiInputNode)
+                and len(selected.end_socket.edges) > 1):
+            order_node = selected.end_socket.node
+            context_menu.addSeparator()
+            earlierAct = context_menu.addAction("Move Input Earlier (read sooner)")
+            laterAct = context_menu.addAction("Move Input Later (read later)")
+        try:
+            action = context_menu.exec(self.mapToGlobal(event.pos()))
+        except Exception:
+            action = None
 
         if selected and action == bezierAct:
             selected.edge_type = EDGE_TYPE_BEZIER
@@ -343,6 +384,14 @@ class CalculatorSubWindow(NodeEditorWidget):
             selected.edge_type = EDGE_TYPE_DIRECT
         if selected and action == squareAct:
             selected.edge_type = EDGE_TYPE_SQUARE
+        if selected and action == earlierAct:
+            if order_node.moveEdgeBy(selected, -1):
+                self.scene.history.storeHistory(
+                    "Reordered inputs", setModified=True)
+        if selected and action == laterAct:
+            if order_node.moveEdgeBy(selected, 1):
+                self.scene.history.storeHistory(
+                    "Reordered inputs", setModified=True)
 
     # helper functions
     def determine_target_socket_of_node(self, was_dragged_flag, new_calc_node):

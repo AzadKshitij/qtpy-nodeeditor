@@ -21,6 +21,7 @@ nodeeditor Package
    nodeeditor.node_graphics_socket
    nodeeditor.node_graphics_view
    nodeeditor.node_node
+   nodeeditor.node_multi_input_node
    nodeeditor.node_scene
    nodeeditor.node_scene_clipboard
    nodeeditor.node_scene_history
