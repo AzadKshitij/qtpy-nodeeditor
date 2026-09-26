@@ -9,6 +9,8 @@ from qtpy.QtCore import Qt, QRectF
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
+from nodeeditor.node_graphics_node import QDMGraphicsNodeLabel
+
 if TYPE_CHECKING:
     from nodeeditor.node_graphics_view import QDMGraphicsView
     from nodeeditor.node_edge import Edge
@@ -78,6 +80,8 @@ class QDMIconGraphicsNode(QGraphicsItem):
         # init icon
         # self.initIcon()
 
+        self.initLabel()
+
     def initSizes(self) -> None:
         """Set up internal attributes like `width`, `height`, etc."""
         self.width = 180
@@ -87,6 +91,8 @@ class QDMIconGraphicsNode(QGraphicsItem):
         self.title_height = 0
         self.title_horizontal_padding = 0.0
         self.title_vertical_padding = 0.0
+        self.label_offset: float = 10.0
+        self._label_visible: bool = False
 
     def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
@@ -106,6 +112,9 @@ class QDMIconGraphicsNode(QGraphicsItem):
 
         self._brush_title = QBrush(QColor("#FF313131"))
         self._brush_background = QBrush(QColor("#E3212121"))
+
+        self._label_font = QFont("Ubuntu", 9)
+        self._label_color = QColor("#EEEEEE")
 
     def onSelected(self) -> None:
         """Our event handling when the node was selected"""
@@ -210,6 +219,87 @@ class QDMIconGraphicsNode(QGraphicsItem):
         self.grContent = self.node.scene.grScene.addWidget(self.content)
         self.grContent.node = self.node
         self.grContent.setParentItem(self)
+
+    def initLabel(self) -> None:
+        """Create the floating single-line label above the node (hidden until text is set)."""
+        self.label_item = QDMGraphicsNodeLabel(self, self)
+        self.label_item.setFont(self._label_font)
+        self.label_item.setDefaultTextColor(self._label_color)
+        self._label_visible = False
+        self.label_item.setVisible(False)
+        self._updateLabelPos()
+
+    def setLabelText(self, text: str) -> None:
+        """Set label text (single-line). Empty text hides the label. No history stored."""
+        text = QDMGraphicsNodeLabel.sanitize(text)
+        self.label_item.setPlainText(text)
+        if text:
+            self._label_visible = True
+        self._refreshLabelVisibility()
+        self._updateLabelPos()
+
+    def labelText(self) -> str:
+        try:
+            return self.label_item.toPlainText()
+        except Exception:
+            return ""
+
+    def setLabelVisible(self, visible: bool) -> None:
+        self._label_visible = bool(visible)
+        self._refreshLabelVisibility()
+
+    def isLabelVisible(self) -> bool:
+        return bool(self._label_visible and bool(self.labelText()))
+
+    def setLabelOffset(self, offset: float) -> None:
+        self.label_offset = float(offset)
+        self._updateLabelPos()
+
+    def labelOffset(self) -> float:
+        return float(self.label_offset)
+
+    def setLabelColor(self, color) -> None:
+        self._label_color = QColor(color) if not isinstance(color, QColor) else color
+        self.label_item.setDefaultTextColor(self._label_color)
+
+    def setLabelFont(self, font: QFont) -> None:
+        self._label_font = font
+        self.label_item.setFont(font)
+        self._updateLabelPos()
+
+    def setLabelBackground(self, bg, border=None) -> None:
+        bg = QColor(bg) if not isinstance(bg, QColor) else bg
+        b = QColor(border) if border is not None and not isinstance(border, QColor) else border
+        self.label_item.setLabelColors(bg=bg, border=b)
+
+    def _refreshLabelVisibility(self) -> None:
+        try:
+            self.label_item.setVisible(bool(self._label_visible and bool(self.label_item.toPlainText())))
+        except Exception:
+            pass
+
+    def _updateLabelPos(self) -> None:
+        try:
+            w = self.label_item.boundingRect().width()
+            h = self.label_item.boundingRect().height()
+            self.label_item.setPos((self.width - w) / 2, -h - self.label_offset)
+        except Exception:
+            pass
+
+    def _onLabelEdited(self, text: str) -> None:
+        text = QDMGraphicsNodeLabel.sanitize(text)
+        if text:
+            self._label_visible = True
+        self._refreshLabelVisibility()
+        self._updateLabelPos()
+        try:
+            self.node.labelChanged.emit(text)
+        except Exception:
+            pass
+        try:
+            self.node.scene.history.storeHistory("Node label changed", setModified=True)
+        except Exception:
+            pass
 
     # def initIcon(self):
     #     """Set up the icon Graphics representation"""

@@ -34,7 +34,7 @@ class Edge(Serializable):
     #: class variable containing list of registered edge validators
     edge_validators: List['function'] = []
 
-    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT) -> None:
+    def __init__(self, scene: 'Scene', start_socket: 'Socket' = None, end_socket: 'Socket' = None, edge_type=EDGE_TYPE_DIRECT, label: str = "") -> None:
         """
 
         :param scene: Reference to the :py:class:`~nodeeditor.node_scene.Scene`
@@ -44,6 +44,9 @@ class Edge(Serializable):
         :param end_socket: Reference to the End socket or ``None``
         :type end_socket: :py:class:`~nodeeditor.node_socket.Socket` or ``None``
         :param edge_type: Constant determining type of edge. See :ref:`edge-type-constants`
+        :param label: Code-set text drawn on top of the edge. Not editable by
+            the user in the view; change it from code via ``edge.label = ...``
+            or ``edge.setLabel(...)`` at creation time or runtime.
 
         :Instance Attributes:
 
@@ -63,6 +66,9 @@ class Edge(Serializable):
 
         # create Graphics Edge instance
         self.grEdge: QDMGraphicsEdge = self.createEdgeClassInstance()
+
+        if label:
+            self.setLabel(label)
 
         self.scene.addEdge(self)
 
@@ -140,6 +146,31 @@ class Edge(Serializable):
 
         if self.start_socket is not None:
             self.updatePositions()
+
+    @property
+    def label(self) -> str:
+        """
+        Code-set text drawn on top of the edge.
+
+        :getter: current label text (``""`` when unset)
+        :setter: sets new label text; ``""``/``None`` hides the label.
+            Not user-editable in the view -- change only from code, both at
+            creation time (``Edge(..., label="...")``) and at runtime
+            (``edge.label = "..."``).
+        """
+        return self.grEdge.label()
+
+    @label.setter
+    def label(self, value: str) -> None:
+        self.setLabel(value)
+
+    def getLabel(self) -> str:
+        """Return the current code-set edge label."""
+        return self.grEdge.label()
+
+    def setLabel(self, text: str) -> None:
+        """Set the text drawn on top of the edge (``""`` hides it)."""
+        self.grEdge.setLabel(text)
 
     @classmethod
     def getEdgeValidators(cls):
@@ -376,6 +407,7 @@ class Edge(Serializable):
             ('edge_type', self.edge_type),
             ('start', self.start_socket.id if self.start_socket is not None else None),
             ('end', self.end_socket.id if self.end_socket is not None else None),
+            ('label', self.getLabel()),
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
@@ -394,6 +426,8 @@ class Edge(Serializable):
             if self.start_socket is None or self.end_socket is None:
                 return False
             self.edge_type = data['edge_type']
+            # 'label' is optional so old files without it still load
+            self.setLabel(data.get('label', "") or "")
             return True
         except Exception:
             try:

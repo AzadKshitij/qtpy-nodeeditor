@@ -29,6 +29,8 @@ class Node(QObject,  Serializable):
     """
     # Signal emitted when node position changes (after user finishes dragging)
     positionChanged = Signal(object)  # Emits the Node object
+    # Signal emitted when the floating label text is changed by user or code
+    labelChanged = Signal(str)
 
     GraphicsNode_class = QDMGraphicsNode
     NodeContent_class = QDMNodeContentWidget
@@ -100,6 +102,56 @@ class Node(QObject,  Serializable):
     def title(self, value) -> None:
         self._title = value
         self.grNode.title = self._title
+
+    def setNodeLabel(self, text: str, store_history: bool = True) -> None:
+        """Set the floating single-line label above the node.
+
+        :param text: label text; empty string hides the label
+        :param store_history: store undo history entry (skip during load/deserialize)
+        """
+        if self.grNode is None or not hasattr(self.grNode, 'setLabelText'):
+            return
+        self.grNode.setLabelText(text)
+        try:
+            self.labelChanged.emit(self.grNode.labelText())
+        except Exception:
+            pass
+        if store_history:
+            try:
+                self.scene.history.storeHistory("Node label changed", setModified=True)
+            except Exception:
+                pass
+
+    def getNodeLabel(self) -> str:
+        """Return floating label text (``""`` when none)."""
+        if self.grNode is None or not hasattr(self.grNode, 'labelText'):
+            return ""
+        try:
+            return self.grNode.labelText()
+        except Exception:
+            return ""
+
+    def clearNodeLabel(self, store_history: bool = True) -> None:
+        """Remove the floating label."""
+        self.setNodeLabel("", store_history=store_history)
+
+    def setNodeLabelVisible(self, visible: bool) -> None:
+        if self.grNode is None or not hasattr(self.grNode, 'setLabelVisible'):
+            return
+        self.grNode.setLabelVisible(visible)
+
+    def isNodeLabelVisible(self) -> bool:
+        if self.grNode is None or not hasattr(self.grNode, 'isLabelVisible'):
+            return False
+        try:
+            return bool(self.grNode.isLabelVisible())
+        except Exception:
+            return False
+
+    def setNodeLabelOffset(self, offset: float) -> None:
+        if self.grNode is None or not hasattr(self.grNode, 'setLabelOffset'):
+            return
+        self.grNode.setLabelOffset(offset)
 
     @property
     def pos(self):
@@ -595,6 +647,18 @@ class Node(QObject,  Serializable):
             outputs.append(socket.serialize())
         ser_content = self.content.serialize() if isinstance(
             self.content, Serializable) else {}
+        try:
+            label_text = self.getNodeLabel()
+        except Exception:
+            label_text = ""
+        try:
+            label_visible = self.isNodeLabelVisible() if label_text else False
+        except Exception:
+            label_visible = False
+        try:
+            label_offset = float(self.grNode.labelOffset()) if self.grNode is not None and hasattr(self.grNode, 'labelOffset') else 10.0
+        except Exception:
+            label_offset = 10.0
         return OrderedDict([
             ('id', self.id),
             ('title', self.title),
@@ -603,6 +667,9 @@ class Node(QObject,  Serializable):
             ('inputs', inputs),
             ('outputs', outputs),
             ('content', ser_content),
+            ('label_text', label_text),
+            ('label_visible', label_visible),
+            ('label_offset', label_offset),
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
@@ -613,6 +680,15 @@ class Node(QObject,  Serializable):
 
             self.setPos(data['pos_x'], data['pos_y'])
             self.title = data['title']
+
+            # floating label (backward compatible: old files have no keys)
+            try:
+                if self.grNode is not None and hasattr(self.grNode, 'setLabelText'):
+                    self.grNode.setLabelOffset(float(data.get('label_offset', 10.0)))
+                    self.grNode.setLabelText(data.get('label_text', ""))
+                    self.grNode.setLabelVisible(bool(data.get('label_visible', bool(data.get('label_text', "")))))
+            except Exception:
+                pass
 
             data['inputs'].sort(
                 key=lambda socket: socket['index'] + socket['position'] * 10000)

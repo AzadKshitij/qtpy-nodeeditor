@@ -2,8 +2,8 @@
 """
 A module containing the Graphics representation of an Edge
 """
-from qtpy.QtWidgets import QGraphicsPathItem, QWidget, QGraphicsItem, QGraphicsSceneHoverEvent
-from qtpy.QtGui import QColor, QPen, QPainterPath
+from qtpy.QtWidgets import QGraphicsPathItem, QWidget, QGraphicsItem, QGraphicsSceneHoverEvent, QGraphicsSimpleTextItem
+from qtpy.QtGui import QColor, QPen, QBrush, QPainterPath, QFont
 from qtpy.QtCore import Qt, QRectF, QPointF
 
 from nodeeditor.node_graphics_edge_path import GraphicsEdgePathBezier, GraphicsEdgePathDirect, GraphicsEdgePathSquare, GraphicsEdgePathImprovedSharp, GraphicsEdgePathImprovedBezier
@@ -47,6 +47,22 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         # init our variables
         self.posSource: List[float] = [0, 0]
         self.posDestination: List[float] = [200, 100]
+
+        # code-settable, user-read-only label drawn on top of the edge path.
+        # Never editable/selectable/movable: users cannot change it, code can
+        # via QDMGraphicsEdge.setLabel() / Edge.label.
+        self._label_offset = QPointF(0, -18)
+        self.labelItem = QGraphicsSimpleTextItem(self)
+        self.labelItem.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
+        self.labelItem.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+        self.labelItem.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, False)
+        self.labelItem.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self.labelItem.setAcceptHoverEvents(False)
+        # QGraphicsSimpleTextItem has no text-interaction/editing API at all,
+        # which is exactly what we want: code-only, never user-editable.
+        self.labelItem.setBrush(QBrush(QColor("#ffffff")))
+        self.labelItem.setZValue(1)
+        self.labelItem.setVisible(False)
 
         self.initAssets()
         self.initUI()
@@ -117,6 +133,58 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
         return True
 
+    def label(self) -> str:
+        """Return the current code-set edge label (``""`` when unset)."""
+        return self.labelItem.text()
+
+    def setLabel(self, text: str) -> None:
+        """Set the text drawn on top of the edge.
+
+        Code-only API: the label item is not selectable, movable, focusable
+        and accepts no mouse buttons, so users cannot edit it directly.
+
+        :param text: label text, ``""``/``None`` hides the label
+        """
+        self.labelItem.setText(text or "")
+        self.labelItem.setVisible(bool(text))
+        self.updateLabelPosition()
+        self.update()
+
+    def setLabelColor(self, color) -> None:
+        """Set label text color from ``QColor`` or hex string."""
+        self.labelItem.setBrush(QBrush(QColor(color) if isinstance(color, str) else color))
+        self.update()
+
+    def setLabelFont(self, font: QFont) -> None:
+        """Set label font, then recenter it on the edge path."""
+        self.labelItem.setFont(font)
+        self.updateLabelPosition()
+        self.update()
+
+    def setLabelOffset(self, x: float, y: float) -> None:
+        """Offset (in px) applied to the centered label position."""
+        self._label_offset = QPointF(x, y)
+        self.updateLabelPosition()
+        self.update()
+
+    def updateLabelPosition(self) -> None:
+        """Center the label on top of the current edge path."""
+        if not self.labelItem.isVisible():
+            return
+        try:
+            path = self.path()
+            mid = path.pointAtPercent(0.5) if path.length() > 0 else QPointF(
+                (self.posSource[0] + self.posDestination[0]) / 2.0,
+                (self.posSource[1] + self.posDestination[1]) / 2.0,
+            )
+        except Exception:
+            mid = QPointF(
+                (self.posSource[0] + self.posDestination[0]) / 2.0,
+                (self.posSource[1] + self.posDestination[1]) / 2.0,
+            )
+        rect = self.labelItem.boundingRect()
+        self.labelItem.setPos(mid + self._label_offset - QPointF(rect.width() / 2.0, rect.height() / 2.0))
+
     def onSelected(self) -> None:
         """Our event handling when the edge was selected"""
         self.edge.scene.grScene.itemSelected.emit()
@@ -179,8 +247,15 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.posDestination = [x, y]
 
     def boundingRect(self) -> QRectF:
-        """Defining Qt' bounding rectangle"""
-        return self.shape().boundingRect()
+        """Defining Qt' bounding rectangle (path united with label rect)."""
+        base = self.shape().boundingRect()
+        try:
+            if self.labelItem.isVisible():
+                label_rect = self.labelItem.boundingRect().translated(self.labelItem.pos())
+                return base.united(label_rect)
+        except Exception:
+            pass
+        return base
 
     def shape(self) -> QPainterPath:
         """Returns ``QPainterPath`` representation of this `Edge`
@@ -194,6 +269,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """Qt's overridden method to paint this Graphics Edge. Path calculated
             in :func:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge.calcPath` method"""
         self.setPath(self.calcPath())
+        self.updateLabelPosition()
 
         painter.setBrush(Qt.NoBrush)
 

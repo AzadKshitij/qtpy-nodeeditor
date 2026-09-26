@@ -3,7 +3,7 @@
 A module containing Graphics representation of :class:`~nodeeditor.node_node.Node`
 """
 from qtpy.QtWidgets import QGraphicsItem, QWidget, QGraphicsTextItem, QGraphicsSceneHoverEvent
-from qtpy.QtGui import QFont, QColor, QPen, QBrush, QPainterPath
+from qtpy.QtGui import QFont, QColor, QPen, QBrush, QPainterPath, QTextCursor
 from qtpy.QtCore import Qt, QRectF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
@@ -14,6 +14,135 @@ if TYPE_CHECKING:
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
     from nodeeditor.node_node import Node
+
+
+class QDMGraphicsNodeLabel(QGraphicsTextItem):
+    """Single-line editable textbox floating above a `QDMGraphicsNode`.
+
+    Parented to the graphics node, so Qt moves it with the node for free.
+    Click to focus/edit; ``Enter`` commits, ``Escape`` reverts, focus-out commits.
+    """
+
+    def __init__(self, grNode: 'QDMGraphicsNode', parent: QGraphicsItem = None) -> None:
+        super().__init__(parent if parent is not None else grNode)
+        self._grNode: 'QDMGraphicsNode' = grNode
+        self._last_text: str = ""
+        self._bg_color = QColor("#E3212121")
+        self._border_color = QColor("#FF5A5A5A")
+        self._pad_x: float = 6.0
+        self._pad_y: float = 3.0
+        self._radius: float = 6.0
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
+        self.setZValue(1)
+        try:
+            self.document().contentsChanged.connect(self._onContentsChanged)
+        except Exception:
+            pass
+
+    @staticmethod
+    def sanitize(text: str) -> str:
+        """Force single-line plain text."""
+        if text is None:
+            return ""
+        return str(text).replace("\r", " ").replace("\n", " ").strip()
+
+    def setLabelColors(self, bg: Optional[QColor] = None, border: Optional[QColor] = None) -> None:
+        if bg is not None:
+            self._bg_color = bg
+        if border is not None:
+            self._border_color = border
+        self.update()
+
+    def focusInEvent(self, event) -> None:
+        self._last_text = self.toPlainText()
+        self._setEditing(True)
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event) -> None:
+        self._commit()
+        self._setEditing(False)
+        super().focusOutEvent(event)
+
+    def keyPressEvent(self, event) -> None:
+        try:
+            key = event.key()
+        except Exception:
+            return super().keyPressEvent(event)
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            event.accept()
+            self.clearFocus()
+            return
+        if key == Qt.Key.Key_Escape:
+            try:
+                self.setPlainText(self._last_text)
+            except Exception:
+                pass
+            event.accept()
+            self.clearFocus()
+            return
+        super().keyPressEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        try:
+            if not self.hasFocus():
+                self.setFocus(Qt.FocusReason.MouseFocusReason)
+        except Exception:
+            pass
+        super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event) -> None:
+        try:
+            if not self.hasFocus():
+                self.setFocus(Qt.FocusReason.MouseFocusReason)
+            cursor = self.textCursor()
+            cursor.select(QTextCursor.SelectionType.Document)
+            self.setTextCursor(cursor)
+        except Exception:
+            pass
+        super().mouseDoubleClickEvent(event)
+
+    def paint(self, painter, option, widget=None) -> None:
+        rect = self.boundingRect().adjusted(-self._pad_x, -self._pad_y, self._pad_x, self._pad_y)
+        painter.setPen(QPen(self._border_color, 1.0))
+        painter.setBrush(QBrush(self._bg_color))
+        painter.drawRoundedRect(rect, self._radius, self._radius)
+        super().paint(painter, option, widget)
+
+    def _onContentsChanged(self) -> None:
+        try:
+            self._grNode._updateLabelPos()
+        except Exception:
+            pass
+
+    def _commit(self) -> None:
+        text = self.sanitize(self.toPlainText())
+        if text != self.toPlainText():
+            try:
+                self.document().blockSignals(True)
+                self.setPlainText(text)
+            finally:
+                try:
+                    self.document().blockSignals(False)
+                except Exception:
+                    pass
+        try:
+            self._grNode._updateLabelPos()
+        except Exception:
+            pass
+        try:
+            self._grNode._onLabelEdited(text)
+        except Exception:
+            pass
+
+    def _setEditing(self, value: bool) -> None:
+        try:
+            view = self._grNode.node.scene.getView()
+            view.editingFlag = value
+        except Exception:
+            pass
 
 
 class QDMGraphicsNode(QGraphicsItem):
@@ -73,6 +202,7 @@ class QDMGraphicsNode(QGraphicsItem):
         # self.title = self.node.title
 
         self.initContent()
+        self.initLabel()
 
     def initSizes(self) -> None:
         """Set up internal attributes like `width`, `height`, etc."""
@@ -83,6 +213,8 @@ class QDMGraphicsNode(QGraphicsItem):
         self.title_height = 24
         self.title_horizontal_padding = 4.0
         self.title_vertical_padding = 4.0
+        self.label_offset: float = 10.0
+        self._label_visible: bool = False
 
     def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
@@ -102,6 +234,9 @@ class QDMGraphicsNode(QGraphicsItem):
 
         self._brush_title = QBrush(QColor("#FF313131"))
         self._brush_background = QBrush(QColor("#E3212121"))
+
+        self._label_font = QFont("Ubuntu", 9)
+        self._label_color = QColor("#EEEEEE")
 
     def onSelected(self) -> None:
         """Our event handling when the node was selected"""
@@ -215,6 +350,92 @@ class QDMGraphicsNode(QGraphicsItem):
         self.grContent = self.node.scene.grScene.addWidget(self.content)
         self.grContent.node = self.node
         self.grContent.setParentItem(self)
+
+    def initLabel(self) -> None:
+        """Create the floating single-line label above the node (hidden until text is set)."""
+        self.label_item = QDMGraphicsNodeLabel(self, self)
+        self.label_item.setFont(self._label_font)
+        self.label_item.setDefaultTextColor(self._label_color)
+        self._label_visible = False
+        self.label_item.setVisible(False)
+        self._updateLabelPos()
+
+    def setLabelText(self, text: str) -> None:
+        """Set label text (single-line). Empty text hides the label. No history stored."""
+        text = QDMGraphicsNodeLabel.sanitize(text)
+        self.label_item.setPlainText(text)
+        if text:
+            self._label_visible = True
+        self._refreshLabelVisibility()
+        self._updateLabelPos()
+
+    def labelText(self) -> str:
+        """Return current label text."""
+        try:
+            return self.label_item.toPlainText()
+        except Exception:
+            return ""
+
+    def setLabelVisible(self, visible: bool) -> None:
+        """Show/hide the label. Hidden when text is empty regardless."""
+        self._label_visible = bool(visible)
+        self._refreshLabelVisibility()
+
+    def isLabelVisible(self) -> bool:
+        return bool(self._label_visible and bool(self.labelText()))
+
+    def setLabelOffset(self, offset: float) -> None:
+        """Gap in px between node top and label bottom."""
+        self.label_offset = float(offset)
+        self._updateLabelPos()
+
+    def labelOffset(self) -> float:
+        return float(self.label_offset)
+
+    def setLabelColor(self, color) -> None:
+        self._label_color = QColor(color) if not isinstance(color, QColor) else color
+        self.label_item.setDefaultTextColor(self._label_color)
+
+    def setLabelFont(self, font: QFont) -> None:
+        self._label_font = font
+        self.label_item.setFont(font)
+        self._updateLabelPos()
+
+    def setLabelBackground(self, bg, border=None) -> None:
+        bg = QColor(bg) if not isinstance(bg, QColor) else bg
+        b = QColor(border) if border is not None and not isinstance(border, QColor) else border
+        self.label_item.setLabelColors(bg=bg, border=b)
+
+    def _refreshLabelVisibility(self) -> None:
+        try:
+            self.label_item.setVisible(bool(self._label_visible and bool(self.label_item.toPlainText())))
+        except Exception:
+            pass
+
+    def _updateLabelPos(self) -> None:
+        """Center label horizontally above the node."""
+        try:
+            w = self.label_item.boundingRect().width()
+            h = self.label_item.boundingRect().height()
+            self.label_item.setPos((self.width - w) / 2, -h - self.label_offset)
+        except Exception:
+            pass
+
+    def _onLabelEdited(self, text: str) -> None:
+        """Called by label item on user commit. Syncs visibility, emits signal, stores history."""
+        text = QDMGraphicsNodeLabel.sanitize(text)
+        if text:
+            self._label_visible = True
+        self._refreshLabelVisibility()
+        self._updateLabelPos()
+        try:
+            self.node.labelChanged.emit(text)
+        except Exception:
+            pass
+        try:
+            self.node.scene.history.storeHistory("Node label changed", setModified=True)
+        except Exception:
+            pass
 
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting the rounded rectanglar `Node`"""
