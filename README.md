@@ -54,4 +54,6 @@ Other links
 
 - [Merge requests](https://github.com/AzadKshitij/qtpy-nodeeditor/merge_requests)
 
-- [Changelog](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/CHANGES.md)
+- [Release history](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/HISTORY.rst)
+
+- [Upstream changelog (pre-fork)](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/CHANGES.md)

@@ -1,6 +1,7 @@
-include CHANGES.rst
-include LICENSE
-include README.rst
+include CHANGES.md
+include HISTORY.rst
+include LICENCE
+include README.md
 include requirements.txt
 
 recursive-include tests *
