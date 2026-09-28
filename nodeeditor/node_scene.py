@@ -16,6 +16,7 @@ from nodeeditor.node_node import Node
 from nodeeditor.node_edge import Edge
 from nodeeditor.node_scene_history import SceneHistory
 from nodeeditor.node_scene_clipboard import SceneClipboard
+from nodeeditor.node_colors_config import get_color_scheme
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, OrderedDict as OrderedDictType, Type
 
@@ -299,6 +300,118 @@ class Scene(Serializable):
         :rtype: ``QGraphicsItem``
         """
         return self.getView().itemAt(pos)
+
+    # ============================================================================
+    # Color Configuration Methods
+    # ============================================================================
+
+    def getColorScheme(self):
+        """Get the global color scheme instance used by all scenes
+
+        :return: NodeEditorColorScheme instance
+        """
+        return get_color_scheme()
+
+    def setEdgeColors(
+        self, default=None, selected=None, hovered=None, dragging=None
+    ) -> None:
+        """Update edge colors and refresh the scene
+
+        :param default: Default edge color (hex string, QColor, or RGB tuple)
+        :param selected: Selected edge color
+        :param hovered: Hovered edge color
+        :param dragging: Dragging edge color
+
+        Example::
+
+            scene.setEdgeColors(default="#FF0000", selected="#00FF00")
+        """
+        scheme = self.getColorScheme()
+        scheme.edges.set_all(
+            default=default, selected=selected, hovered=hovered, dragging=dragging
+        )
+        self._refresh_edge_colors()
+
+    def setSocketColors(self, outline=None, highlight=None, type_colors=None) -> None:
+        """Update socket colors and refresh the scene
+
+        :param outline: Socket outline color (hex string, QColor, or RGB tuple)
+        :param highlight: Socket highlight color
+        :param type_colors: List of colors for socket types
+
+        Example::
+
+            scene.setSocketColors(
+                outline="#000000",
+                highlight="#00FF00",
+                type_colors=["#FF0000", "#00FF00", "#0000FF"]
+            )
+        """
+        scheme = self.getColorScheme()
+        scheme.sockets.set_all(
+            outline=outline, highlight=highlight, type_colors=type_colors
+        )
+        self._refresh_socket_colors()
+
+    def setHighlightColor(self, color) -> None:
+        """Update the color used for highlighting edges and sockets
+
+        :param color: Highlight color (hex string, QColor, or RGB tuple)
+
+        Example::
+
+            scene.setHighlightColor("#00FF00")
+        """
+        scheme = self.getColorScheme()
+        scheme.edges.hovered = color
+        scheme.sockets.highlight = color
+        self._refresh_colors()
+
+    def setSocketTypeColor(self, socket_type: int, color) -> None:
+        """Update the color for a specific socket type
+
+        :param socket_type: Socket type index
+        :param color: Color to set (hex string, QColor, or RGB tuple)
+
+        Example::
+
+            scene.setSocketTypeColor(0, "#FF0000")  # Set type 0 to red
+        """
+        scheme = self.getColorScheme()
+        scheme.sockets.set_type_color(socket_type, color)
+        self._refresh_socket_colors()
+
+    def _refresh_edge_colors(self) -> None:
+        """Refresh all edges in the scene with updated colors"""
+        for edge in self.edges:
+            if hasattr(edge, "grEdge") and edge.grEdge:
+                edge.grEdge.initAssets()
+                edge.grEdge.update()
+
+    def _refresh_socket_colors(self) -> None:
+        """Refresh all sockets in the scene with updated colors"""
+        for node in self.nodes:
+            if hasattr(node, "grNode") and node.grNode:
+                # Refresh the node graphics item (for hover colors, etc.)
+                node.grNode.initAssets()
+                # Refresh input sockets
+                for socket in node.inputs:
+                    if hasattr(socket, "grSocket") and socket.grSocket:
+                        socket.grSocket.initAssets()
+                        socket.grSocket.update()
+                # Refresh output sockets
+                for socket in node.outputs:
+                    if hasattr(socket, "grSocket") and socket.grSocket:
+                        socket.grSocket.initAssets()
+                        socket.grSocket.update()
+                # Update the node graphics item
+                node.grNode.update()
+
+    def _refresh_colors(self) -> None:
+        """Refresh all colors in the scene (edges, sockets, highlights)"""
+        self._refresh_edge_colors()
+        self._refresh_socket_colors()
+        self.grScene.update()
 
     def addNode(self, node: Node) -> None:
         """Add :class:`~nodeeditor.node_node.Node` to this `Scene`

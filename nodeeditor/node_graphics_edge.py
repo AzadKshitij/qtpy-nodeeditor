@@ -7,6 +7,7 @@ from qtpy.QtGui import QColor, QPen, QBrush, QPainterPath, QFont
 from qtpy.QtCore import Qt, QRectF, QPointF
 
 from nodeeditor.node_graphics_edge_path import GraphicsEdgePathBezier, GraphicsEdgePathDirect, GraphicsEdgePathSquare, GraphicsEdgePathImprovedSharp, GraphicsEdgePathImprovedBezier
+from nodeeditor.node_colors_config import get_color_scheme
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
@@ -75,14 +76,16 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
     def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
-        self._color = self._default_color = QColor("#333334")
-        self._color_selected = QColor("#00ff00")
-        self._color_hovered = QColor("#FF37A6FF")
+        # Get colors from global color scheme
+        scheme = get_color_scheme()
+        self._color = self._default_color = scheme.edges.default
+        self._color_selected = scheme.edges.selected
+        self._color_hovered = scheme.edges.hovered
         self._pen = QPen(self._color)
         self._pen_selected = QPen(self._color_selected)
-        self._pen_dragging = QPen(self._color)
+        self._pen_dragging = QPen(scheme.edges.dragging)
         self._pen_hovered = QPen(self._color_hovered)
-        self._pen_dragging.setStyle(Qt.DashLine)
+        self._pen_dragging.setStyle(Qt.PenStyle.DashLine)
         self._pen.setWidthF(3.0)
         self._pen_selected.setWidthF(3.0)
         self._pen_dragging.setWidthF(3.0)
@@ -271,7 +274,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.setPath(self.calcPath())
         self.updateLabelPosition()
 
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
 
         if self.hovered and self.edge.end_socket is not None:
             painter.setPen(self._pen_hovered)

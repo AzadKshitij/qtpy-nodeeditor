@@ -38,3 +38,18 @@ if _QT_API_NAME is None:
 # don't be too strict yet...
 # if _QT_API_NAME is None:
 #     raise ImportError("Please install PyQt5/PySide2 or PyQt6/PySide6")
+
+# Export color configuration classes for easier access
+from nodeeditor.node_colors_config import (
+    NodeEditorColorScheme,
+    EdgeColors,
+    SocketColors,
+    get_color_scheme,
+)
+
+__all__ = [
+    "NodeEditorColorScheme",
+    "EdgeColors",
+    "SocketColors",
+    "get_color_scheme",
+]

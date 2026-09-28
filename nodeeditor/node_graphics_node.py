@@ -8,6 +8,8 @@ from qtpy.QtCore import Qt, QRectF
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
+from nodeeditor.node_colors_config import get_color_scheme
+
 
 if TYPE_CHECKING:
     from nodeeditor.node_graphics_view import QDMGraphicsView
@@ -221,9 +223,11 @@ class QDMGraphicsNode(QGraphicsItem):
         self._title_color = Qt.GlobalColor.white
         self._title_font = QFont("Ubuntu", 10)
 
+        # Get colors from global color scheme
+        scheme = get_color_scheme()
         self._color = QColor("#7F000000")
         self._color_selected = QColor("#FFFFA637")
-        self._color_hovered = QColor("#FF37A6FF")
+        self._color_hovered = scheme.edges.hovered
 
         self._pen_default = QPen(self._color)
         self._pen_default.setWidthF(2.0)

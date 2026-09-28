@@ -28,4 +28,7 @@ wheels/
 /venv/
 /.venv/
 
+NodeGraphQt
+NodeGraphQt/
+
 NOTES.md

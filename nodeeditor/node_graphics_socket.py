@@ -6,6 +6,8 @@ from qtpy.QtWidgets import QGraphicsItem
 from qtpy.QtGui import QColor, QBrush, QPen, QFont
 from qtpy.QtCore import Qt, QRectF
 
+from nodeeditor.node_colors_config import get_color_scheme
+
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any
 
 
@@ -14,6 +16,7 @@ if TYPE_CHECKING:
     from nodeeditor.node_edge import Edge
     from nodeeditor.node_socket import Socket
 
+# Deprecated: Use NodeEditorColorScheme.sockets.get_type_color() instead
 SOCKET_COLORS = [
     QColor("#FFFF7700"),
     QColor("#FF52e220"),
@@ -58,11 +61,8 @@ class QDMGraphicsSocket(QGraphicsItem):
 
     def getSocketColor(self, key):
         """Returns the ``QColor`` for this ``key``"""
-        if type(key) == int:
-            return SOCKET_COLORS[key]
-        elif type(key) == str:
-            return QColor(key)
-        return Qt.GlobalColor.transparent
+        scheme = get_color_scheme()
+        return scheme.sockets.get_type_color(key)
 
     def changeSocketType(self) -> None:
         """Change the Socket Type"""
@@ -74,10 +74,13 @@ class QDMGraphicsSocket(QGraphicsItem):
     def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
 
+        # Get colors from global color scheme
+        scheme = get_color_scheme()
+
         # determine socket color
         self._color_background = self.getSocketColor(self.socket_type)
-        self._color_outline = QColor("#FF000000")
-        self._color_highlight = QColor("#FF37A6FF")
+        self._color_outline = scheme.sockets.outline
+        self._color_highlight = scheme.sockets.highlight
 
         self._pen = QPen(self._color_outline)
         self._pen.setWidthF(self.outline_width)
