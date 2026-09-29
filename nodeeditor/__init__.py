@@ -2,7 +2,7 @@
 
 __name__ = 'Node Editor'
 __author__ = 'Azad Kshitij'
-__version__ = "0.6"
+__version__ = "0.7"
 
 
 _QT_API_NAME, _QT_API_VERSION = None, None

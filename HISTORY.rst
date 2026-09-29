@@ -7,6 +7,27 @@ This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
 
+0.7 - 2026-09-29
+----------------
+
+**Features**
+
+- Added centralized color configuration for edges, sockets, and node hover
+  highlights, with scene helpers to refresh existing graphics items.
+- Added an interactive color configuration example with theme selection.
+
+**Fixes**
+
+- Preserve the existing socket type palette and transparent fallback when
+  applying color configuration, and restore node colors when resetting defaults.
+- Preserve upstream grouping behavior while applying color changes.
+- Renamed a case-colliding scene fixture for Windows compatibility.
+
+**Tests**
+
+- Added headless regression coverage for color updates, icon nodes, the color
+  demo, and group collapse/expand and serialization with node and edge labels.
+
 0.6 - 2026-09-27
 ----------------
 
