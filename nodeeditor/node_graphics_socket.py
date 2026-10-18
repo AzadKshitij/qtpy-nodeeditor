@@ -98,6 +98,16 @@ class QDMGraphicsSocket(QGraphicsItem):
         self._text = text
         self.update()
 
+    def setDetailVisible(self, visible: bool) -> None:
+        """Show or hide this socket's circle at low zoom.
+
+        Pushed by the owning node when the scene drops to its level-of-detail
+        state. A dozen sockets per node at normal zoom costs more per frame than
+        the node itself; at that scale the circles are a couple of pixels wide
+        and cannot be aimed at, so wiring is a zoomed-in activity.
+        """
+        self.setVisible(bool(visible))
+
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting a circle"""
         painter.setBrush(self._brush)

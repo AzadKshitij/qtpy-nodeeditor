@@ -197,6 +197,9 @@ class QDMGraphicsNode(QGraphicsItem):
         """Set up this ``QGraphicsItem``"""
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        # Qt then tells us when it has moved the item, which is how the
+        # connected edges are refreshed without rescanning the whole scene.
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self.setAcceptHoverEvents(True)
 
         # init title
@@ -217,6 +220,10 @@ class QDMGraphicsNode(QGraphicsItem):
         self.title_vertical_padding = 4.0
         self.label_offset: float = 10.0
         self._label_visible: bool = False
+        #: Level-of-detail state pushed by the scene (see
+        #: ``QDMGraphicsScene.setDetailLod``). False below the scene's
+        #: threshold, when labels, content widgets and sockets are skipped.
+        self._detail_visible: bool = True
 
     def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
@@ -262,15 +269,43 @@ class QDMGraphicsNode(QGraphicsItem):
         # Keep default Qt behavior (move/select).
         super().mousePressEvent(event)
 
+    def itemChange(self, change, value):
+        """Refresh this node's edges when Qt moves it.
+
+        Qt moves the dragged node - and every other node in the selection -
+        itself. Reacting to the position change Qt already reports updates the
+        edges of exactly the nodes that moved, replacing the old per-mouse-move
+        scan of every node in the scene.
+        """
+        if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+            node = getattr(self, "node", None)
+            if node is not None:
+                try:
+                    node.updateConnectedEdges()
+                except (AttributeError, RuntimeError):
+                    pass  # socket list not built yet, or C++ side gone
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+            # A node added while the view is already zoomed out must start in
+            # the scene's current level-of-detail state, not fully detailed:
+            # loading a big workflow while zoomed out would otherwise draw every
+            # new node's content widget until the next zoom change.
+            scene = value if value is not None else self.scene()
+            lod = getattr(scene, "_detail_visible", True)
+            if lod != getattr(self, "_detail_visible", True):
+                self.setDetailVisible(lod)
+        elif change == QGraphicsItem.GraphicsItemChange.ItemChildAddedChange:
+            # Sockets and the content proxy are created after this node joined
+            # the scene, so the scene's one-off broadcast never reached them;
+            # without this a node built while zoomed out draws fully detailed
+            # until the next zoom change.
+            if not getattr(self, "_detail_visible", True):
+                self._applyDetailToChild(value)
+        return super().itemChange(change, value)
+
     def mouseMoveEvent(self, event) -> None:
         """Overridden event to detect that we moved with this `Node`"""
         super().mouseMoveEvent(event)
-        if self.scene() is None:
-            return
-        # optimize me! just update the selected nodes
-        for node in self.scene().scene.nodes:
-            if node.grNode.isSelected():
-                node.updateConnectedEdges()
+        # Connected edges follow via itemChange(); no scene-wide scan here.
         self._was_moved = True
 
     def mouseReleaseEvent(self, event) -> None:
@@ -410,9 +445,59 @@ class QDMGraphicsNode(QGraphicsItem):
         b = QColor(border) if border is not None and not isinstance(border, QColor) else border
         self.label_item.setLabelColors(bg=bg, border=b)
 
+    def setDetailVisible(self, visible: bool) -> None:
+        """Show or hide this node's fine detail at low zoom.
+
+        Broadcast by the scene when the on-screen scale crosses its level-of-
+        detail threshold. A node's content widget, its floating label and its
+        socket circles are the per-node costs that dominate a zoomed-out frame,
+        and at that size none of them can be read or aimed at anyway.
+        """
+        visible = bool(visible)
+        if visible == self._detail_visible:
+            return
+        self._detail_visible = visible
+
+        self._refreshLabelVisibility()
+
+        # The content proxy, the sockets and any other child item that wants to
+        # fade out too.
+        for child in self.childItems():
+            self._applyDetailToChild(child)
+
+    def _applyDetailToChild(self, child) -> None:
+        """Push this node's detail state onto one child item.
+
+        Sockets own a ``setDetailVisible``; the content proxy widget does not,
+        so it is matched by identity against ``grContent``.
+        """
+        setter = getattr(child, "setDetailVisible", None)
+        if setter is not None:
+            setter(self._detail_visible)
+        elif child is getattr(self, "grContent", None):
+            child.setVisible(self._detail_visible)
+
+    def syncDetailVisibility(self) -> None:
+        """Push the scene's current detail state onto every child item.
+
+        The sockets and the content proxy are built during ``Node.__init__``,
+        after Qt already reported this node joining the scene, so the scene's
+        one-off broadcast never reached them - and Qt's
+        ``ItemChildAddedChange`` hands over a base-class wrapper for an item
+        still inside its own constructor, which has no ``setDetailVisible``.
+        Called from ``Node.__init__`` once the node is fully built.
+        """
+        self._detail_visible = getattr(self.scene(), "_detail_visible", True)
+        self._refreshLabelVisibility()
+        for child in self.childItems():
+            self._applyDetailToChild(child)
+
     def _refreshLabelVisibility(self) -> None:
         try:
-            self.label_item.setVisible(bool(self._label_visible and bool(self.label_item.toPlainText())))
+            self.label_item.setVisible(bool(
+                self._label_visible
+                and bool(self.label_item.toPlainText())
+                and self._detail_visible))
         except Exception:
             pass
 

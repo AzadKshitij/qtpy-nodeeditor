@@ -84,6 +84,13 @@ class Node(QObject,  Serializable):
         # grouping support (single parent Group or None; see nodeeditor.node_group)
         self.parent_group: Optional["Group"] = None
 
+        # The scene may already be at low zoom (a restore into a zoomed-out
+        # view): sockets and the content proxy were built after Qt reported
+        # this node joining the scene, so push the current state onto them.
+        sync_detail = getattr(self.grNode, "syncDetailVisibility", None)
+        if sync_detail is not None:
+            sync_detail()
+
     def __str__(self) -> str:
         return "<%s:%s %s..%s>" % (self.title, self.__class__.__name__, hex(id(self))[2:5], hex(id(self))[-3:])
 
@@ -170,15 +177,11 @@ class Node(QObject,  Serializable):
         :param x: X `Scene` position
         :param y: Y `Scene` position
         """
+        # Moving the graphics item fires ``itemChange(ItemPositionHasChanged)``,
+        # which refreshes the connected edges. The loop that used to live here
+        # did the same work again, and called ``calcPath()`` a second time
+        # before immediately invalidating that path, so it was pure waste.
         self.grNode.setPos(x, y)
-        for inputs in self.inputs:
-            for edge in inputs.edges:
-                edge.grEdge.calcPath()
-                edge.updatePositions()
-        for outputs in self.outputs:
-            for edge in outputs.edges:
-                edge.grEdge.calcPath()
-                edge.updatePositions()
 
     def initInnerClasses(self) -> None:
         """Sets up graphics Node (PyQt) and Content Widget"""

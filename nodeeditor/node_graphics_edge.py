@@ -237,7 +237,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         :param y: y position
         :type y: ``float``
         """
-        self.posSource = [x, y]
+        self.setPositions((x, y), self.posDestination)
 
     def setDestination(self, x: float, y: float) -> None:
         """ Set destination point
@@ -247,11 +247,57 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         :param y: y position
         :type y: ``float``
         """
-        self.posDestination = [x, y]
+        self.setPositions(self.posSource, (x, y))
+
+    def setPositions(self, source, destination) -> None:
+        """Set both ends and adopt the resulting path once.
+
+        A node move changes both ends. Adopting inside each setter would run the
+        route calculation twice per edge per move, and that calculation is the
+        expensive part of moving a node.
+
+        :param source: new source point
+        :param destination: new destination point
+        """
+        self.posSource = [source[0], source[1]]
+        self.posDestination = [destination[0], destination[1]]
+        self.adoptGeometry()
+
+    def adoptGeometry(self) -> None:
+        """Recompute the drawn path right away, so Qt invalidates the true rect.
+
+        The setters run before the caller repaints, and a path picked up only
+        while painting invalidates the *previous* geometry (see
+        :meth:`refreshPath`).
+        """
+        if getattr(self, "pathCalculator", None) is None:
+            return
+        if getattr(self, "labelItem", None) is None:
+            return
+        self.refreshPath()
+
+    def strokeMargin(self) -> float:
+        """Half the widest pen this edge can paint with, plus an antialias pixel.
+
+        ``paint`` strokes the path, and a stroke reaches half its width past the
+        path on both sides. A ``boundingRect`` of the bare path is therefore
+        smaller than what the item draws, and every repaint leaves the outer band
+        of the *previous* stroke on screen. That is not a one-pixel cosmetic
+        miss: while a node is dragged, each frame adds a band along the path's
+        old position, and dozens of frames accumulate into the smeared arcs and
+        loops the canvas was showing.
+        """
+        widest = 0.0
+        for name in ("_pen", "_pen_selected", "_pen_dragging", "_pen_hovered"):
+            pen = getattr(self, name, None)
+            if pen is not None:
+                widest = max(widest, pen.widthF())
+        return widest / 2.0 + 1.0
 
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle (path united with label rect)."""
-        base = self.shape().boundingRect()
+        margin = self.strokeMargin()
+        base = self.shape().boundingRect().adjusted(-margin, -margin, margin, margin)
         try:
             if self.labelItem.isVisible():
                 label_rect = self.labelItem.boundingRect().translated(self.labelItem.pos())
@@ -259,6 +305,18 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         except Exception:
             pass
         return base
+
+    def refreshPath(self) -> None:
+        """Adopt the current path and label position now.
+
+        Qt invalidates an item by its *declared* geometry, so an item that only
+        adopts a new path while painting invalidates the previous one and draws
+        the new one: whatever the old path covered outside both rectangles stays
+        on screen. Callers that know the edge moved (``updatePositions``) call
+        this first, which makes ``setPath`` repaint the union of old and new.
+        """
+        self.setPath(self.calcPath())
+        self.updateLabelPosition()
 
     def shape(self) -> QPainterPath:
         """Returns ``QPainterPath`` representation of this `Edge`
@@ -271,6 +329,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Qt's overridden method to paint this Graphics Edge. Path calculated
             in :func:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge.calcPath` method"""
+        # A no-op once refreshPath() has run for this geometry (Qt's setPath
+        # returns early on an unchanged path); kept for consumers that only ever
+        # paint.
         self.setPath(self.calcPath())
         self.updateLabelPosition()
 

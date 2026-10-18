@@ -43,6 +43,11 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
         """Sets up layouts and widgets to be rendered in :py:class:`~nodeeditor.node_graphics_node.QDMGraphicsNode` class.
         """
 
+        #: Kept on the widget because the icon pixmap *is* the node's whole
+        #: look: consumers that repaint the node cheaply at low zoom blit this
+        #: instead of rendering the widget.
+        self.icon = icon
+
         self.v_layout = QVBoxLayout()
         self.v_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.v_layout)
