@@ -47,9 +47,31 @@ from nodeeditor.node_colors_config import (
     get_color_scheme,
 )
 
+# Export the socket shape system for easier access
+from nodeeditor.node_socket_shapes import (
+    SocketShape,
+    SocketShapeContext,
+    CircleShape,
+    SquareShape,
+    TriangleShape,
+    ChevronShape,
+    register_socket_shape,
+    get_socket_shape,
+    SOCKET_SHAPES,
+)
+
 __all__ = [
     "NodeEditorColorScheme",
     "EdgeColors",
     "SocketColors",
     "get_color_scheme",
+    "SocketShape",
+    "SocketShapeContext",
+    "CircleShape",
+    "SquareShape",
+    "TriangleShape",
+    "ChevronShape",
+    "register_socket_shape",
+    "get_socket_shape",
+    "SOCKET_SHAPES",
 ]

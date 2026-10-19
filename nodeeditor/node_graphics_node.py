@@ -561,6 +561,27 @@ class QDMGraphicsNode(QGraphicsItem):
         except Exception:
             pass
 
+    def _isSocketHovered(self) -> bool:
+        """``True`` while the mouse is over one of this node's sockets.
+
+        A socket lives inside the node's own hit area, so Qt reports the node
+        as hovered while the mouse is over the socket. The socket's highlight
+        is the more precise of the two, so the node holds back its hover
+        outline until the mouse leaves the socket.
+        """
+        node = getattr(self, "node", None)
+        if node is None:
+            return False
+        try:
+            sockets = list(node.inputs) + list(node.outputs)
+        except (AttributeError, TypeError):
+            return False
+        for socket in sockets:
+            gr_socket = getattr(socket, "grSocket", None)
+            if gr_socket is not None and getattr(gr_socket, "hovered", False):
+                return True
+        return False
+
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting the rounded rectanglar `Node`"""
         # title
@@ -594,7 +615,7 @@ class QDMGraphicsNode(QGraphicsItem):
         path_outline.addRoundedRect(-1, -1, self.width+2,
                                     self.height+2, self.edge_roundness, self.edge_roundness)
         painter.setBrush(Qt.NoBrush)
-        if self.hovered:
+        if self.hovered and not self._isSocketHovered():
             painter.setPen(self._pen_hovered)
             painter.drawPath(path_outline.simplified())
             painter.setPen(self._pen_default)

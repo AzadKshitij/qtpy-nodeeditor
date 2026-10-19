@@ -8,6 +8,7 @@ from nodeeditor.node_graphics_node import QDMGraphicsNode
 from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_socket import Socket, LEFT_BOTTOM, LEFT_CENTER, LEFT_TOP, RIGHT_BOTTOM, RIGHT_CENTER, RIGHT_TOP
+from nodeeditor.node_socket_shapes import SOCKET_SHAPES
 from nodeeditor.utils_no_qt import dumpException, pp
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Union
@@ -207,6 +208,11 @@ class Node(QObject,  Serializable):
         self.output_socket_position = RIGHT_TOP
         self.input_multi_edged = False
         self.output_multi_edged = True
+        #: shape used by this node's input sockets, keyed by socket type.
+        #: ``'*'`` is the wildcard for every type the map does not name.
+        self.input_socket_shapes: dict = {}
+        #: shape used by this node's output sockets, keyed by socket type
+        self.output_socket_shapes: dict = {}
         self.socket_offsets = {
             LEFT_BOTTOM: -1,
             LEFT_CENTER: -1,
@@ -215,6 +221,41 @@ class Node(QObject,  Serializable):
             RIGHT_CENTER: 1,
             RIGHT_TOP: 1,
         }
+
+    def getSocketShapeName(self, socket_type, is_input: bool) -> str:
+        """Name of the shape used by a socket of ``socket_type`` on this node.
+
+        The side's own map is consulted first, then its ``'*'`` wildcard
+        entry, and the circle is the last resort. Types that are not mapped
+        keep the classic circle.
+
+        :param socket_type: the socket's type, as passed to ``initSockets``
+        :param is_input: ``True`` for an input socket
+        :return: the registered shape name
+        :rtype: ``str``
+
+        Example::
+
+            class MyNode(Node):
+                def initSettings(self):
+                    super().initSettings()
+                    self.input_socket_shapes = {1: 'chevron'}
+                    self.output_socket_shapes = {'*': 'triangle'}
+        """
+        if is_input:
+            mapping = getattr(self, "input_socket_shapes", None)
+        else:
+            mapping = getattr(self, "output_socket_shapes", None)
+
+        name = None
+        if isinstance(mapping, dict):
+            name = mapping.get(socket_type)
+            if name is None:
+                name = mapping.get("*")
+        # an unregistered name draws as the circle rather than breaking
+        if isinstance(name, str) and name in SOCKET_SHAPES:
+            return name
+        return "circle"
 
     def initSockets(self, inputs: list, outputs: list,
                     input_text: list = [], output_text: list = [],

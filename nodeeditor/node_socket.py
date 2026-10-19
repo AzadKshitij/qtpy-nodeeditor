@@ -77,6 +77,11 @@ class Socket(QObject, Serializable):
         self.is_input = is_input
         self.is_output = not self.is_input
 
+        #: name of the shape this socket is drawn with. Set by the owning node
+        #: (see :meth:`~nodeeditor.node_node.Node.getSocketShapeName`), so it
+        #: is code, never graph file data.
+        self.shape = self._resolveShapeName(socket_type, is_input)
+
         if DEBUG:
             print("Socket -- creating with", self.index,
                   self.position, "for nodeeditor", self.node)
@@ -92,6 +97,22 @@ class Socket(QObject, Serializable):
             self.index, "ME" if self.is_multi_edges else "SE", hex(id(self))[
                 2:5], hex(id(self))[-3:]
         )
+
+    def _resolveShapeName(self, socket_type, is_input: bool) -> str:
+        """Ask the owning node which shape a socket of this type should use.
+
+        :param socket_type: the socket's type
+        :param is_input: ``True`` for an input socket
+        :return: the registered shape name
+        :rtype: ``str``
+        """
+        getter = getattr(self.node, "getSocketShapeName", None)
+        if getter is None:
+            return "circle"
+        try:
+            return getter(socket_type, is_input) or "circle"
+        except Exception:
+            return "circle"
 
     def delete(self) -> None:
         """Delete this `Socket` from graphics scene for sure"""
@@ -111,6 +132,10 @@ class Socket(QObject, Serializable):
         if self.socket_type != new_socket_type:
             self.socket_type = new_socket_type
             self.grSocket.changeSocketType()
+            # the shape follows the socket type
+            self.shape = self._resolveShapeName(
+                new_socket_type, self.is_input)
+            self.grSocket.setShape(self.shape)
             return True
         return False
 
