@@ -6,7 +6,7 @@ from qtpy.QtWidgets import QGraphicsItem, QWidget, QGraphicsTextItem, QGraphicsS
 from qtpy.QtGui import QFont, QColor, QPen, QBrush, QPainterPath, QTextCursor
 from qtpy.QtCore import Qt, QRectF
 
-from typing import TYPE_CHECKING, List, Optional, Tuple, Any
+from typing import TYPE_CHECKING, List, Mapping, Optional, Tuple, Any
 
 from nodeeditor.node_colors_config import get_color_scheme
 
@@ -224,6 +224,12 @@ class QDMGraphicsNode(QGraphicsItem):
         #: ``QDMGraphicsScene.setDetailLod``). False below the scene's
         #: threshold, when labels, content widgets and sockets are skipped.
         self._detail_visible: bool = True
+        #: Resolved per-element state pushed by the scene (see
+        #: ``QDMGraphicsScene.set_detail_policy``). Each flag says whether
+        #: that element may be drawn right now.
+        self._content_visible: bool = True
+        self._sockets_visible: bool = True
+        self._label_enabled: bool = True
 
     def initAssets(self) -> None:
         """Initialize ``QObjects`` like ``QColor``, ``QPen`` and ``QBrush``"""
@@ -290,16 +296,19 @@ class QDMGraphicsNode(QGraphicsItem):
             # loading a big workflow while zoomed out would otherwise draw every
             # new node's content widget until the next zoom change.
             scene = value if value is not None else self.scene()
-            lod = getattr(scene, "_detail_visible", True)
-            if lod != getattr(self, "_detail_visible", True):
-                self.setDetailVisible(lod)
+            state = getattr(scene, "detail_state", None)
+            if callable(state):
+                self.setDetailState(state())
+            else:
+                lod = getattr(scene, "_detail_visible", True)
+                if lod != getattr(self, "_detail_visible", True):
+                    self.setDetailVisible(lod)
         elif change == QGraphicsItem.GraphicsItemChange.ItemChildAddedChange:
             # Sockets and the content proxy are created after this node joined
             # the scene, so the scene's one-off broadcast never reached them;
             # without this a node built while zoomed out draws fully detailed
             # until the next zoom change.
-            if not getattr(self, "_detail_visible", True):
-                self._applyDetailToChild(value)
+            self._applyDetailToChild(value)
         return super().itemChange(change, value)
 
     def mouseMoveEvent(self, event) -> None:
@@ -445,18 +454,21 @@ class QDMGraphicsNode(QGraphicsItem):
         b = QColor(border) if border is not None and not isinstance(border, QColor) else border
         self.label_item.setLabelColors(bg=bg, border=b)
 
-    def setDetailVisible(self, visible: bool) -> None:
-        """Show or hide this node's fine detail at low zoom.
+    def setDetailState(self, state: Mapping[str, bool]) -> None:
+        """Apply a resolved per-element detail state.
 
-        Broadcast by the scene when the on-screen scale crosses its level-of-
-        detail threshold. A node's content widget, its floating label and its
-        socket circles are the per-node costs that dominate a zoomed-out frame,
-        and at that size none of them can be read or aimed at anyway.
+        The scene resolves its detail policy into a mapping of element key to
+        "draw it" and hands the whole mapping over, so an application can add
+        elements of its own to the same broadcast and read them back here.
+        The zoom state itself rides along under the ``detail`` key.
+
+        Every child is pushed, not only the ones whose flag changed: a socket
+        or a content proxy built after the last flip has never seen the state.
         """
-        visible = bool(visible)
-        if visible == self._detail_visible:
-            return
-        self._detail_visible = visible
+        self._detail_visible = bool(state.get("detail", self._detail_visible))
+        self._content_visible = bool(state.get("content", True))
+        self._sockets_visible = bool(state.get("sockets", True))
+        self._label_enabled = bool(state.get("label", True))
 
         self._refreshLabelVisibility()
 
@@ -464,6 +476,24 @@ class QDMGraphicsNode(QGraphicsItem):
         # fade out too.
         for child in self.childItems():
             self._applyDetailToChild(child)
+
+    def setDetailVisible(self, visible: bool) -> None:
+        """Show or hide this node's fine detail at low zoom.
+
+        The legacy entry point, kept for callers outside the scene: it drops
+        the content widget, the floating label and the socket circles together.
+        The scene uses :meth:`setDetailState` instead, which resolves each of
+        those separately.
+        """
+        visible = bool(visible)
+        self.setDetailState(
+            {
+                "detail": visible,
+                "content": visible,
+                "sockets": visible,
+                "label": visible,
+            }
+        )
 
     def _applyDetailToChild(self, child) -> None:
         """Push this node's detail state onto one child item.
@@ -473,9 +503,9 @@ class QDMGraphicsNode(QGraphicsItem):
         """
         setter = getattr(child, "setDetailVisible", None)
         if setter is not None:
-            setter(self._detail_visible)
+            setter(self._sockets_visible)
         elif child is getattr(self, "grContent", None):
-            child.setVisible(self._detail_visible)
+            child.setVisible(self._content_visible)
 
     def syncDetailVisibility(self) -> None:
         """Push the scene's current detail state onto every child item.
@@ -487,7 +517,12 @@ class QDMGraphicsNode(QGraphicsItem):
         still inside its own constructor, which has no ``setDetailVisible``.
         Called from ``Node.__init__`` once the node is fully built.
         """
-        self._detail_visible = getattr(self.scene(), "_detail_visible", True)
+        scene = self.scene()
+        state = getattr(scene, "detail_state", None)
+        if callable(state):
+            self.setDetailState(state())
+            return
+        self._detail_visible = getattr(scene, "_detail_visible", True)
         self._refreshLabelVisibility()
         for child in self.childItems():
             self._applyDetailToChild(child)
@@ -497,7 +532,7 @@ class QDMGraphicsNode(QGraphicsItem):
             self.label_item.setVisible(bool(
                 self._label_visible
                 and bool(self.label_item.toPlainText())
-                and self._detail_visible))
+                and self._label_enabled))
         except Exception:
             pass
 

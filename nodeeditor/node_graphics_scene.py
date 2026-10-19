@@ -10,7 +10,7 @@ from qtpy.QtGui import QColor, QPen, QFont, QPainter
 from nodeeditor.utils import dumpException
 from nodeeditor.node_graphics_view import STATE_STRING, DEBUG_STATE
 
-from typing import TYPE_CHECKING, List, Optional, Tuple, Any
+from typing import TYPE_CHECKING, List, Mapping, Optional, Tuple, Any
 
 
 #: How `QGraphicsScene` indexes its items.
@@ -55,6 +55,14 @@ class QDMGraphicsScene(QGraphicsScene):
     #: they cost dominate a frame once hundreds of nodes share the viewport.
     DETAIL_LOD_THRESHOLD = 0.5
 
+    #: The parts of a node the level-of-detail switch can drop. An application
+    #: may register elements of its own (see :meth:`set_detail_policy`).
+    DETAIL_ELEMENTS = ("content", "label", "sockets")
+
+    #: How an element behaves when the canvas simplifies: always drawn, drawn
+    #: only while the zoom warrants it, or never drawn.
+    DETAIL_MODES = ("always", "auto", "never")
+
     def __init__(self, scene: 'Scene', parent: QWidget = None) -> None:
         """
         :param scene: reference to the :class:`~nodeeditor.node_scene.Scene`
@@ -81,6 +89,20 @@ class QDMGraphicsScene(QGraphicsScene):
         #: Current level-of-detail state broadcast to items (see
         #: :meth:`setDetailLod`). Starts fully detailed.
         self._detail_visible = True
+
+        #: Zoom scale at which items are asked to drop their fine detail. Per
+        #: instance, so an application can move the point where the canvas
+        #: simplifies without touching the class default.
+        self.detail_lod_threshold = float(self.DETAIL_LOD_THRESHOLD)
+
+        #: Per-element detail modes, seeded with the library's own elements.
+        self.detail_policy: dict[str, str] = {
+            name: "auto" for name in self.DETAIL_ELEMENTS
+        }
+
+        #: Resolved per-element state, recomputed on every flip.
+        self._detail_state: dict[str, bool] = {}
+        self._resolve_detail_state()
 
         self._color_background = QColor("#14171a")
         self._color_light = QColor("#1d2225")
@@ -178,7 +200,7 @@ class QDMGraphicsScene(QGraphicsScene):
         flip. Callers must not be inside a paint pass - see
         :meth:`setDetailLod`.
         """
-        visible = scale >= self.DETAIL_LOD_THRESHOLD
+        visible = scale >= self.detail_lod_threshold
         if visible == self._detail_visible:
             return False
         self.setDetailLod(visible)
@@ -195,11 +217,72 @@ class QDMGraphicsScene(QGraphicsScene):
         if visible == self._detail_visible:
             return
         self._detail_visible = visible
+        self._resolve_detail_state()
+        self._broadcast_detail_state()
+
+    def set_detail_policy(self, policy: Mapping[str, str]) -> None:
+        """Say what each element may do when the canvas simplifies.
+
+        ``policy`` maps an element key to ``always``, ``auto`` or ``never``.
+        ``auto`` follows the zoom threshold, ``always`` keeps the element at
+        every zoom and ``never`` drops it at every zoom. Keys the library does
+        not know are kept, so an application can register an element of its own
+        and read the answer back with :meth:`detail_enabled`.
+        """
+        cleaned: dict[str, str] = {}
+        for key, mode in dict(policy).items():
+            mode = str(mode).strip().lower()
+            if mode not in self.DETAIL_MODES:
+                print(
+                    f"nodeeditor: unknown detail mode {mode!r} for {key!r}, ignored"
+                )
+                continue
+            cleaned[str(key)] = mode
+        merged = dict(self.detail_policy)
+        merged.update(cleaned)
+        if merged == self.detail_policy:
+            return
+        self.detail_policy = merged
+        self._resolve_detail_state()
+        self._broadcast_detail_state()
+
+    def detail_enabled(self, element: str) -> bool:
+        """Whether ``element`` should be drawn at the current zoom."""
+        return self._detail_state.get(element, self._detail_visible)
+
+    def detail_state(self) -> dict[str, bool]:
+        """The resolved per-element state, plus the zoom state under "detail"."""
+        state = dict(self._detail_state)
+        state["detail"] = self._detail_visible
+        return state
+
+    def _resolve_detail_state(self) -> None:
+        """Turn the policy and the zoom state into one on/off map."""
+        state: dict[str, bool] = {}
+        for key, mode in self.detail_policy.items():
+            if mode == "always":
+                state[key] = True
+            elif mode == "never":
+                state[key] = False
+            else:
+                state[key] = self._detail_visible
+        self._detail_state = state
+
+    def _broadcast_detail_state(self) -> None:
+        """Hand the resolved state to every item that cares about it."""
+        state = self.detail_state()
         for item in self.items():
+            setter = getattr(item, "setDetailState", None)
+            if setter is not None:
+                try:
+                    setter(dict(state))
+                except RuntimeError:
+                    pass  # C++ side already gone
+                continue
             setter = getattr(item, "setDetailVisible", None)
             if setter is not None:
                 try:
-                    setter(visible)
+                    setter(self._detail_visible)
                 except RuntimeError:
                     pass  # C++ side already gone
 
