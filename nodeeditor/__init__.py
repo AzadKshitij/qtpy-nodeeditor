@@ -60,6 +60,10 @@ from nodeeditor.node_socket_shapes import (
     SOCKET_SHAPES,
 )
 
+# Export the graph algorithm exception
+from nodeeditor.node_graph import GraphCycleError
+
+
 __all__ = [
     "NodeEditorColorScheme",
     "EdgeColors",
@@ -74,4 +78,5 @@ __all__ = [
     "register_socket_shape",
     "get_socket_shape",
     "SOCKET_SHAPES",
+    "GraphCycleError",
 ]

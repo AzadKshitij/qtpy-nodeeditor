@@ -17,6 +17,7 @@ from nodeeditor.node_edge import Edge
 from nodeeditor.node_scene_history import SceneHistory
 from nodeeditor.node_scene_clipboard import SceneClipboard
 from nodeeditor.node_colors_config import get_color_scheme
+import nodeeditor.node_graph as node_graph
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Callable, OrderedDict as OrderedDictType, Type
 
@@ -124,6 +125,107 @@ class Scene(Serializable):
             if node.id == node_id:
                 return node
         return None
+
+    # ------------------------------------------------------------------
+    # Graph algorithms
+    # ------------------------------------------------------------------
+    # These are thin wrappers around :mod:`nodeeditor.node_graph`, which
+    # implements them natively. The graph is derived from this `Scene` on
+    # every call, so it always reflects the current connections.
+
+    def topological_order(self) -> List[Node]:
+        """The `Nodes` of this `Scene` in dependency order.
+
+        Every `Node` comes after the `Nodes` feeding it. `Nodes` that do not
+        depend on each other keep their scene order, so the result is
+        reproducible for a given graph.
+
+        :return: the `Nodes` in dependency order
+        :rtype: ``list`` of :class:`~nodeeditor.node_node.Node`
+        :raises :class:`~nodeeditor.node_graph.GraphCycleError` if the graph
+            contains a cycle
+        """
+        return node_graph.topological_order(self)
+
+    def descendants(self, node: Node) -> List[Node]:
+        """Every `Node` reachable downstream of `node`, excluding `node`.
+
+        Ordered breadth-first, so the nearest nodes come first. A node
+        reachable through several paths appears once.
+
+        :param node: the `Node` to start from
+        :type node: :class:`~nodeeditor.node_node.Node`
+        :return: the downstream `Nodes`
+        :rtype: ``list`` of :class:`~nodeeditor.node_node.Node`
+        """
+        return node_graph.descendants(self, node)
+
+    def ancestors(self, node: Node) -> List[Node]:
+        """Every `Node` feeding `node`, excluding `node` itself.
+
+        Ordered breadth-first, so the nearest nodes come first.
+
+        :param node: the `Node` to start from
+        :type node: :class:`~nodeeditor.node_node.Node`
+        :return: the upstream `Nodes`
+        :rtype: ``list`` of :class:`~nodeeditor.node_node.Node`
+        """
+        return node_graph.ancestors(self, node)
+
+    def components(self) -> List[List[Node]]:
+        """The disconnected subgraphs of this `Scene`.
+
+        Two `Nodes` belong to the same component when a chain of `Edges`
+        connects them, regardless of direction. A `Node` without any
+        connection forms a component of its own. The components come in scene
+        order.
+
+        :return: one list of `Nodes` per component
+        :rtype: ``list`` of ``list`` of :class:`~nodeeditor.node_node.Node`
+        """
+        return node_graph.components(self)
+
+    def cycles(self) -> List[List[Edge]]:
+        """The cycles of this `Scene`.
+
+        One representative cycle per cyclic region. Within a cycle, the
+        `Edges` are listed in traversal order and the last one leads back to
+        the node the first one started from.
+
+        :return: the cycles, each a list of `Edges`
+        :rtype: ``list`` of ``list`` of :class:`~nodeeditor.node_edge.Edge`
+        """
+        return node_graph.cycles(self)
+
+    def paths(self, source: Node, target: Node) -> List[List[Tuple[Node, Optional[Edge]]]]:
+        """Every simple path from `source` to `target`.
+
+        A path is a list of ``(node, edge)`` steps, where the `edge` of a step
+        is the `Edge` that led into its `Node`. The first step carries
+        ``None`` as its edge.
+
+        :param source: the `Node` to start from
+        :type source: :class:`~nodeeditor.node_node.Node`
+        :param target: the `Node` to reach
+        :type target: :class:`~nodeeditor.node_node.Node`
+        :return: the paths found
+        :rtype: ``list`` of ``list`` of ``(Node, Edge)``
+        """
+        return node_graph.paths(self, source, target)
+
+    def shortest_path(
+        self, source: Node, target: Node
+    ) -> Optional[List[Tuple[Node, Optional[Edge]]]]:
+        """The shortest path from `source` to `target`, counted in `Edges`.
+
+        :param source: the `Node` to start from
+        :type source: :class:`~nodeeditor.node_node.Node`
+        :param target: the `Node` to reach
+        :type target: :class:`~nodeeditor.node_node.Node`
+        :return: the shortest path, or ``None`` when `target` is unreachable
+        :rtype: ``list`` of ``(Node, Edge)`` or ``None``
+        """
+        return node_graph.shortest_path(self, source, target)
 
     def setSilentSelectionEvents(self, value: bool = True) -> None:
         """Calling this can suppress onItemSelected events to be triggered. This is useful when working with clipboard"""

@@ -20,6 +20,7 @@ nodeeditor Package
    nodeeditor.node_graphics_scene
    nodeeditor.node_graphics_socket
    nodeeditor.node_graphics_view
+   nodeeditor.node_graph
    nodeeditor.node_node
    nodeeditor.node_multi_input_node
    nodeeditor.node_scene

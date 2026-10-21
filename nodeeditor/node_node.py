@@ -9,6 +9,7 @@ from nodeeditor.node_content_widget import QDMNodeContentWidget
 from nodeeditor.node_serializable import Serializable
 from nodeeditor.node_socket import Socket, LEFT_BOTTOM, LEFT_CENTER, LEFT_TOP, RIGHT_BOTTOM, RIGHT_CENTER, RIGHT_TOP
 from nodeeditor.node_socket_shapes import SOCKET_SHAPES
+import nodeeditor.node_graph as node_graph
 from nodeeditor.utils_no_qt import dumpException, pp
 
 from typing import TYPE_CHECKING, List, Optional, Tuple, Any, Union
@@ -509,12 +510,16 @@ class Node(QObject,  Serializable):
     def markDescendantsDirty(self, new_value: bool = True) -> None:
         """Mark all children and descendants of this `Node` to be `Dirty`. Not this `Node` it self
 
+        The traversal is iterative and keeps a visited set, so a graph with a
+        cycle terminates instead of exhausting the interpreter's recursion
+        limit, and a node reachable through several paths is visited once
+        rather than once per path.
+
         :param new_value: ``True`` if children and descendants should be `Dirty`. ``False`` if you want to un-dirty children and descendants
         :type new_value: ``bool``
         """
-        for other_node in self.getChildrenNodes():
+        for other_node in node_graph.descendants(self.scene, self):
             other_node.markDirty(new_value)
-            other_node.markDescendantsDirty(new_value)
 
     def isInvalid(self) -> bool:
         """Is this node marked as `Invalid`?
@@ -550,12 +555,16 @@ class Node(QObject,  Serializable):
     def markDescendantsInvalid(self, new_value: bool = True) -> None:
         """Mark all children and descendants of this `Node` to be `Invalid`. Not this `Node` it self
 
+        The traversal is iterative and keeps a visited set, so a graph with a
+        cycle terminates instead of exhausting the interpreter's recursion
+        limit, and a node reachable through several paths is visited once
+        rather than once per path.
+
         :param new_value: ``True`` if children and descendants should be `Invalid`. ``False`` if you want to make children and descendants valid
         :type new_value: ``bool``
         """
-        for other_node in self.getChildrenNodes():
+        for other_node in node_graph.descendants(self.scene, self):
             other_node.markInvalid(new_value)
-            other_node.markDescendantsInvalid(new_value)
 
     def eval(self, index: int = 0) -> int:
         """Evaluate this `Node`. This is supposed to be overridden. See :ref:`evaluation` for more"""
