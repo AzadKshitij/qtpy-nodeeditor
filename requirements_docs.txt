@@ -1,6 +1,10 @@
 # Tooling for building the documentation site.
 # See docs/CONTRIBUTING.md for how to use it.
-mkdocs>=1.6,<2
-mkdocs-material>=9.5,<10
-mkdocstrings[python]>=0.26,<1
-ruff>=0.6
+#
+# Pinned exactly on purpose: mkdocstrings and Pygments have to agree on the
+# Highlight API, and a loose version range resolved a combination that failed
+# to build the API pages.
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+mkdocstrings[python]==1.0.8
+ruff==0.17.1
