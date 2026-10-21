@@ -7,6 +7,53 @@ This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
 
+0.8 - 2026-10-21
+----------------
+
+**Features**
+
+- Configurable socket shapes: nodes declare per-side, per-type socket shapes
+  through ``input_socket_shapes`` / ``output_socket_shapes`` (with an ``'*'``
+  wildcard, circle fallback), over a new ``nodeeditor.node_socket_shapes``
+  registry (`register_socket_shape`) with built-in ``circle``, ``square``,
+  ``triangle`` and ``chevron`` presets and support for custom point tuples,
+  shape classes, and drawing callbacks. Shape outlines double as hit areas, and
+  unknown names fall back to the circle instead of raising. Serialization is
+  unchanged.
+- Socket hover highlight: sockets now accept hover events and paint a highlight
+  when hovered, kept separate from the ``isHighlighted`` flag used for edge
+  snapping.
+- Per-element level-of-detail policy: the canvas' single "drop detail below the
+  zoom threshold" boolean became a policy map over the node's elements
+  (``content``, ``label``, ``sockets``), each ``always``, ``auto`` or ``never``
+  (`Scene.set_detail_policy`), with answers readable per element through
+  ``detail_enabled``. Applications can register and query elements of their own.
+- The level-of-detail threshold is a per-instance value
+  (``detail_lod_threshold``) instead of a class constant, so each scene can
+  move the point where it simplifies.
+- ``setDetailState`` broadcasts the resolved state to items; ``setDetailVisible``
+  stays for callers outside the scene with its old drop-everything meaning.
+
+**Performance**
+
+- Zoom-based detail switching and grid level culling for large graphs: a grid
+  level whose on-screen spacing falls under ``MIN_GRID_SPACING_PX`` is not
+  drawn, since it reads as a wash and costs time proportional to its line
+  count.
+
+**Docs**
+
+- Added ``docs/SOCKET_SHAPES.md`` with a usage guide, the
+  ``examples/example_socket_shapes.py`` demo (including a custom class and a
+  callback shape), and expanded ``docs/MULTI_INPUT_NODES.md``.
+
+**Tests**
+
+- Added ``tests/test_110_socket_shapes.py`` for shape registration, resolution,
+  hit areas, hover and serialization neutrality, and
+  ``tests/test_200_detail_policy.py`` for policy resolution, broadcasting and
+  threshold overrides.
+
 0.7 - 2026-09-29
 ----------------
 
