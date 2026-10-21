@@ -75,6 +75,7 @@ class QDMGraphicsSocket(QGraphicsItem):
 
     @property
     def socket_type(self):
+        """The socket's type, used to look up its color."""
         return self.socket.socket_type
 
     @property

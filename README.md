@@ -1,59 +1,133 @@
-Welcome to PyQtNodeEditor
-==========================
+# nodeeditor-qtpy
 
-<!-- <p>
-    <a href="https://github.com/AzadKshitij/qtpy-nodeeditor.git/releases"><img src="https://img.shields.io/github/release/AzadKshitij/qtpy-nodeeditor.svg" alt="Latest Release"></a>
-</p> -->
+A node editor framework for Qt. Build interactive graph interfaces out of
+draggable nodes, connectable sockets and edges, with undo/redo, JSON
+serialization and support for your own evaluation logic.
 
-## ⚠️⚠️ Disclaimer
-**This is not the original repository. This is a fork of the original repository, customized for personal use. you can still find original repo [here](https://gitlab.com/pavel.krupala/pyqt-node-editor.git).**
+The distribution is called `nodeeditor-qtpy`; the import package is `nodeeditor`.
+The framework itself is binding-agnostic: it talks to Qt through
+[QtPy](https://github.com/spyder-ide/qtpy), so it runs on PyQt5, PySide2,
+PyQt6 and PySide6.
 
-Features
---------
+![Calculator example](https://raw.githubusercontent.com/AzadKshitij/qtpy-nodeeditor/main/examples/calculator_ss_1.png)
 
-- provides full framework for creating customizable graph, nodes, sockets and edges
-- full support for undo / redo and serialization into files in a VCS friendly way
+## Features
+
+- full framework for customizable nodes, sockets and edges
+- undo / redo and serialization into JSON files in a VCS friendly way
 - support for implementing evaluation logic
-- hovering effects, dragging edges, cutting lines and a bunch more...
-- provided 2 examples on how node editor can be implemented
+- hovering effects, dragging edges, cutting lines, snapping and more
+- node groups, multi-input nodes, custom socket shapes and color schemes
+- ready-made examples you can copy from
 
-Requirements
-------------
+## Requirements
 
-- Python 3.x
-- PyQt6 or PySide6 (using wrapper QtPy)
+- Python 3.10+
+- A Qt binding: PyQt6 or PySide6 (any Qt 5/6 binding QtPy supports works)
 
-Installation
-------------
+## Installation
 
-Directly from source code to get the latest version
+From PyPI, including a Qt binding:
 
 ```
-pip install git+https://github.com/AzadKshitij/qtpy-nodeeditor.git
+pip install nodeeditor-qtpy[pyqt6]
 ```
 
+or, for PySide6:
 
-Or download the source code from github
+```
+pip install nodeeditor-qtpy[pyside6]
+```
+
+Without an extra, the package installs no binding and uses whichever
+PyQt5/PySide2/PyQt6/PySide6 you already have. When several are installed,
+QtPy picks one from the `QT_API` environment variable.
+
+Directly from source code to get the latest version:
+
+```
+pip install "nodeeditor-qtpy[pyqt6] @ git+https://github.com/AzadKshitij/qtpy-nodeeditor.git"
+```
+
+Or clone the repository:
+
 ```
 git clone https://github.com/AzadKshitij/qtpy-nodeeditor.git
 ```
 
-Screenshots
------------
-<p>
-<image src= "examples/calculator_ss_1.png">
+## Quick start
 
-Other links
------------
+A node is a `Node` belonging to a `Scene`. Give it sockets, then connect an
+output socket to an input socket with an `Edge`:
 
-- [Documentation](https://pyqt-node-editor.readthedocs.io/en/latest/)
+```python
+import sys
 
-- [Contribute](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/CONTRIBUTING.md)
+from qtpy.QtWidgets import QApplication
 
+from nodeeditor.node_editor_widget import NodeEditorWidget
+from nodeeditor.node_node import Node
+from nodeeditor.node_edge import Edge
+
+app = QApplication(sys.argv)
+
+editor = NodeEditorWidget()
+scene = editor.scene
+
+# a node with one output socket
+source = Node(scene, title="Value", outputs=[1], output_text=["out"])
+
+# a node with one input socket
+sink = Node(scene, title="Print", inputs=[1], input_text=["in"])
+
+# connect the output of the first node to the input of the second
+Edge(scene, source.outputs[0], sink.inputs[0])
+
+editor.show()
+sys.exit(app.exec())
+```
+
+`NodeEditorWidget` creates the `Scene` for you. Use `Scene` on its own when
+you want to drive the graph without a widget:
+
+```python
+from nodeeditor.node_scene import Scene
+from nodeeditor.node_node import Node
+
+scene = Scene()
+node = Node(scene, title="Value", outputs=[1], output_text=["out"])
+```
+
+The `inputs` and `outputs` lists hold socket types, and the matching
+`input_text` / `output_text` lists hold the labels drawn next to them. Both
+`Node` and `Edge` register themselves with the scene when created, so there is
+nothing to add by hand.
+
+## Import names
+
+```python
+from nodeeditor import NodeEditorColorScheme, get_socket_shape
+from nodeeditor.node_scene import Scene
+from nodeeditor.node_node import Node
+from nodeeditor.node_edge import Edge
+```
+
+## Credits
+
+This project is a fork of the original
+[PyQt Node Editor](https://gitlab.com/pavel.krupala/pyqt-node-editor) by
+[Pavel Křupala](https://gitlab.com/pavel.krupala), which is released under the
+MIT licence. The original author is credited in [LICENCE](LICENCE), and the
+history of the upstream project is kept in
+[CHANGES.md](CHANGES.md) and [HISTORY.rst](HISTORY.rst).
+
+## Links
+
+- [Documentation](https://azadkshitij.github.io/qtpy-nodeeditor/)
+- [Examples](https://github.com/AzadKshitij/qtpy-nodeeditor/tree/main/examples)
+- [Original project](https://gitlab.com/pavel.krupala/pyqt-node-editor)
+- [Contribute](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/main/CONTRIBUTING.md)
 - [Issues](https://github.com/AzadKshitij/qtpy-nodeeditor/issues)
-
-- [Merge requests](https://github.com/AzadKshitij/qtpy-nodeeditor/merge_requests)
-
-- [Release history](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/HISTORY.rst)
-
-- [Upstream changelog (pre-fork)](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/CHANGES.md)
+- [Pull requests](https://github.com/AzadKshitij/qtpy-nodeeditor/pulls)
+- [Release history](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/main/HISTORY.rst)
+- [Upstream changelog (pre-fork)](https://github.com/AzadKshitij/qtpy-nodeeditor/blob/main/CHANGES.md)

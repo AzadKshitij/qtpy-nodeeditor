@@ -1,11 +1,103 @@
+[build-system]
+requires = ["uv_build>=0.13.4,<0.14"]
+build-backend = "uv_build"
+
 [project]
-name = "qtpy-nodeeditor"
-version = "0.8"
-description = "Add your description here"
+name = "nodeeditor-qtpy"
+version = "0.8.1"
+description = "Framework for building node editors and graph UIs in Qt, independent of the Qt binding (PyQt5/PyQt6/PySide2/PySide6 via QtPy)"
 readme = "README.md"
-requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENCE"]
+requires-python = ">=3.10"
+authors = [
+    { name = "Azad Kshitij", email = "azadkshitij08302001@gmail.com" },
+]
+keywords = [
+    "node editor",
+    "nodeeditor",
+    "node graph",
+    "graph",
+    "visual programming",
+    "qt",
+    "qtpy",
+    "pyqt6",
+    "pyside6",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: User Interfaces",
+    "Typing :: Typed",
+]
 dependencies = [
     "orjson>=3.12.0",
-    "pyqt6>=6.11.0",
     "qtpy>=2.4.3",
+]
+
+[project.optional-dependencies]
+pyqt6 = ["PyQt6>=6.0"]
+pyside6 = ["PySide6>=6.0"]
+
+[project.urls]
+Homepage = "https://github.com/AzadKshitij/qtpy-nodeeditor"
+Repository = "https://github.com/AzadKshitij/qtpy-nodeeditor.git"
+Issues = "https://github.com/AzadKshitij/qtpy-nodeeditor/issues"
+Changelog = "https://github.com/AzadKshitij/qtpy-nodeeditor/blob/master/HISTORY.rst"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pyqt6>=6.0",
+]
+
+[tool.uv.build-backend]
+module-name = "nodeeditor"
+module-root = ""
+source-include = [
+    "tests/**",
+    "examples/**",
+    "docs/**",
+    "CHANGES.md",
+    "HISTORY.rst",
+    "mkdocs.yml",
+    "requirements_docs.txt",
+]
+source-exclude = [".ruff_cache", ".mypy_cache"]
+wheel-exclude = [".ruff_cache", ".mypy_cache"]
+
+# ---------------------------------------------------------------------------
+# Hatchling fallback. Not used while [build-system] declares uv_build above.
+# To build with hatchling instead, replace the [build-system] table with:
+#
+#   [build-system]
+#   requires = ["hatchling"]
+#   build-backend = "hatchling.build"
+#
+# The tables below are then active again, and `uv build` produces the same
+# wheel and sdist contents as uv_build does.
+# ---------------------------------------------------------------------------
+
+[tool.hatch.build.targets.wheel]
+packages = ["nodeeditor"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/nodeeditor",
+    "/tests",
+    "/examples",
+    "/docs",
+    "/CHANGES.md",
+    "/HISTORY.rst",
+    "/LICENCE",
+    "/README.md",
+    "/mkdocs.yml",
+    "/requirements_docs.txt",
+    "/pyproject.toml",
 ]

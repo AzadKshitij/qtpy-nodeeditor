@@ -32,6 +32,8 @@ DEBUG_REMOVE_WARNINGS = False
 
 
 class Socket(QObject, Serializable):
+    """Class representing Socket."""
+
     Socket_GR_Class = QDMGraphicsSocket
 
     """Class representing Socket."""
@@ -93,6 +95,7 @@ class Socket(QObject, Serializable):
         self.edges: List['Edge'] = []
 
     def __str__(self) -> str:
+        """Return a short identifying string of this `Socket`."""
         return "<Socket #%d %s %s..%s>" % (
             self.index, "ME" if self.is_multi_edges else "SE", hex(id(self))[
                 2:5], hex(id(self))[-3:]
@@ -406,6 +409,12 @@ class Socket(QObject, Serializable):
             return data['position'] in (RIGHT_BOTTOM, RIGHT_TOP)
 
     def serialize(self) -> OrderedDict:
+        """
+        Serialize this `Socket` into an ``OrderedDict`` for storing in memory or on disk.
+
+        :return: data serialized in ``OrderedDict``
+        :rtype: ``OrderedDict``
+        """
         return OrderedDict([
             ('id', self.id),
             ('index', self.index),
@@ -415,6 +424,19 @@ class Socket(QObject, Serializable):
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
+        """
+        Deserialize this `Socket` from a ``dict`` of serialized data.
+
+        :param data: Dictionary containing serialized data
+        :type data: ``dict``
+        :param hashmap: Helper dictionary containing references (by id == key) to existing objects
+        :type hashmap: ``dict``
+        :param restore_id: True if we are creating new Sockets. False is useful when loading existing
+            Sockets of which we want to keep the existing object's `id`.
+        :type restore_id: bool
+        :return: ``True`` if deserialization was successful, otherwise ``False``
+        :rtype: ``bool``
+        """
         if restore_id:
             self.id = data['id']
         self.is_multi_edges = self.determineMultiEdges(data)

@@ -26,6 +26,16 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
     """
 
     def __init__(self, grNode: 'QDMGraphicsNode', parent: QGraphicsItem = None) -> None:
+        """
+        :param grNode: reference to the owning :class:`~nodeeditor.node_graphics_node.QDMGraphicsNode`
+        :type grNode: :class:`~nodeeditor.node_graphics_node.QDMGraphicsNode`
+        :param parent: parent widget
+        :type parent: QWidget
+
+        :Instance Attributes:
+
+            - **grNode** - reference to the owning :class:`~nodeeditor.node_graphics_node.QDMGraphicsNode`
+        """
         super().__init__(parent if parent is not None else grNode)
         self._grNode: 'QDMGraphicsNode' = grNode
         self._last_text: str = ""
@@ -52,6 +62,13 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
         return str(text).replace("\r", " ").replace("\n", " ").strip()
 
     def setLabelColors(self, bg: Optional[QColor] = None, border: Optional[QColor] = None) -> None:
+        """Set the background and border colors of the label box.
+
+        :param bg: background color of the label box
+        :type bg: QColor
+        :param border: border color of the label box
+        :type border: QColor
+        """
         if bg is not None:
             self._bg_color = bg
         if border is not None:
@@ -59,16 +76,31 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
         self.update()
 
     def focusInEvent(self, event) -> None:
+        """Remember the current text and switch the scene into editing mode.
+
+        :param event: Qt's focus event
+        :type event: QFocusEvent
+        """
         self._last_text = self.toPlainText()
         self._setEditing(True)
         super().focusInEvent(event)
 
     def focusOutEvent(self, event) -> None:
+        """Commit the edited text and leave editing mode.
+
+        :param event: Qt's focus event
+        :type event: QFocusEvent
+        """
         self._commit()
         self._setEditing(False)
         super().focusOutEvent(event)
 
     def keyPressEvent(self, event) -> None:
+        """Commit on ``Return``/``Enter``, revert the text on ``Escape``.
+
+        :param event: Qt's key event
+        :type event: QKeyEvent
+        """
         try:
             key = event.key()
         except Exception:
@@ -88,6 +120,11 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
         super().keyPressEvent(event)
 
     def mousePressEvent(self, event) -> None:
+        """Take the keyboard focus when the label is clicked.
+
+        :param event: Qt's mouse event
+        :type event: QMouseEvent
+        """
         try:
             if not self.hasFocus():
                 self.setFocus(Qt.FocusReason.MouseFocusReason)
@@ -96,6 +133,11 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
         super().mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event) -> None:
+        """Select the whole text on a double click, so typing replaces it.
+
+        :param event: Qt's mouse event
+        :type event: QMouseEvent
+        """
         try:
             if not self.hasFocus():
                 self.setFocus(Qt.FocusReason.MouseFocusReason)
@@ -107,6 +149,7 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
         super().mouseDoubleClickEvent(event)
 
     def paint(self, painter, option, widget=None) -> None:
+        """Draw the rounded background box behind the label text."""
         rect = self.boundingRect().adjusted(-self._pad_x, -self._pad_y, self._pad_x, self._pad_y)
         painter.setPen(QPen(self._border_color, 1.0))
         painter.setBrush(QBrush(self._bg_color))
@@ -271,6 +314,11 @@ class QDMGraphicsNode(QGraphicsItem):
             self.onSelected()
 
     def mousePressEvent(self, event) -> None:
+        """Keep the default Qt behavior, so the node can be moved and selected.
+
+        :param event: Qt's mouse event
+        :type event: QMouseEvent
+        """
         # Collapsed groups hide child grNodes, so no special guard needed.
         # Keep default Qt behavior (move/select).
         super().mousePressEvent(event)
@@ -430,6 +478,7 @@ class QDMGraphicsNode(QGraphicsItem):
         self._refreshLabelVisibility()
 
     def isLabelVisible(self) -> bool:
+        """``True`` while the label is requested visible and carries text."""
         return bool(self._label_visible and bool(self.labelText()))
 
     def setLabelOffset(self, offset: float) -> None:
@@ -438,18 +487,36 @@ class QDMGraphicsNode(QGraphicsItem):
         self._updateLabelPos()
 
     def labelOffset(self) -> float:
+        """Return the gap in px between node top and label bottom."""
         return float(self.label_offset)
 
     def setLabelColor(self, color) -> None:
+        """Set the text color of the label.
+
+        :param color: the new text color
+        :type color: QColor
+        """
         self._label_color = QColor(color) if not isinstance(color, QColor) else color
         self.label_item.setDefaultTextColor(self._label_color)
 
     def setLabelFont(self, font: QFont) -> None:
+        """Set the font of the label and move the label to its new position.
+
+        :param font: the new font
+        :type font: QFont
+        """
         self._label_font = font
         self.label_item.setFont(font)
         self._updateLabelPos()
 
     def setLabelBackground(self, bg, border=None) -> None:
+        """Set the background and border colors of the label box.
+
+        :param bg: background color of the label box
+        :type bg: QColor
+        :param border: border color of the label box
+        :type border: QColor
+        """
         bg = QColor(bg) if not isinstance(bg, QColor) else bg
         b = QColor(border) if border is not None and not isinstance(border, QColor) else border
         self.label_item.setLabelColors(bg=bg, border=b)

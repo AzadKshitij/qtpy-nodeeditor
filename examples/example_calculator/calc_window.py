@@ -9,6 +9,7 @@ from nodeeditor.utils import loadStylesheets
 from nodeeditor.node_editor_window import NodeEditorWindow
 from examples.example_calculator.calc_sub_window import CalculatorSubWindow
 from examples.example_calculator.calc_drag_listbox import QDMDragListbox
+from examples.example_calculator.calc_graph_inspector import GraphInspectorPanel
 from nodeeditor.utils import dumpException, pp
 from examples.example_calculator.calc_conf import CALC_NODES
 
@@ -64,6 +65,7 @@ class CalculatorWindow(NodeEditorWindow):
         self.mdiArea.subWindowActivated.connect(self.updateMenus)
 
         self.createNodesDock()
+        self.createGraphInspectorDock()
 
         self.createActions()
         self.createMenus()
@@ -107,6 +109,63 @@ class CalculatorWindow(NodeEditorWindow):
 
         self.actAbout = QAction(
             "&About", self, statusTip="Show the application's About box", triggered=self.about)
+
+        self.createGraphActions()
+
+    def createGraphActions(self):
+        self.actTopologicalOrder = QAction(
+            "&Topological Order", self,
+            statusTip="List every node so it comes after the nodes feeding it",
+            triggered=self.showTopologicalOrder)
+        self.actTopologicalOrder.setShortcut(QKeySequence("Ctrl+Shift+T"))
+
+        self.actComponents = QAction(
+            "&Flocks (disconnected subgraphs)", self,
+            statusTip="Split the graph into its disconnected subgraphs",
+            triggered=self.showComponents)
+
+        self.actCycles = QAction(
+            "&Cycles", self,
+            statusTip="Find the loops in the graph",
+            triggered=self.showCycles)
+
+        self.actShortestPath = QAction(
+            "&Shortest Path Between Two Selected Nodes", self,
+            statusTip="Find the shortest chain between the two selected nodes",
+            triggered=self.showSelectedPath)
+        self.actShortestPath.setShortcut(QKeySequence("Ctrl+Shift+P"))
+
+    def getCurrentScene(self):
+        """Shortcut for the `Scene` of the active tab, or ``None``."""
+        active = self.getCurrentNodeEditorWidget()
+        return active.scene if active is not None else None
+
+    def onActiveSceneChanged(self, *args):
+        """Show the last algorithm again when another graph becomes active."""
+        if self.mdiArea.activeSubWindow() is None and self.mdiArea.subWindowList():
+            # focus moved to a dock, the graph is still open
+            return
+        self.graphInspector.refresh()
+
+    def showTopologicalOrder(self):
+        self.showGraphInspector()
+        self.graphInspector.showTopologicalOrder()
+
+    def showComponents(self):
+        self.showGraphInspector()
+        self.graphInspector.showComponents()
+
+    def showCycles(self):
+        self.showGraphInspector()
+        self.graphInspector.showCycles()
+
+    def showSelectedPath(self):
+        self.showGraphInspector()
+        self.graphInspector.showSelectedPath()
+
+    def showGraphInspector(self):
+        self.graphDock.show()
+        self.graphDock.raise_()
 
     def getCurrentNodeEditorWidget(self):
         """ we're returning NodeEditorWidget here... """
@@ -155,6 +214,12 @@ class CalculatorWindow(NodeEditorWindow):
     def createMenus(self):
         super().createMenus()
 
+        self.graphMenu = self.menuBar().addMenu("&Graph")
+        self.graphMenu.addAction(self.actTopologicalOrder)
+        self.graphMenu.addAction(self.actComponents)
+        self.graphMenu.addAction(self.actCycles)
+        self.graphMenu.addAction(self.actShortestPath)
+
         self.viewMenu = self.menuBar().addMenu("&View")
         self.updateViewMenu()
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
@@ -186,6 +251,10 @@ class CalculatorWindow(NodeEditorWindow):
         self.actNext.setEnabled(hasMdiChild)
         self.actPrevious.setEnabled(hasMdiChild)
         self.actSeparator.setVisible(hasMdiChild)
+        self.actTopologicalOrder.setEnabled(hasMdiChild)
+        self.actComponents.setEnabled(hasMdiChild)
+        self.actCycles.setEnabled(hasMdiChild)
+        self.actShortestPath.setEnabled(hasMdiChild)
 
         self.updateEditMenu()
 
@@ -241,6 +310,11 @@ class CalculatorWindow(NodeEditorWindow):
         toolbar_nodes.triggered.connect(self.onWindowNodesToolbar)
         toolbar_nodes.setChecked(self.nodesDock.isVisible())
 
+        graph_inspector = self.windowMenu.addAction("Graph Inspector")
+        graph_inspector.setCheckable(True)
+        graph_inspector.triggered.connect(self.onWindowGraphInspector)
+        graph_inspector.setChecked(self.graphDock.isVisible())
+
         self.windowMenu.addSeparator()
 
         self.windowMenu.addAction(self.actClose)
@@ -275,6 +349,12 @@ class CalculatorWindow(NodeEditorWindow):
         else:
             self.nodesDock.show()
 
+    def onWindowGraphInspector(self):
+        if self.graphDock.isVisible():
+            self.graphDock.hide()
+        else:
+            self.graphDock.show()
+
     def createToolBars(self):
         pass
 
@@ -286,6 +366,17 @@ class CalculatorWindow(NodeEditorWindow):
         self.nodesDock.setFloating(False)
 
         self.addDockWidget(Qt.RightDockWidgetArea, self.nodesDock)
+
+    def createGraphInspectorDock(self):
+        self.graphInspector = GraphInspectorPanel(self.getCurrentScene)
+
+        self.graphDock = QDockWidget("Graph Inspector")
+        self.graphDock.setWidget(self.graphInspector)
+        self.graphDock.setFloating(False)
+
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.graphDock)
+
+        self.mdiArea.subWindowActivated.connect(self.onActiveSceneChanged)
 
     def createStatusBar(self):
         self.statusBar().showMessage("Ready")

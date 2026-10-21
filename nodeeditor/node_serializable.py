@@ -6,6 +6,8 @@ from collections import OrderedDict
 
 
 class Serializable():
+    """Class representing the serializable "interface" of NodeEditor."""
+
     def __init__(self) -> None:
         """
         Default constructor automatically creates data which are common to any serializable object.

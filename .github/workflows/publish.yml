@@ -1,0 +1,96 @@
+name: Publish
+
+# Publishing is done from CI so that PyPI records provenance (PEP 740
+# attestations) for every upload. A local `uv publish` cannot produce those,
+# which is why a local upload shows up as "Without provenance".
+#
+# Setup on PyPI (once per index):
+#   Settings -> Publishing -> add a "Pending Publisher" with
+#     - PyPI project name: nodeeditor-qtpy
+#     - Owner:       AzadKshitij
+#     - Repository:  qtpy-nodeeditor
+#     - Workflow:    publish.yml
+#     - Environment: pypi            (or testpypi for the test index)
+#   Create the matching GitHub environment with the same name.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      index:
+        description: "Index to publish to"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build wheel and sdist
+        run: uv build --out-dir dist
+
+      - name: Check metadata
+        run: uvx twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: github.event_name == 'release' || inputs.index == 'pypi'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          attestations: true
+          print-hash: true
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.index == 'testpypi'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          repository-url: https://test.pypi.org/legacy/
+          attestations: true
+          print-hash: true

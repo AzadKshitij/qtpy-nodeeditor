@@ -94,6 +94,7 @@ class Node(QObject,  Serializable):
             sync_detail()
 
     def __str__(self) -> str:
+        """Return a short identifying string of this `Node`."""
         return "<%s:%s %s..%s>" % (self.title, self.__class__.__name__, hex(id(self))[2:5], hex(id(self))[-3:])
 
     @property
@@ -145,11 +146,23 @@ class Node(QObject,  Serializable):
         self.setNodeLabel("", store_history=store_history)
 
     def setNodeLabelVisible(self, visible: bool) -> None:
+        """Show or hide the floating label of this `Node`.
+
+        The label stays hidden while it carries no text.
+
+        :param visible: ``True`` shows the label, ``False`` hides it
+        :type visible: ``bool``
+        """
         if self.grNode is None or not hasattr(self.grNode, 'setLabelVisible'):
             return
         self.grNode.setLabelVisible(visible)
 
     def isNodeLabelVisible(self) -> bool:
+        """Is the floating label of this `Node` currently visible?
+
+        :return: ``True`` if the label is visible
+        :rtype: ``bool``
+        """
         if self.grNode is None or not hasattr(self.grNode, 'isLabelVisible'):
             return False
         try:
@@ -158,6 +171,11 @@ class Node(QObject,  Serializable):
             return False
 
     def setNodeLabelOffset(self, offset: float) -> None:
+        """Set the gap between the top of this `Node` and the bottom of its floating label.
+
+        :param offset: gap in pixels
+        :type offset: ``float``
+        """
         if self.grNode is None or not hasattr(self.grNode, 'setLabelOffset'):
             return
         self.grNode.setLabelOffset(offset)
@@ -199,6 +217,7 @@ class Node(QObject,  Serializable):
         return self.__class__.NodeContent_class
 
     def getGraphicsNodeClass(self):
+        """Returns class representing the graphics node"""
         return self.__class__.GraphicsNode_class
 
     def initSettings(self) -> None:
@@ -693,6 +712,12 @@ class Node(QObject,  Serializable):
     # serialization functions
 
     def serialize(self) -> OrderedDict:
+        """
+        Serialize this `Node` into an ``OrderedDict`` for storing in memory or on disk.
+
+        :return: data serialized in ``OrderedDict``
+        :rtype: ``OrderedDict``
+        """
         inputs, outputs = [], []
         for socket in self.inputs:
             inputs.append(socket.serialize())
@@ -726,6 +751,21 @@ class Node(QObject,  Serializable):
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
+        """
+        Deserialize this `Node` from a ``dict`` of serialized data.
+
+        Sockets missing in the data are created, sockets already present are reused.
+
+        :param data: Dictionary containing serialized data
+        :type data: ``dict``
+        :param hashmap: Helper dictionary containing references (by id == key) to existing objects
+        :type hashmap: ``dict``
+        :param restore_id: True if we are creating new Sockets. False is useful when loading existing
+            Sockets of which we want to keep the existing object's `id`.
+        :type restore_id: bool
+        :return: ``True`` if deserialization was successful, otherwise ``False``
+        :rtype: ``bool``
+        """
         try:
             if restore_id:
                 self.id = data['id']

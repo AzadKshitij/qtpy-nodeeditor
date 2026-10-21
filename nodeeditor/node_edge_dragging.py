@@ -18,7 +18,19 @@ DEBUG = False
 
 
 class EdgeDragging:
+    """Class handling the dragging of a new :class:`~nodeeditor.node_edge.Edge` between sockets"""
+
     def __init__(self, grView: 'QDMGraphicsView') -> None:
+        """
+        :param grView: reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        :type grView: :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+
+        :Instance Attributes:
+
+        - **grView** - reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        - **drag_edge** - the :class:`~nodeeditor.node_edge.Edge` currently being dragged
+        - **drag_start_socket** - the :class:`~nodeeditor.node_socket.Socket` where the drag started
+        """
         self.grView = grView
         # initializing these variable to know we're using them in this class...
         self.drag_edge: Edge | None = None

@@ -23,10 +23,14 @@ if TYPE_CHECKING:
 
 
 class NodeEditorWidget(QWidget):
+    """Widget hosting a graph :class:`~nodeeditor.node_scene.Scene` and its graphics view.
+
+    The ``Scene`` and the ``GraphicsView`` classes used by this widget can be replaced
+    by subclasses through the ``Scene_class`` and ``GraphicsView_class`` attributes.
+    """
+
     Scene_class = Scene
     GraphicsView_class = QDMGraphicsView
-
-    """The ``NodeEditorWidget`` class"""
 
     def __init__(self, parent: QWidget = None):
         """

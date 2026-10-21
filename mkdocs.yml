@@ -1,0 +1,113 @@
+site_name: Node Editor
+site_description: >-
+  A node editor framework for Qt: customizable nodes, sockets and edges with
+  undo/redo, JSON serialization and evaluation logic. Binding-agnostic through
+  QtPy (PyQt5, PySide2, PyQt6, PySide6).
+site_author: Azad Kshitij
+site_url: https://azadkshitij.github.io/qtpy-nodeeditor/
+repo_url: https://github.com/AzadKshitij/qtpy-nodeeditor
+repo_name: AzadKshitij/qtpy-nodeeditor
+edit_uri: edit/main/docs/
+copyright: >-
+  Copyright &copy; 2019 Pavel Křupala and 2024-2026 Azad Kshitij.
+  Released under the MIT licence.
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - search.share
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    logo: material/graph
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: numpy
+            docstring_section_style: table
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: true
+            show_symbol_type_toc: true
+            members_order: source
+            separate_signature: true
+            show_if_no_docstring: false
+            filters:
+              - "!^_"
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - Quick start: quickstart.md
+      - Events: events.md
+  - Guides:
+      - Group nodes: guides/group-nodes.md
+      - Node grouping (reference): guides/node-grouping.md
+      - Multi-input nodes: guides/multi-input-nodes.md
+      - Graph algorithms: guides/graph-algorithms.md
+      - Socket shapes: guides/socket-shapes.md
+      - Node labels: guides/node-labels.md
+      - Edge labels: guides/edge-labels.md
+      - Coding standards: guides/coding-standards.md
+  - API reference:
+      - Overview: api/index.md
+      - Scene: api/scene.md
+      - Node: api/node.md
+      - Groups: api/group.md
+      - Edge: api/edge.md
+      - Socket: api/socket.md
+      - Socket shapes: api/socket-shapes.md
+      - Color scheme: api/color-scheme.md
+      - Editor widget: api/editor-widget.md
+      - Editor window: api/editor-window.md
+      - Graph algorithms: api/graph.md
+      - Graphics items: api/graphics.md
+      - Content widgets: api/content.md
+      - Serialization: api/serializable.md
+      - Utilities: api/utils.md
+  - Documentation tooling: CONTRIBUTING.md

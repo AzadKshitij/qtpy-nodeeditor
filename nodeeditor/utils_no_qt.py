@@ -1,3 +1,6 @@
+"""
+Module with helper functions which do not depend on Qt
+"""
 import traceback
 from pprint import PrettyPrinter
 

@@ -20,8 +20,20 @@ if TYPE_CHECKING:
 
 
 class EdgeIntersect:
+    """Class handling the intersection of a dragged node with an existing edge"""
 
     def __init__(self, grView: 'QDMGraphicsView') -> None:
+        """
+        :param grView: reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        :type grView: :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+
+        :Instance Attributes:
+
+        - **grView** - reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        - **grScene** - reference to the :class:`~nodeeditor.node_graphics_scene.QDMGraphicsScene`
+        - **draggedNode** - the :class:`~nodeeditor.node_node.Node` currently being dragged
+        - **hoveredList** - graphics items hovered by the dragged node
+        """
         self.grView = grView
         self.grScene: 'QDMGraphicsScene' = grView.grScene
         self.draggedNode: Node | None = None

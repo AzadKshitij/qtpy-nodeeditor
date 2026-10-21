@@ -19,6 +19,17 @@ if TYPE_CHECKING:
 
 
 class NodeEditorWindow(QMainWindow):
+    """The Main Window of NodeEditor.
+
+    Holds the file and edit menus, the actions behind them and the
+    :class:`~nodeeditor.node_editor_widget.NodeEditorWidget` that draws the graph.
+
+    :Instance Attributes:
+
+    - **name_company** - name of the company, used for permanent profile settings
+    - **name_product** - name of this App, used for permanent profile settings
+    """
+
     NodeEditorWidget_class = NodeEditorWidget
 
     """Class representing NodeEditor's Main Window"""
@@ -55,6 +66,11 @@ class NodeEditorWindow(QMainWindow):
         self.show()
 
     def sizeHint(self):
+        """The preferred size of the main window.
+
+        :return: the default window size
+        :rtype: ``QSize``
+        """
         return QSize(800, 600)
 
     def createStatusBar(self) -> None:
@@ -108,6 +124,7 @@ class NodeEditorWindow(QMainWindow):
         self.createEditMenu()
 
     def createFileMenu(self) -> None:
+        """Create the `File` menu and fill it with the file actions"""
         menubar: QMenuBar = self.menuBar()
         self.fileMenu: QMenu = menubar.addMenu('&File')
         self.fileMenu.addAction(self.actNew)
@@ -119,6 +136,7 @@ class NodeEditorWindow(QMainWindow):
         self.fileMenu.addAction(self.actExit)
 
     def createEditMenu(self) -> None:
+        """Create the `Edit` menu and fill it with the edit and grouping actions"""
         menubar: QMenuBar = self.menuBar()
         self.editMenu: QMenu = menubar.addMenu('&Edit')
         self.editMenu.addAction(self.actUndo)

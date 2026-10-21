@@ -32,7 +32,7 @@ DEBUG_REMOVE_WARNINGS = False
 
 
 class InvalidFile(Exception):
-    pass
+    """Raised when a file cannot be loaded as a `Scene`."""
 
 
 class Scene(Serializable):
@@ -331,9 +331,19 @@ class Scene(Serializable):
         self.history.redo()
 
     def canUndo(self) -> bool:
+        """Is there a recorded change which can be undone?
+
+        :return: ``True`` if the `Scene` history holds an undoable change
+        :rtype: ``bool``
+        """
         return self.history.canUndo()
 
     def canRedo(self) -> bool:
+        """Is there a reverted change which can be redone?
+
+        :return: ``True`` if the `Scene` history holds a redoable change
+        :rtype: ``bool``
+        """
         return self.history.canRedo()
 
     # our helper listener functions
@@ -583,6 +593,13 @@ class Scene(Serializable):
                 )
 
     def getGroupById(self, group_id: int):
+        """
+        Find the `Group` in this `Scene` according to the provided `group_id`
+
+        :param group_id: ID of the group we are looking for
+        :type group_id: ``int``
+        :return: Found `Group` or ``None``
+        """
         for group in self.groups:
             if getattr(group, 'id', None) == group_id:
                 return group
@@ -797,6 +814,12 @@ class Scene(Serializable):
         return Node if self.node_class_selector is None else self.node_class_selector(data)
 
     def serialize(self) -> OrderedDict:
+        """
+        Serialize this `Scene` into an ``OrderedDict`` for storing in memory or on disk.
+
+        :return: data serialized in ``OrderedDict``
+        :rtype: ``OrderedDict``
+        """
         nodes: List[dict] = []
         edges: List[dict] = []
         groups: List[dict] = []
@@ -824,6 +847,22 @@ class Scene(Serializable):
         )
 
     def deserialize(self, data: dict, hashmap: Optional[dict] = None, restore_id: bool = True, *args: Any, **kwargs: Any) -> bool:
+        """
+        Deserialize this `Scene` from a ``dict`` of serialized data.
+
+        `Nodes`, `Edges` and `Groups` already present in the `Scene` are reused,
+        the ones missing from the data are created and the leftover ones are removed.
+
+        :param data: Dictionary containing serialized data
+        :type data: ``dict``
+        :param hashmap: Helper dictionary containing references (by id == key) to existing objects
+        :type hashmap: ``dict``
+        :param restore_id: True if we are creating new Sockets. False is useful when loading existing
+            Sockets of which we want to keep the existing object's `id`.
+        :type restore_id: bool
+        :return: ``True`` if deserialization was successful, otherwise ``False``
+        :rtype: ``bool``
+        """
         hashmap = hashmap or {}
 
         if restore_id:

@@ -361,35 +361,61 @@ class QDMIconGraphicsNode(QGraphicsItem):
         self._updateLabelPos()
 
     def labelText(self) -> str:
+        """Return current label text."""
         try:
             return self.label_item.toPlainText()
         except Exception:
             return ""
 
     def setLabelVisible(self, visible: bool) -> None:
+        """Show/hide the label. Hidden when text is empty regardless."""
         self._label_visible = bool(visible)
         self._refreshLabelVisibility()
 
     def isLabelVisible(self) -> bool:
+        """``True`` while the label is requested visible and carries text."""
         return bool(self._label_visible and bool(self.labelText()))
 
     def setLabelOffset(self, offset: float) -> None:
+        """Set the gap in px between node top and label bottom.
+
+        :param offset: the new gap in px
+        :type offset: ``float``
+        """
         self.label_offset = float(offset)
         self._updateLabelPos()
 
     def labelOffset(self) -> float:
+        """Return the gap in px between node top and label bottom."""
         return float(self.label_offset)
 
     def setLabelColor(self, color) -> None:
+        """Set the text color of the label.
+
+        :param color: the new text color
+        :type color: QColor
+        """
         self._label_color = QColor(color) if not isinstance(color, QColor) else color
         self.label_item.setDefaultTextColor(self._label_color)
 
     def setLabelFont(self, font: QFont) -> None:
+        """Set the font of the label and move the label to its new position.
+
+        :param font: the new font
+        :type font: QFont
+        """
         self._label_font = font
         self.label_item.setFont(font)
         self._updateLabelPos()
 
     def setLabelBackground(self, bg, border=None) -> None:
+        """Set the background and border colors of the label box.
+
+        :param bg: background color of the label box
+        :type bg: QColor
+        :param border: border color of the label box
+        :type border: QColor
+        """
         bg = QColor(bg) if not isinstance(bg, QColor) else bg
         b = QColor(border) if border is not None and not isinstance(border, QColor) else border
         self.label_item.setLabelColors(bg=bg, border=b)

@@ -114,10 +114,30 @@ class QDMNodeIconContentWidget(QWidget, Serializable):
         self.node.scene.getView().editingFlag = value
 
     def serialize(self) -> OrderedDict:
+        """Serialization method to serialize this class data into ``OrderedDict``.
+
+        :return: data serialized in ``OrderedDict``
+        :rtype: ``OrderedDict``
+        """
         return OrderedDict([
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True) -> bool:
+        """Deserialization method which takes data in python ``dict`` format.
+
+        The icon content holds no state of its own, so there is nothing to
+        restore and the call always succeeds.
+
+        :param data: Dictionary containing serialized data
+        :type data: ``dict``
+        :param hashmap: Helper dictionary containing references (by id == key) to existing objects
+        :type hashmap: ``dict``
+        :param restore_id: True if we are creating new objects. False is useful when loading existing
+            objects of which we want to keep the existing object's `id`.
+        :type restore_id: bool
+        :return: ``True`` if deserialization was successful, otherwise ``False``
+        :rtype: ``bool``
+        """
         return True
 
 

@@ -61,6 +61,14 @@ def loadStylesheets(*args) -> None:
 
 
 def isCTRLPressed(event):
+    """
+    Checks whether the Control key is held down in the given event.
+
+    :param event: Qt's mouse or key event
+    :type event: ``QEvent``
+    :return: the Control modifier of the event, truthy when the key is held
+    :rtype: ``int``
+    """
     from qtpy.QtCore import Qt
     if QT_API in ("pyqt5", "pyside2"):
         return event.modifiers() & Qt.CTRL
@@ -69,6 +77,14 @@ def isCTRLPressed(event):
 
 
 def isSHIFTPressed(event):
+    """
+    Checks whether the Shift key is held down in the given event.
+
+    :param event: Qt's mouse or key event
+    :type event: ``QEvent``
+    :return: the Shift modifier of the event, truthy when the key is held
+    :rtype: ``int``
+    """
     from qtpy.QtCore import Qt
     if QT_API in ("pyqt5", "pyside2"):
         return event.modifiers() & Qt.SHIFT
@@ -77,6 +93,14 @@ def isSHIFTPressed(event):
 
 
 def isALTPressed(event):
+    """
+    Checks whether the Alt key is held down in the given event.
+
+    :param event: Qt's mouse or key event
+    :type event: ``QEvent``
+    :return: the Alt modifier of the event, truthy when the key is held
+    :rtype: ``int``
+    """
     from qtpy.QtCore import Qt
     if QT_API in ("pyqt5", "pyside2"):
         return event.modifiers() & Qt.ALT

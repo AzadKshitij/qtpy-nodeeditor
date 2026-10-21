@@ -84,6 +84,7 @@ class Edge(Serializable):
         self.scene.addEdge(self)
 
     def __str__(self) -> str:
+        """A short description of this `Edge` and the two sockets it connects"""
         return "<Edge %s..%s -- S:%s E:%s>" % (
             hex(id(self))[2:5], hex(id(self))[-3:],
             self.start_socket, self.end_socket
@@ -444,6 +445,12 @@ class Edge(Serializable):
             dumpException(e)
 
     def serialize(self) -> OrderedDict:
+        """
+        Serialize this `Edge` into an ``OrderedDict`` for storing in memory or on disk.
+
+        :return: data serialized in ``OrderedDict``
+        :rtype: ``OrderedDict``
+        """
         return OrderedDict([
             ('id', self.id),
             ('edge_type', self.edge_type),
@@ -454,6 +461,22 @@ class Edge(Serializable):
         ])
 
     def deserialize(self, data: dict, hashmap: dict = {}, restore_id: bool = True, *args, **kwargs) -> bool:
+        """
+        Deserialize this `Edge` from a ``dict`` of serialized data.
+
+        Both sockets are looked up in the ``hashmap``, so they have to be
+        deserialized before the edge that connects them.
+
+        :param data: Dictionary containing serialized data
+        :type data: ``dict``
+        :param hashmap: Helper dictionary containing references (by id == key) to existing objects
+        :type hashmap: ``dict``
+        :param restore_id: True if we are creating new Edges. False is useful when loading existing
+            Edges of which we want to keep the existing object's `id`.
+        :type restore_id: bool
+        :return: ``True`` if deserialization was successful, otherwise ``False``
+        :rtype: ``bool``
+        """
         try:
             if restore_id:
                 self.id = data['id']

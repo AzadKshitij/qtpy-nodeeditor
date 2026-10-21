@@ -28,6 +28,13 @@ wheels/
 /venv/
 /.venv/
 
+# Documentation site build output
+/site/
+
+# Tooling directories
+/.opencode/
+/.openchamber/
+
 NodeGraphQt
 NodeGraphQt/
 

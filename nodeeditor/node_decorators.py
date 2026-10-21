@@ -1,3 +1,6 @@
+"""
+A module containing the decorator which marks classes as automatically serializable
+"""
 from typing import Any, Callable, Optional, Type, Dict, TypeVar, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -44,6 +47,11 @@ class MakeSerializable:
 
     @classmethod
     def get_registered(cls) -> Dict[str, Type]:
+        """Get all classes registered as automatically serializable
+
+        :return: mapping of serialize keys to the registered classes
+        :rtype: ``dict``
+        """
         return cls._registry
 
     @classmethod

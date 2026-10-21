@@ -1,3 +1,10 @@
+"""
+A module containing the classes that calculate the graphics path drawn for an Edge.
+
+Every class derives from :class:`GraphicsEdgePathBase` and implements
+:meth:`GraphicsEdgePathBase.calcPath`, which turns the positions of the edge's
+two sockets into the :class:`~qtpy.QtGui.QPainterPath` that gets painted.
+"""
 import math
 from qtpy.QtCore import QPointF
 from qtpy.QtGui import QPainterPath
@@ -26,6 +33,10 @@ class GraphicsEdgePathBase:
     """Base Class for calculating the graphics path to draw for an graphics Edge"""
 
     def __init__(self, owner: 'QDMGraphicsEdge') -> None:
+        """
+        :param owner: the :class:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge` this path belongs to
+        :type owner: :class:`~nodeeditor.node_graphics_edge.QDMGraphicsEdge`
+        """
         # keep the reference to owner GraphicsEdge class
         self.owner = owner
 
@@ -102,6 +113,11 @@ class GraphicsEdgePathSquare(GraphicsEdgePathBase):
     """Square line connection Graphics Edge"""
 
     def __init__(self, *args, handle_weight: float=0.5, **kwargs) -> None:
+        """
+        :param args: positional arguments passed on to the base class
+        :param handle_weight: where the vertical part of the square sits, ``0.5`` being the middle
+        :param kwargs: keyword arguments passed on to the base class
+        """
         super().__init__(*args, **kwargs)
         self.rand = None
         self.handle_weight = handle_weight

@@ -19,7 +19,21 @@ if TYPE_CHECKING:
 
 
 class EdgeSnapping():
+    """Class handling the snapping of a dragged edge to a nearby socket"""
+
     def __init__(self, grView: 'QDMGraphicsView', snapping_radius: float = 24) -> None:
+        """
+        :param grView: reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        :type grView: :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        :param snapping_radius: radius in scene units within which sockets are considered for snapping
+        :type snapping_radius: ``float``
+
+        :Instance Attributes:
+
+        - **grView** - reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        - **grScene** - reference to the :class:`~nodeeditor.node_graphics_scene.QDMGraphicsScene`
+        - **edge_snapping_radius** - radius in scene units within which sockets are considered for snapping
+        """
         self.grView = grView
         self.grScene = self.grView.grScene
         self.edge_snapping_radius = snapping_radius

@@ -17,7 +17,21 @@ DEBUG_REROUTING = True
 
 
 class EdgeRerouting:
+    """Class handling the re-routing of existing edges to another socket"""
+
     def __init__(self, grView: 'QDMGraphicsView') -> None:
+        """
+        :param grView: reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        :type grView: :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+
+        :Instance Attributes:
+
+        - **grView** - reference to the :class:`~nodeeditor.node_graphics_view.QDMGraphicsView`
+        - **start_socket** - the :class:`~nodeeditor.node_socket.Socket` where the re-routing started
+        - **rerouting_edges** - dashed edges representing the re-routing in progress
+        - **is_rerouting** - are we currently re-routing?
+        - **first_mb_release** - flag for detecting if we already clicked with the rerouting LMB release
+        """
         self.grView = grView
         # store where we started re-routing the edges
         self.start_socket: Optional['Socket'] = None

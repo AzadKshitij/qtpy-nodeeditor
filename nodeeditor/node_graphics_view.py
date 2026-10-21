@@ -819,16 +819,31 @@ class QDMGraphicsView(QGraphicsView):
         return (dist_scene.x()*dist_scene.x() + dist_scene.y()*dist_scene.y()) > edge_drag_threshold_sq
 
     def zoomIn(self):
+        """Step the zoom level up and return the factor to scale the scene by.
+
+        :return: the zoom factor to apply
+        :rtype: ``float``
+        """
         # self.scale(self.zoomInFactor, self.zoomInFactor)
         self.zoom += self.zoomStep
         return self.zoomInFactor
 
     def zoomOut(self):
+        """Step the zoom level down and return the factor to scale the scene by.
+
+        :return: the zoom factor to apply
+        :rtype: ``float``
+        """
         # self.scale(1 / self.zoomInFactor, 1 / self.zoomInFactor)
         self.zoom -= self.zoomStep
         return 1 / self.zoomInFactor
 
     def applyZoom(self, zoomFactor: float) -> None:
+        """Scale the scene by ``zoomFactor``, keeping the zoom level inside the configured range.
+
+        :param zoomFactor: the factor to scale the scene by
+        :type zoomFactor: ``float``
+        """
         clamped = False
         if self.zoom < self.zoomRange[0]:
             self.zoom, clamped = self.zoomRange[0], True

@@ -1,3 +1,6 @@
-sphinx==7.4.7
-sphinx_rtd_theme==2.0
-recommonmark==0.7.1
+# Tooling for building the documentation site.
+# See docs/CONTRIBUTING.md for how to use it.
+mkdocs>=1.6,<2
+mkdocs-material>=9.5,<10
+mkdocstrings[python]>=0.26,<1
+ruff>=0.6

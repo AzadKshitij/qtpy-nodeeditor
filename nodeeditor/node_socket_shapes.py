@@ -106,6 +106,12 @@ class CircleShape(SocketShape):
     """The classic socket: a filled circle."""
 
     def path(self, radius: float, direction: int = DIRECTION_OUTPUT) -> QPainterPath:
+        """The circle as a path, centered on the item origin.
+
+        :param radius: the socket's radius in scene units
+        :param direction: ignored, a circle looks the same on both sides
+        :return: the outline path
+        """
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), radius, radius)
         return path
@@ -121,6 +127,10 @@ class SquareShape(SocketShape):
     HALF_SIDE = 0.85
 
     def points(self) -> List[Tuple[float, float]]:
+        """The square's four corners, in units of the socket radius.
+
+        :return: list of ``(x, y)`` pairs
+        """
         h = self.HALF_SIDE
         return [(-h, -h), (h, -h), (h, h), (-h, h)]
 
@@ -133,6 +143,12 @@ class TriangleShape(SocketShape):
     """
 
     def points(self) -> List[Tuple[float, float]]:
+        """The triangle's three corners, in units of the socket radius.
+
+        The tip points right, so the outline mirrors on input sockets.
+
+        :return: list of ``(x, y)`` pairs
+        """
         return [(-0.8, -0.9), (0.9, 0.0), (-0.8, 0.9)]
 
 
@@ -147,6 +163,10 @@ class ChevronShape(SocketShape):
     mirrors_input = False
 
     def points(self) -> List[Tuple[float, float]]:
+        """The chevron's six corners, in units of the socket radius.
+
+        :return: list of ``(x, y)`` pairs
+        """
         return [(0.847, 0.0), (0.284, 1.0), (-0.847, 1.0),
                 (-0.331, 0.0), (-0.847, -1.0), (0.284, -1.0)]
 
@@ -165,11 +185,22 @@ class CallbackShape(SocketShape):
         self.func = func
 
     def path(self, radius: float, direction: int = DIRECTION_OUTPUT) -> QPainterPath:
+        """The circle used as the hit area of a callback shape.
+
+        :param radius: the socket's radius in scene units
+        :param direction: ignored, the fallback outline is always a circle
+        :return: the outline path
+        """
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), radius, radius)
         return path
 
     def draw(self, painter, ctx: SocketShapeContext) -> None:
+        """Paint the shape by handing the paint over to the wrapped callback.
+
+        :param painter: the `QPainter` to draw into
+        :param ctx: the :class:`SocketShapeContext` for this paint
+        """
         self.func(painter, ctx)
 
 

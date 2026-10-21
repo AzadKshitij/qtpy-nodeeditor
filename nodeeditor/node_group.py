@@ -47,6 +47,15 @@ class Group(Serializable, QGraphicsRectItem):
     def __init__(self, scene: 'Scene', title: str = "Group",
                  x: float = 0, y: float = 0,
                  width: float = 200, height: float = 150) -> None:
+        """Create a group and register it with the scene.
+
+        :param scene: the :class:`~nodeeditor.node_scene.Scene` the group belongs to
+        :param title: title shown in the group's title bar
+        :param x: initial x position in scene coordinates
+        :param y: initial y position in scene coordinates
+        :param width: initial width of the group's box
+        :param height: initial height of the group's box
+        """
         QGraphicsRectItem.__init__(self, 0, 0, width, height)
         Serializable.__init__(self)
 
@@ -93,6 +102,13 @@ class Group(Serializable, QGraphicsRectItem):
     # membership
     # ------------------------------------------------------------------
     def addNode(self, node: 'Node') -> None:
+        """Add a node to the group.
+
+        A node belongs to at most one group, so adding it here detaches it
+        from the group it was in before.
+
+        :param node: the :class:`~nodeeditor.node_node.Node` to add
+        """
         if node is None:
             return
         if node in self.child_nodes:
@@ -127,6 +143,11 @@ class Group(Serializable, QGraphicsRectItem):
             pass
 
     def removeNode(self, node: 'Node', update_bounds: bool = True) -> None:
+        """Detach a node from the group, keeping the node itself.
+
+        :param node: the node to detach from the group
+        :param update_bounds: recalculate the group box afterwards
+        """
         if node not in self.child_nodes:
             return
         try:
@@ -161,18 +182,26 @@ class Group(Serializable, QGraphicsRectItem):
                 pass
 
     def getChildNodes(self) -> List['Node']:
+        """Return a copy of the list of nodes in the group."""
         return list(self.child_nodes)
 
     def contains(self, node: 'Node') -> bool:
+        """Return whether the given node is a member of this group."""
         return node in self.child_nodes
 
     def isCollapsed(self) -> bool:
+        """Return whether the group is currently collapsed."""
         return self._collapsed
 
     # ------------------------------------------------------------------
     # bounds: auto-fit + header drag
     # ------------------------------------------------------------------
     def calculateBounds(self) -> QRectF:
+        """Return the rectangle that tightly fits the child nodes.
+
+        The result is at least :attr:`MIN_WIDTH` by :attr:`MIN_HEIGHT_EXPANDED`
+        and leaves :attr:`PADDING` around the children.
+        """
         if not self.child_nodes:
             p = self.pos()
             r = self.rect()
@@ -314,6 +343,11 @@ class Group(Serializable, QGraphicsRectItem):
         return incoming, outgoing, internal
 
     def externalEdges(self) -> Tuple[List['Edge'], List['Edge']]:
+        """Return the edges that cross the group boundary.
+
+        :return: a tuple of (incoming, outgoing) edges, where an incoming edge
+            ends inside the group and an outgoing edge starts inside it
+        """
         inc, out, _ = self._classifyEdges()
         return inc, out
 
@@ -355,6 +389,11 @@ class Group(Serializable, QGraphicsRectItem):
             return None
 
     def refreshExternalEdges(self) -> None:
+        """Show or hide edges according to the collapsed state.
+
+        External edges are rerouted to their stub rows on the collapsed box,
+        internal edges are hidden while the group is collapsed.
+        """
         try:
             inc, out, internal = self._classifyEdges()
             for e in inc + out:
@@ -390,6 +429,13 @@ class Group(Serializable, QGraphicsRectItem):
     # collapse / expand (no node resize, positions preserved)
     # ------------------------------------------------------------------
     def collapse(self) -> None:
+        """Collapse the group into its title bar.
+
+        Child nodes and the edges between them are hidden, the box shrinks to
+        the collapsed width, and the edges crossing the boundary are rerouted
+        to stub rows. Node positions are preserved, so expanding restores the
+        graph exactly as it was.
+        """
         if self._collapsed:
             return
         self._collapsed = True
@@ -419,6 +465,11 @@ class Group(Serializable, QGraphicsRectItem):
             dumpException()
 
     def expand(self) -> None:
+        """Expand the group, restoring the hidden nodes and edges.
+
+        The children reappear at the positions they had before the group was
+        collapsed.
+        """
         if not self._collapsed:
             return
         self._collapsed = False
@@ -510,12 +561,17 @@ class Group(Serializable, QGraphicsRectItem):
             pass
 
     def toggleCollapse(self) -> None:
+        """Collapse the group if it is expanded, expand it otherwise."""
         if self._collapsed:
             self.expand()
         else:
             self.collapse()
 
     def setCollapsed(self, collapsed: bool) -> None:
+        """Collapse or expand the group.
+
+        :param collapsed: True to collapse the group, False to expand it
+        """
         if collapsed:
             self.collapse()
         else:
@@ -610,6 +666,10 @@ class Group(Serializable, QGraphicsRectItem):
             return False
 
     def setDropHighlight(self, enabled: bool) -> None:
+        """Highlight the group while nodes are dragged over it.
+
+        :param enabled: whether the drop highlight should be shown
+        """
         try:
             if self._drop_highlight != bool(enabled):
                 self._drop_highlight = bool(enabled)
@@ -653,6 +713,11 @@ class Group(Serializable, QGraphicsRectItem):
         self.dispose()
 
     def dispose(self) -> None:
+        """Remove the group from the scene and from the graphics scene.
+
+        This is the low-level removal used by :meth:`ungroup` and
+        :meth:`deleteWithChildren`.
+        """
         try:
             try:
                 if self.scene.grScene is not None and self in self.scene.grScene.items():
@@ -708,6 +773,11 @@ class Group(Serializable, QGraphicsRectItem):
             return super().shape()
 
     def mousePressEvent(self, event) -> None:
+        """Handle a press on the group.
+
+        The collapse toggle is handled first; a press on the title bar
+        afterwards starts a drag of the group and its children.
+        """
         try:
             lp = event.pos()
         except Exception:
@@ -789,6 +859,7 @@ class Group(Serializable, QGraphicsRectItem):
                 pass
 
     def mouseDoubleClickEvent(self, event) -> None:
+        """Rename the group when its title bar is double-clicked."""
         # Double-click header renames; body is click-through like press.
         try:
             lp = event.pos()
@@ -813,6 +884,7 @@ class Group(Serializable, QGraphicsRectItem):
             pass
 
     def mouseMoveEvent(self, event) -> None:
+        """Move the group and its children while the title bar is dragged."""
         if not self._can_move:
             return
         try:
@@ -858,6 +930,7 @@ class Group(Serializable, QGraphicsRectItem):
                 pass
 
     def mouseReleaseEvent(self, event) -> None:
+        """Finish dragging the group and store the move in the history."""
         moved = self._can_move
         actually_moved = bool(moved and getattr(self, '_moved', False))
         if not moved:
@@ -895,6 +968,7 @@ class Group(Serializable, QGraphicsRectItem):
                 pass
 
     def hoverEnterEvent(self, event) -> None:
+        """Highlight the title bar when the mouse moves onto it."""
         try:
             lp = event.pos()
             self._hover_header = lp.y() < float(self.TITLE_BAR_HEIGHT)
@@ -909,6 +983,7 @@ class Group(Serializable, QGraphicsRectItem):
             pass
 
     def hoverMoveEvent(self, event) -> None:
+        """Track the mouse over the title bar to keep the hover state."""
         try:
             lp = event.pos()
             in_header = lp.y() < float(self.TITLE_BAR_HEIGHT)
@@ -927,6 +1002,7 @@ class Group(Serializable, QGraphicsRectItem):
             pass
 
     def hoverLeaveEvent(self, event) -> None:
+        """Remove the title bar highlight when the mouse leaves it."""
         self._hover_header = False
         try:
             self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
@@ -942,6 +1018,11 @@ class Group(Serializable, QGraphicsRectItem):
             pass
 
     def contextMenuEvent(self, event) -> None:
+        """Show the group context menu.
+
+        The menu offers collapsing, renaming, the colour presets, ungrouping
+        and deleting the group together with its children.
+        """
         try:
             # Expanded body is click-through: let canvas context menu handle it.
             # (shape() already excludes the body; this is belt-and-suspenders.)
@@ -1013,6 +1094,7 @@ class Group(Serializable, QGraphicsRectItem):
             dumpException()
 
     def paint(self, painter: QPainter, option, widget=None) -> None:
+        """Paint the group box, its title bar and the collapse toggle."""
         try:
             rect = self.rect()
             painter.setPen(self.pen())
@@ -1082,6 +1164,10 @@ class Group(Serializable, QGraphicsRectItem):
     # serialization v2 (clean break, best-effort old load as expanded)
     # ------------------------------------------------------------------
     def serialize(self) -> dict:
+        """Return the group as a JSON-serializable dictionary.
+
+        The format is versioned with :data:`GROUP_SERIALIZATION_VERSION`.
+        """
         try:
             p = self.pos()
             r = self.rect()
@@ -1107,6 +1193,15 @@ class Group(Serializable, QGraphicsRectItem):
         }
 
     def deserialize(self, data: dict, hashmap: Optional[dict] = None, restore_id: bool = True) -> bool:
+        """Restore the group from a dictionary created by :meth:`serialize`.
+
+        Files written by the old ``GroupNode`` format are loaded as expanded.
+
+        :param data: the serialized group
+        :param hashmap: mapping of ids to objects, used to relink the children
+        :param restore_id: whether the id stored in the file is restored
+        :return: whether the group was restored
+        """
         try:
             if restore_id and 'id' in data:
                 self.id = data['id']
