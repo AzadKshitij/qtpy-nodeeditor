@@ -33,10 +33,11 @@ jobs:
   build:
     name: Build site
     # Only build for a "publish" commit, or when the workflow is started by hand.
+    # contains() is case-insensitive, so "publish", "Publish" and "published" all match.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.head_commit.message != null &&
-       contains(lower(github.event.head_commit.message), 'publish'))
+       contains(github.event.head_commit.message, 'publish'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,7 +69,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.head_commit.message != null &&
-       contains(lower(github.event.head_commit.message), 'publish'))
+       contains(github.event.head_commit.message, 'publish'))
     runs-on: ubuntu-latest
     environment:
       name: github-pages
