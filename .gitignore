@@ -6,6 +6,11 @@ __pycache__/
 .idea
 .tox
 
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 
 # Distribution / packaging
 .Python
@@ -34,6 +39,9 @@ wheels/
 # Tooling directories
 /.opencode/
 /.openchamber/
+
+# Scratch graph files written by the examples and the test suite
+*.tds
 
 NodeGraphQt
 NodeGraphQt/
