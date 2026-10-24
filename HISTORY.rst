@@ -1,11 +1,70 @@
 History
 =======
 
-Release history for **qtpy-nodeeditor**.
+Release history for **nodeeditor-qtpy**.
 
 This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
+
+0.8.1 - 2026-10-21
+------------------
+
+**Features**
+
+- Added ``nodeeditor.node_graph``: graph algorithms over a ``Scene`` without a
+  third-party graph library. ``topological_order`` (Kahn's algorithm, scene
+  order as the tie-break, raising ``GraphCycleError``), ``descendants`` and
+  ``ancestors`` (breadth-first with a visited set), ``components`` (the
+  disconnected subgraphs, via union-find), ``cycles`` (one representative cycle
+  per cyclic region), and ``paths`` and ``shortest_path`` (parallel edges stay
+  distinct). Every algorithm is also a thin wrapper on ``Scene``, so
+  ``scene.shortest_path(a, b)`` works without importing the module, and
+  ``GraphCycleError`` is exported from the package.
+- Added a graph inspector panel to the calculator example, which runs the
+  algorithms on the active graph and selects the matching node on the canvas.
+- ``Node.markDescendantsDirty`` and ``markDescendantsInvalid`` now walk with
+  ``descendants()`` instead of recursing. The old walk raised
+  ``RecursionError`` on a cycle and on chains over 1000 nodes, and visited a
+  node once per path into it: a 42-node diamond graph took 4.5 s, now about
+  0.0002 s.
+
+**Packaging**
+
+- First release on PyPI, as ``nodeeditor-qtpy``. The import package stays
+  ``nodeeditor``.
+- Built with ``uv_build``; the ``hatchling`` configuration is kept as a
+  fallback and produces the same artifacts.
+- Dependencies are ``qtpy`` and ``orjson`` only. The bindings are optional
+  extras, ``pyqt6`` and ``pyside6``, and any binding QtPy supports keeps
+  working. Python 3.10 and newer.
+- The licence is an SPDX ``MIT`` expression and the licence file ships in the
+  wheel, with the upstream copyright retained.
+- Uploads run from GitHub Actions with PEP 740 attestations, so PyPI records
+  provenance instead of showing "without provenance".
+- ``nodeeditor.__version__`` now reports the version of the installed
+  distribution, and importing the package without a Qt binding raises an error
+  that names the extras to install.
+
+**Docs**
+
+- New documentation site at
+  https://azadkshitij.github.io/qtpy-nodeeditor/, built with MkDocs, the
+  Material theme and mkdocstrings. The API reference is generated from the
+  docstrings in the source, so it always matches the installed code.
+- Added pages for the installation, a quick start, the event system and node
+  groups, and the guides now carry screenshots.
+- Documented every public class, method and function in the package.
+- The site is redeployed whenever a commit pushed to ``main`` carries
+  "publish" in its message.
+
+**Tests**
+
+- Added ``tests/test_120_graph.py`` for the algorithms, the ``Scene`` wrappers
+  and the dirty walk.
+- Moved the hover colour test into ``tests/``, where it runs with the suite; it
+  was stranded in the repository root and never collected.
+- The suite now runs 90 tests.
 
 0.8 - 2026-10-21
 ----------------

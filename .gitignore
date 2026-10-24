@@ -40,8 +40,6 @@ wheels/
 /.opencode/
 /.openchamber/
 
-# Scratch graph files written by the examples and the test suite
-*.tds
 
 NodeGraphQt
 NodeGraphQt/
