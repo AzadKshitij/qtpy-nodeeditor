@@ -751,6 +751,10 @@ class QDMGraphicsView(QGraphicsView):
             from nodeeditor.node_group import Group
         except Exception:
             Group = None  # type: ignore
+        try:
+            from nodeeditor.node_comment import Comment
+        except Exception:
+            Comment = None  # type: ignore
 
         selected = list(self.grScene.selectedItems())
         groups = [it for it in selected if Group is not None and isinstance(it, Group)]
@@ -765,6 +769,12 @@ class QDMGraphicsView(QGraphicsView):
         for item in selected:
             try:
                 if Group is not None and isinstance(item, Group):
+                    continue
+                if Comment is not None and isinstance(item, Comment):
+                    try:
+                        item.remove()
+                    except Exception:
+                        pass
                     continue
                 if isinstance(item, QDMGraphicsEdge):
                     try:

@@ -87,6 +87,7 @@ nav:
       - Events: events.md
   - Guides:
       - Group nodes: guides/group-nodes.md
+      - Canvas comments: guides/comments.md
       - Node grouping (reference): guides/node-grouping.md
       - Multi-input nodes: guides/multi-input-nodes.md
       - Graph algorithms: guides/graph-algorithms.md
@@ -99,6 +100,7 @@ nav:
       - Scene: api/scene.md
       - Node: api/node.md
       - Groups: api/group.md
+      - Comments: api/comment.md
       - Edge: api/edge.md
       - Socket: api/socket.md
       - Socket shapes: api/socket-shapes.md

@@ -16,6 +16,7 @@ The package re-exports the pieces most applications need:
 | [Scene](scene.md) | `node_scene`, `node_scene_clipboard`, `node_scene_history` |
 | [Node](node.md) | `node_node`, `node_multi_input_node` |
 | [Groups](group.md) | `node_group` |
+| [Comments](comment.md) | `node_comment` |
 | [Edge](edge.md) | `node_edge` and the edge interaction helpers |
 | [Socket](socket.md) | `node_socket` |
 | [Socket shapes](socket-shapes.md) | `node_socket_shapes` |

@@ -55,6 +55,7 @@ class Scene(Serializable):
         self.nodes: List[Node] = []
         self.edges: List[Edge] = []
         self.groups: List = []  # List of GroupNode instances
+        self.comments: List = []  # List of Comment (canvas note) instances
 
         # current filename assigned to this scene
         self.filename: Optional[str] = None
@@ -605,6 +606,87 @@ class Scene(Serializable):
                 return group
         return None
 
+    def addComment(self, comment=None, text: str = "", x: float = 0,
+                   y: float = 0, width: Optional[float] = None,
+                   height: Optional[float] = None):
+        """Create a canvas note or register an existing one with this `Scene`.
+
+        With no comment (or a string as the first argument) a new
+        :class:`~nodeeditor.node_comment.Comment` is created and returned::
+
+            note = scene.addComment("Remember to tune this", x=40, y=20)
+
+        Passing an existing `Comment` adds it to :attr:`comments` and returns
+        it, mirroring :meth:`addGroup`. Registering is idempotent.
+
+        :param comment: an existing `Comment`, a text string, or ``None``
+        :param text: text used when a new note is created
+        :param x: x position in scene coordinates for a new note
+        :param y: y position in scene coordinates for a new note
+        :param width: requested width for a new note
+        :param height: requested height for a new note
+        :return: the registered or newly created `Comment`
+        """
+        if comment is None or isinstance(comment, str):
+            if isinstance(comment, str):
+                text = comment
+            from nodeeditor.node_comment import Comment
+
+            if width is None:
+                width = Comment.DEFAULT_WIDTH
+            if height is None:
+                height = Comment.DEFAULT_HEIGHT
+            return Comment(
+                self, text=text, x=x, y=y, width=width, height=height
+            )
+        if comment not in self.comments:
+            self.comments.append(comment)
+        return comment
+
+    def removeComment(self, comment) -> None:
+        """Remove a canvas note from this `Scene`.
+
+        :param comment: the `Comment` to remove
+        """
+        if comment in self.comments:
+            self.comments.remove(comment)
+        else:
+            if DEBUG_REMOVE_WARNINGS:
+                print(
+                    "!W:",
+                    "Scene::removeComment",
+                    "wanna remove comment",
+                    comment,
+                    "from self.comments but it's not in the list!",
+                )
+
+    def getCommentById(self, comment_id: int):
+        """Find a canvas note by id.
+
+        :param comment_id: id of the comment to find
+        :return: the matching `Comment` or ``None``
+        """
+        for comment in self.comments:
+            if getattr(comment, "id", None) == comment_id:
+                return comment
+        return None
+
+    def getSelectedComments(self) -> list:
+        """Return the `Comment` items currently selected in the scene.
+
+        :return: selected `Comment` instances
+        :rtype: ``list`` of :class:`~nodeeditor.node_comment.Comment`
+        """
+        try:
+            from nodeeditor.node_comment import Comment
+
+            return [
+                item for item in self.getSelectedItems()
+                if isinstance(item, Comment)
+            ]
+        except Exception:
+            return []
+
     def findCollapsedGroupForNode(self, node):
         """Return collapsed Group containing `node`, or None."""
         try:
@@ -735,6 +817,21 @@ class Scene(Serializable):
                 pass
         self.groups.clear()
 
+        # canvas notes are independent visual items; drop their graphics too
+        for comment in list(self.comments):
+            try:
+                comment.dispose()
+            except Exception:
+                try:
+                    if (
+                        self.grScene is not None
+                        and comment in self.grScene.items()
+                    ):
+                        self.grScene.removeItem(comment)
+                except Exception:
+                    pass
+        self.comments.clear()
+
         self.has_been_modified = False
 
     def saveToFile(self, filename: str) -> None:
@@ -823,6 +920,7 @@ class Scene(Serializable):
         nodes: List[dict] = []
         edges: List[dict] = []
         groups: List[dict] = []
+        comments: List[dict] = []
         for node in self.nodes:
             new_node = node.serialize()
             if not any(new_node['id'] == a['id'] for a in nodes):
@@ -835,6 +933,10 @@ class Scene(Serializable):
             new_group = group.serialize()
             if not any(new_group["id"] == a["id"] for a in groups):
                 groups.append(new_group)
+        for comment in self.comments:
+            new_comment = comment.serialize()
+            if not any(new_comment["id"] == a["id"] for a in comments):
+                comments.append(new_comment)
         return OrderedDict(
             [
                 ("id", self.id),
@@ -843,6 +945,7 @@ class Scene(Serializable):
                 ("nodes", nodes),
                 ("edges", edges),
                 ("groups", groups),
+                ("comments", comments),
             ]
         )
 
@@ -1102,5 +1205,50 @@ class Scene(Serializable):
                     continue
         except Exception:
             pass
+
+        # -- deserialize COMMENTS (additive; old scenes have no "comments" key)
+        all_comments = self.comments.copy()
+
+        for comment_data in data.get("comments", []) or []:
+            found_comment = None
+            try:
+                cid = comment_data.get("id", None)
+            except Exception:
+                cid = None
+            for comment in all_comments:
+                if getattr(comment, 'id', None) == cid:
+                    found_comment = comment
+                    break
+
+            if not found_comment:
+                try:
+                    from nodeeditor.node_comment import Comment
+
+                    new_comment = Comment(self)
+                    new_comment.deserialize(comment_data, hashmap, restore_id)
+                    # Comment.__init__ already registered itself; guard double-add
+                    if new_comment not in self.comments:
+                        self.comments.append(new_comment)
+                except Exception:
+                    dumpException()
+            else:
+                try:
+                    found_comment.deserialize(
+                        comment_data, hashmap, restore_id
+                    )
+                    all_comments.remove(found_comment)
+                except Exception:
+                    dumpException()
+
+        while all_comments != []:
+            comment = all_comments.pop()
+            try:
+                comment.dispose()
+            except Exception:
+                try:
+                    if comment in self.comments:
+                        self.comments.remove(comment)
+                except Exception:
+                    pass
 
         return True

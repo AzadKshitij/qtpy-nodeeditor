@@ -31,6 +31,7 @@ class SelectionDict(TypedDict, total=False):
     nodes: List[str]  # list of node IDs
     edges: List[str]  # list of edge IDs
     groups: List[str]  # list of group IDs
+    comments: List[str]  # list of comment IDs
 
 
 class SceneHistory():
@@ -422,10 +423,16 @@ class SceneHistory():
             'nodes': [],
             'edges': [],
             'groups': [],
+            'comments': [],
         }
         for item in self.scene.grScene.selectedItems():
             try:
-                # Groups are QGraphicsRectItem without .node/.edge; check first
+                # Groups and comments are QGraphicsItems without .node/.edge;
+                # check them first so their ids land in the right list.
+                comments = getattr(self.scene, 'comments', [])
+                if comments and item in comments:
+                    sel_obj['comments'].append(item.id)
+                    continue
                 groups = getattr(self.scene, 'groups', [])
                 if groups and item in groups:
                     sel_obj['groups'].append(item.id)
@@ -538,6 +545,24 @@ class SceneHistory():
             except Exception:
                 pass
 
+            # comments (new; old stamps may lack the key)
+            try:
+                for comment in list(getattr(self.scene, 'comments', [])):
+                    try:
+                        comment.setSelected(False)
+                    except Exception:
+                        pass
+                for cid in history_stamp['selection'].get('comments', []):
+                    for comment in list(getattr(self.scene, 'comments', [])):
+                        if getattr(comment, 'id', None) == cid:
+                            try:
+                                comment.setSelected(True)
+                            except Exception:
+                                pass
+                            break
+            except Exception:
+                pass
+
             current_selection = self.captureCurrentSelection()
             if DEBUG_SELECTION:
                 print("selected nodes after restore:",
@@ -547,7 +572,7 @@ class SceneHistory():
             self.scene._last_selected_items = self.scene.getSelectedItems()
 
             # if the selection of nodes differ before and after restoration, set flag
-            if current_selection.get('nodes') != previous_selection.get('nodes') or current_selection.get('edges') != previous_selection.get('edges') or current_selection.get('groups') != previous_selection.get('groups'):
+            if current_selection.get('nodes') != previous_selection.get('nodes') or current_selection.get('edges') != previous_selection.get('edges') or current_selection.get('groups') != previous_selection.get('groups') or current_selection.get('comments') != previous_selection.get('comments'):
                 if DEBUG_SELECTION:
                     print("\nSCENE: Selection has changed")
                 self.undo_selection_has_changed = True

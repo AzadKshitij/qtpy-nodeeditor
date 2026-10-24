@@ -18,6 +18,7 @@ PyQt6 and PySide6.
 - support for implementing evaluation logic
 - hovering effects, dragging edges, cutting lines, snapping and more
 - node groups, multi-input nodes, custom socket shapes and color schemes
+- canvas comments (sticky notes) with inline editing and serialization
 - ready-made examples you can copy from
 
 ## Requirements
@@ -110,6 +111,7 @@ from nodeeditor import NodeEditorColorScheme, get_socket_shape
 from nodeeditor.node_scene import Scene
 from nodeeditor.node_node import Node
 from nodeeditor.node_edge import Edge
+from nodeeditor.node_comment import Comment
 ```
 
 ## Credits

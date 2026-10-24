@@ -135,6 +135,11 @@ class CalculatorWindow(NodeEditorWindow):
             triggered=self.showSelectedPath)
         self.actShortestPath.setShortcut(QKeySequence("Ctrl+Shift+P"))
 
+        self.actNewComment = QAction("&New Comment", self,
+                                     statusTip="Add a sticky note to the canvas",
+                                     triggered=self.onAddComment)
+        self.actNewComment.setShortcut(QKeySequence("Ctrl+Shift+N"))
+
     def getCurrentScene(self):
         """Shortcut for the `Scene` of the active tab, or ``None``."""
         active = self.getCurrentNodeEditorWidget()
@@ -214,6 +219,10 @@ class CalculatorWindow(NodeEditorWindow):
     def createMenus(self):
         super().createMenus()
 
+        # "New Comment" belongs next to the other Edit-menu editing actions.
+        self.editMenu.addSeparator()
+        self.editMenu.addAction(self.actNewComment)
+
         self.graphMenu = self.menuBar().addMenu("&Graph")
         self.graphMenu.addAction(self.actTopologicalOrder)
         self.graphMenu.addAction(self.actComponents)
@@ -255,6 +264,7 @@ class CalculatorWindow(NodeEditorWindow):
         self.actComponents.setEnabled(hasMdiChild)
         self.actCycles.setEnabled(hasMdiChild)
         self.actShortestPath.setEnabled(hasMdiChild)
+        self.actNewComment.setEnabled(hasMdiChild)
 
         self.updateEditMenu()
 
@@ -289,6 +299,26 @@ class CalculatorWindow(NodeEditorWindow):
             gridAct.triggered.connect(self.onShowGrid)
         # gridAct.setChecked(self.scene.grScene.showGrid)
         # gridAct.triggered.connect(self.onShowGrid)
+
+    def onAddComment(self):
+        """Add a sticky note at the center of the active canvas and edit it."""
+        scene = self.getCurrentScene()
+        if scene is None:
+            self.statusBar().showMessage("Open a graph before adding a comment", 3000)
+            return
+
+        try:
+            view = self.getCurrentNodeEditorWidget().view
+            center = view.mapToScene(view.viewport().rect().center())
+            x, y = center.x(), center.y()
+        except Exception:
+            x, y = 0, 0
+
+        comment = scene.addComment("", x=x, y=y, width=240)
+        comment.begin_edit()
+        self.statusBar().showMessage(
+            "Comment added. Type your note, then click away or press Ctrl+Enter to save.",
+            4000)
 
     def onShowGrid(self, checked: bool) -> None:
         """

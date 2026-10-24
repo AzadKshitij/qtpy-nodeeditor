@@ -74,6 +74,9 @@ from nodeeditor.node_socket_shapes import (
 # Export the graph algorithm exception
 from nodeeditor.node_graph import GraphCycleError
 
+# Export the canvas note item for convenient construction
+from nodeeditor.node_comment import Comment
+
 
 __all__ = [
     "NodeEditorColorScheme",
@@ -90,4 +93,5 @@ __all__ = [
     "get_socket_shape",
     "SOCKET_SHAPES",
     "GraphCycleError",
+    "Comment",
 ]
