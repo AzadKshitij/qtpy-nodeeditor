@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "nodeeditor-qtpy"
-version = "0.8.1"
+version = "0.8.2"
 description = "Framework for building node editors and graph UIs in Qt, independent of the Qt binding (PyQt5/PyQt6/PySide2/PySide6 via QtPy)"
 readme = "README.md"
 license = "MIT"

@@ -26,8 +26,15 @@ class QDMCutLine(QGraphicsItem):
         self.setZValue(2)
 
     def boundingRect(self) -> QRectF:
-        """Defining Qt' bounding rectangle"""
-        return self.shape().boundingRect()
+        """Defining Qt' bounding rectangle
+
+        Inflated by half the pen, because ``paint`` strokes the polyline: a
+        rectangle of the bare path leaves the outer half of the stroke outside
+        the area Qt repaints, so a moving cut line leaves a trail of old lines.
+        """
+        pen = getattr(self, "_pen", None)
+        margin = (pen.widthF() / 2.0 if pen is not None else 0.0) + 1.0
+        return self.shape().boundingRect().adjusted(-margin, -margin, margin, margin)
 
     def shape(self) -> QPainterPath:
         """Calculate the QPainterPath object from list of line points

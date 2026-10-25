@@ -7,6 +7,33 @@ This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
 
+0.8.2 - 2026-10-25
+------------------
+
+**Fixes**
+
+- A dragged node no longer leaves a stack of label plates behind it. Two
+  declared rectangles were smaller than what their items painted:
+  ``QDMGraphicsNodeLabel`` declared the text while painting a rounded box
+  padded by 6x3 px, and ``QDMGraphicsNode`` / ``QDMIconGraphicsNode`` declared
+  their body while the label floats above it. Qt repaints a moved item by the
+  rectangle it declared at the old position and dirties its children only at
+  the new one, so the old plate was never cleared. The label now declares its
+  plate, ``textRect()`` keeps the text rectangle for callers that position it,
+  the nodes expose ``labelRect()`` and include it in their own rectangle, and a
+  label that moves, changes text or is hidden by the level of detail re-indexes
+  its node with ``prepareGeometryChange()``.
+- ``QDMGraphicsCutline`` declared the bare polyline while stroking it with a
+  2px pen, so a moving cut line left the outer half of the stroke behind. Its
+  rectangle now accounts for the pen.
+
+**Tests**
+
+- Added ``tests/test_210_label_geometry.py``: the label declares its plate, a
+  node declares the label above it, hiding the label leaves the body alone, and
+  a node move dirties the plate's old position.
+- The suite now runs 121 tests.
+
 0.8.1 - 2026-10-21
 ------------------
 

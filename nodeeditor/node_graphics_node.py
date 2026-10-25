@@ -148,9 +148,34 @@ class QDMGraphicsNodeLabel(QGraphicsTextItem):
             pass
         super().mouseDoubleClickEvent(event)
 
+    def textRect(self) -> QRectF:
+        """The text's own rectangle, as ``QGraphicsTextItem`` computes it."""
+        return super().boundingRect()
+
+    def boundingRect(self) -> QRectF:
+        """The text rectangle plus the box painted behind it.
+
+        ``paint`` draws a rounded box padded by ``_pad_x``/``_pad_y`` around the
+        text and a 1px border on top of that, so the visible label is larger
+        than the text. Declaring only the text put most of the box outside the
+        rectangle Qt repaints: every frame of a node drag left another copy of
+        the box behind, which is the stack of label plates the canvas showed.
+
+        ``textRect()`` stays available for callers that position the label: they
+        want the text, not the padded box.
+        """
+        text = self.textRect()
+        margin = 1.0  # half the 1px border, plus antialiasing
+        return text.adjusted(
+            -self._pad_x - margin,
+            -self._pad_y - margin,
+            self._pad_x + margin,
+            self._pad_y + margin,
+        )
+
     def paint(self, painter, option, widget=None) -> None:
         """Draw the rounded background box behind the label text."""
-        rect = self.boundingRect().adjusted(-self._pad_x, -self._pad_y, self._pad_x, self._pad_y)
+        rect = self.textRect().adjusted(-self._pad_x, -self._pad_y, self._pad_x, self._pad_y)
         painter.setPen(QPen(self._border_color, 1.0))
         painter.setBrush(QBrush(self._bg_color))
         painter.drawRoundedRect(rect, self._radius, self._radius)
@@ -263,6 +288,8 @@ class QDMGraphicsNode(QGraphicsItem):
         self.title_vertical_padding = 4.0
         self.label_offset: float = 10.0
         self._label_visible: bool = False
+        #: Cached floating label box, dropped whenever the label moves or hides.
+        self._label_rect = None
         #: Level-of-detail state pushed by the scene (see
         #: ``QDMGraphicsScene.setDetailLod``). False below the scene's
         #: threshold, when labels, content widgets and sockets are skipped.
@@ -411,14 +438,41 @@ class QDMGraphicsNode(QGraphicsItem):
         self.hovered = False
         self.update()
 
+    def labelRect(self) -> QRectF:
+        """The floating label's box, in this node's coordinates.
+
+        Empty while the label has no text or is hidden, so a plain node keeps
+        the body as its rectangle. Cached: ``boundingRect`` runs a couple of
+        hundred times per drag step, and the box only changes through
+        :meth:`_updateLabelPos` and :meth:`_refreshLabelVisibility`, which drop
+        the cache first.
+        """
+        cached = getattr(self, "_label_rect", None)
+        if cached is None:
+            label = getattr(self, "label_item", None)
+            if label is None or not label.isVisible():
+                cached = QRectF()
+            else:
+                cached = label.boundingRect().translated(label.pos())
+            self._label_rect = cached
+        return cached
+
     def boundingRect(self) -> QRectF:
-        """Defining Qt' bounding rectangle"""
-        return QRectF(
+        """Defining Qt' bounding rectangle
+
+        The floating label counts: Qt repaints a moved item by the rectangle it
+        declared at the old position, and dirties its children only at the new
+        one. A label outside this rectangle therefore stayed painted wherever
+        the node had been, which is the stack of plates left above a dragged
+        node.
+        """
+        body = QRectF(
             0,
             0,
             self.width,
             self.height
         ).normalized()
+        return body.united(self.labelRect())
 
     def initTitle(self) -> None:
         """Set up the title Graphics representation: font, color, position, etc."""
@@ -596,19 +650,36 @@ class QDMGraphicsNode(QGraphicsItem):
 
     def _refreshLabelVisibility(self) -> None:
         try:
-            self.label_item.setVisible(bool(
+            visible = bool(
                 self._label_visible
                 and bool(self.label_item.toPlainText())
-                and self._label_enabled))
+                and self._label_enabled
+            )
+            self._label_rect = None
+            if visible != self.label_item.isVisible():
+                # The label is part of this node's declared rectangle, so
+                # showing or hiding it resizes that rectangle.
+                self.prepareGeometryChange()
+            self.label_item.setVisible(visible)
+            # ``setVisible`` itself asks for the rectangle while the flag is
+            # still the old one, so the cache has to go again afterwards.
+            self._label_rect = None
         except Exception:
             pass
 
     def _updateLabelPos(self) -> None:
         """Center label horizontally above the node."""
         try:
-            w = self.label_item.boundingRect().width()
-            h = self.label_item.boundingRect().height()
+            # The label is part of this node's declared rectangle, so moving it
+            # resizes that rectangle and Qt has to re-index the node.
+            self._label_rect = None
+            self.prepareGeometryChange()
+            w = self.label_item.textRect().width()
+            h = self.label_item.textRect().height()
             self.label_item.setPos((self.width - w) / 2, -h - self.label_offset)
+            # ``setPos`` asks for the rectangle too; keep the cache from
+            # holding the box at the old position.
+            self._label_rect = None
         except Exception:
             pass
 
