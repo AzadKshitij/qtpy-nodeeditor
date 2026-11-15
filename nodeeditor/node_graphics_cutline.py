@@ -2,6 +2,8 @@
 """
 A module containing the class for Cutting Line
 """
+from collections.abc import Iterable
+
 from qtpy.QtGui import QPen, QPainterPath, QPolygonF, QPainter
 from qtpy.QtWidgets import QGraphicsItem, QWidget
 from qtpy.QtCore import Qt, QRectF, QPointF
@@ -17,13 +19,33 @@ class QDMCutLine(QGraphicsItem):
         """
         super().__init__(parent)
 
-        self.line_points: list = []
+        self._points: list[QPointF] = []
 
         self._pen = QPen(Qt.GlobalColor.white)
         self._pen.setWidthF(2.0)
         self._pen.setDashPattern([3, 3])
 
         self.setZValue(2)
+
+    @property
+    def line_points(self) -> list[QPointF]:
+        """The points the stroke passes through, in item coordinates.
+
+        A property rather than a plain attribute: ``boundingRect`` is derived
+        from it, so assigning the list has to declare the geometry change
+        first. Qt repaints an item by the rectangle it declared before the
+        change, and clearing the stroke otherwise leaves the painted line on
+        the canvas until something else repaints the viewport.
+        """
+        return self._points
+
+    @line_points.setter
+    def line_points(self, points: Iterable[QPointF]) -> None:
+        points = list(points)
+        if points == self._points:
+            return
+        self.prepareGeometryChange()
+        self._points = points
 
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle

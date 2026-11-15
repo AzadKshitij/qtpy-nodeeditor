@@ -7,6 +7,25 @@ This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
 
+0.8.3 - 2026-11-15
+------------------
+
+**Fixes**
+
+- A cut stroke no longer stays on the canvas after the mouse button is
+  released. ``QDMCutLine`` derives ``boundingRect()`` from ``line_points``, and
+  the view ends a stroke by replacing that list with an empty one and calling
+  ``update()``. Qt repaints an item by the rectangle it declared before the
+  change, and without ``prepareGeometryChange()`` the only rectangle declared
+  was the new one at the origin, so the stroke was never cleared. The list is
+  now a property that declares the change before it stores the points.
+
+**Tests**
+
+- Added ``tests/test_140_cut_line.py``: replacing the points repaints the area
+  the stroke covered.
+- The suite now runs 123 tests.
+
 0.8.2 - 2026-10-25
 ------------------
 
