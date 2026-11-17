@@ -78,3 +78,18 @@ Primitive costs (`bench/micro.py`), which is the compiler question in one table:
 3. `node.paint` is the largest single item at both zooms: Phase 3.
 4. The frame as a whole is paint-bound: Phase 4 (raster cache).
 5. `drawBackground` is 2.0–4.7 ms per frame: Phase 5a.
+
+## Phase 01 — set-based serialize dedup
+
+`Scene.serialize()` replaced four `any(...)` scans with one `seen` set per
+collection. Output unchanged: first occurrence wins, order preserved.
+
+| Operation | before | after | delta |
+|---|---|---|---|
+| `serialize()`, 300 nodes | 16,225 | 8,223 | −49 % |
+| `createHistoryStamp()`, 300 nodes | 16,760 | 8,458 | −50 % |
+| `serialize()`, 1000 nodes | ~180,000 (quadratic) | 24,620 | linear now |
+
+Frame metrics do not move: serialization is not in the paint path. Test gate:
+121 passed, plus an explicit check that a duplicated node or edge id is still
+dropped.
