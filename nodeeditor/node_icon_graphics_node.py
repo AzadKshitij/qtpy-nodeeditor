@@ -252,6 +252,15 @@ class QDMIconGraphicsNode(QGraphicsItem):
             self._label_rect = cached
         return cached
 
+    def _outlineMargin(self) -> float:
+        """Half the widest outline pen, plus the one-pixel stroke offset."""
+        margin = 1.0
+        for name in ("_pen_default", "_pen_selected", "_pen_hovered"):
+            pen = getattr(self, name, None)
+            if pen is not None:
+                margin = max(margin, 1.0 + pen.widthF() / 2.0)
+        return margin
+
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle
 
@@ -260,13 +269,17 @@ class QDMIconGraphicsNode(QGraphicsItem):
         one. A label outside this rectangle therefore stayed painted wherever
         the node had been, which is the stack of plates left above a dragged
         node.
+
+        The outline is stroked one pixel outside the body, so it has to be part
+        of the declared rectangle as well.
         """
+        margin = self._outlineMargin()
         body = QRectF(
             0,
             0,
             self.width,
             self.height
-        ).normalized()
+        ).normalized().adjusted(-margin, -margin, margin, margin)
         return body.united(self.labelRect())
 
     def initTitle(self) -> None:

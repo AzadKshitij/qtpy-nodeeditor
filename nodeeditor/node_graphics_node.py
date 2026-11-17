@@ -457,6 +457,15 @@ class QDMGraphicsNode(QGraphicsItem):
             self._label_rect = cached
         return cached
 
+    def _outlineMargin(self) -> float:
+        """Half the widest outline pen, plus the one-pixel stroke offset."""
+        margin = 1.0
+        for name in ("_pen_default", "_pen_selected", "_pen_hovered"):
+            pen = getattr(self, name, None)
+            if pen is not None:
+                margin = max(margin, 1.0 + pen.widthF() / 2.0)
+        return margin
+
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle
 
@@ -465,13 +474,19 @@ class QDMGraphicsNode(QGraphicsItem):
         one. A label outside this rectangle therefore stayed painted wherever
         the node had been, which is the stack of plates left above a dragged
         node.
+
+        The outline is stroked one pixel outside the body, so half the widest
+        pen reaches further still. Without that margin the outer band of a
+        hovered or selected outline sits outside the declared rectangle and
+        stays painted when the state changes.
         """
+        margin = self._outlineMargin()
         body = QRectF(
             0,
             0,
             self.width,
             self.height
-        ).normalized()
+        ).normalized().adjusted(-margin, -margin, margin, margin)
         return body.united(self.labelRect())
 
     def initTitle(self) -> None:
@@ -483,8 +498,8 @@ class QDMGraphicsNode(QGraphicsItem):
         self.title_item.setFont(self._title_font)
 
         # Calculate horizontal and vertical center positions
-        horizontal_center = (self.boundingRect().width(
-        ) - self.title_item.boundingRect().width()) / 2
+        horizontal_center = (self.width -
+                             self.title_item.boundingRect().width()) / 2
         vertical_center = (self.title_height -
                            self.title_item.boundingRect().height()) / 2
 

@@ -340,8 +340,8 @@ class Edge(Serializable):
                     source_pos = [sp.x(), sp.y()]
             except Exception:
                 return
-            self.grEdge.setSource(*source_pos)
 
+            # destination
             if self.end_socket is not None:
                 end_pos = None
                 try:
@@ -352,16 +352,18 @@ class Edge(Serializable):
                     if end_pos is None:
                         gs = getattr(self.end_socket, 'grSocket', None)
                         if gs is None:
-                            self.grEdge.setDestination(*source_pos)
-                            self.grEdge.update()
-                            return
-                        ep = gs.scenePos()
-                        end_pos = [ep.x(), ep.y()]
+                            end_pos = list(source_pos)
+                        else:
+                            ep = gs.scenePos()
+                            end_pos = [ep.x(), ep.y()]
                 except Exception:
                     end_pos = list(source_pos)
-                self.grEdge.setDestination(*end_pos)
             else:
-                self.grEdge.setDestination(*source_pos)
+                end_pos = list(source_pos)
+
+            # Adopt both ends at once: one route calculation and one declared
+            # geometry change per move, instead of one per end.
+            self.grEdge.setPositions(source_pos, end_pos)
             self.grEdge.update()
         except Exception:
             try:
