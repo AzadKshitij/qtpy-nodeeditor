@@ -325,6 +325,9 @@ class QDMGraphicsNode(QGraphicsItem):
         self._label_font = QFont("Ubuntu", 9)
         self._label_color = QColor("#EEEEEE")
 
+        # Build the cached paint paths from the geometry set up in initSizes().
+        self._rebuild_paths()
+
     def onSelected(self) -> None:
         """Our event handling when the node was selected"""
         self.node.scene.grScene.itemSelected.emit()
@@ -735,45 +738,66 @@ class QDMGraphicsNode(QGraphicsItem):
                 return True
         return False
 
+    def _rebuild_paths(self) -> None:
+        """Build the cached paint paths from the current geometry.
+
+        The paths only depend on a handful of geometry attributes, so they can
+        be built once instead of on every paint. ``simplified()`` is deliberately
+        not called: all paths use ``Qt.WindingFill``, so overlapping subpaths
+        fill as a single region without it.
+        """
+        self._path_title = QPainterPath()
+        self._path_title.setFillRule(Qt.WindingFill)
+        self._path_title.addRoundedRect(
+            0, 0, self.width, self.title_height, self.edge_roundness, self.edge_roundness)
+        self._path_title.addRect(0, self.title_height - self.edge_roundness,
+                                 self.edge_roundness, self.edge_roundness)
+        self._path_title.addRect(self.width - self.edge_roundness, self.title_height -
+                                 self.edge_roundness, self.edge_roundness, self.edge_roundness)
+
+        self._path_content = QPainterPath()
+        self._path_content.setFillRule(Qt.WindingFill)
+        self._path_content.addRoundedRect(0, self.title_height, self.width, self.height -
+                                          self.title_height, self.edge_roundness, self.edge_roundness)
+        self._path_content.addRect(0, self.title_height,
+                                   self.edge_roundness, self.edge_roundness)
+        self._path_content.addRect(self.width - self.edge_roundness,
+                                   self.title_height, self.edge_roundness, self.edge_roundness)
+
+        self._path_outline = QPainterPath()
+        self._path_outline.addRoundedRect(-1, -1, self.width+2,
+                                          self.height+2, self.edge_roundness, self.edge_roundness)
+
+        self._path_geometry = (self.width, self.height, self.title_height, self.edge_roundness)
+
+    def _ensure_paths(self) -> None:
+        """Rebuild the cached paths if the node's geometry changed."""
+        geometry = (self.width, self.height, self.title_height, self.edge_roundness)
+        if geometry != getattr(self, "_path_geometry", None):
+            self._rebuild_paths()
+
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None) -> None:
         """Painting the rounded rectanglar `Node`"""
+        self._ensure_paths()
+
         # title
-        path_title = QPainterPath()
-        path_title.setFillRule(Qt.WindingFill)
-        path_title.addRoundedRect(
-            0, 0, self.width, self.title_height, self.edge_roundness, self.edge_roundness)
-        path_title.addRect(0, self.title_height - self.edge_roundness,
-                           self.edge_roundness, self.edge_roundness)
-        path_title.addRect(self.width - self.edge_roundness, self.title_height -
-                           self.edge_roundness, self.edge_roundness, self.edge_roundness)
         painter.setPen(Qt.NoPen)
         painter.setBrush(self._brush_title)
-        painter.drawPath(path_title.simplified())
+        painter.drawPath(self._path_title)
 
         # content
-        path_content = QPainterPath()
-        path_content.setFillRule(Qt.WindingFill)
-        path_content.addRoundedRect(0, self.title_height, self.width, self.height -
-                                    self.title_height, self.edge_roundness, self.edge_roundness)
-        path_content.addRect(0, self.title_height,
-                             self.edge_roundness, self.edge_roundness)
-        path_content.addRect(self.width - self.edge_roundness,
-                             self.title_height, self.edge_roundness, self.edge_roundness)
         painter.setPen(Qt.NoPen)
         painter.setBrush(self._brush_background)
-        painter.drawPath(path_content.simplified())
+        painter.drawPath(self._path_content)
 
         # outline
-        path_outline = QPainterPath()
-        path_outline.addRoundedRect(-1, -1, self.width+2,
-                                    self.height+2, self.edge_roundness, self.edge_roundness)
         painter.setBrush(Qt.NoBrush)
         if self.hovered and not self._isSocketHovered():
             painter.setPen(self._pen_hovered)
-            painter.drawPath(path_outline.simplified())
+            painter.drawPath(self._path_outline)
             painter.setPen(self._pen_default)
-            painter.drawPath(path_outline.simplified())
+            painter.drawPath(self._path_outline)
         else:
             painter.setPen(
                 self._pen_default if not self.isSelected() else self._pen_selected)
-            painter.drawPath(path_outline.simplified())
+            painter.drawPath(self._path_outline)

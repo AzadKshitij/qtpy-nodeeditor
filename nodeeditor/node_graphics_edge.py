@@ -49,6 +49,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.posSource: List[float] = [0, 0]
         self.posDestination: List[float] = [200, 100]
 
+        #: Cached path for the current endpoints; dropped whenever they move.
+        self._path_cache: Optional[QPainterPath] = None
+
         # code-settable, user-read-only label drawn on top of the edge path.
         # Never editable/selectable/movable: users cannot change it, code can
         # via QDMGraphicsEdge.setLabel() / Edge.label.
@@ -64,6 +67,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.labelItem.setBrush(QBrush(QColor("#ffffff")))
         self.labelItem.setZValue(1)
         self.labelItem.setVisible(False)
+
+        #: Cached bounding rectangle; dropped when the path or label changes.
+        self._bounds_cache: Optional[QRectF] = None
 
         self.initAssets()
         self.initUI()
@@ -150,6 +156,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """
         self.labelItem.setText(text or "")
         self.labelItem.setVisible(bool(text))
+        self._bounds_cache = None
         self.updateLabelPosition()
         self.update()
 
@@ -172,6 +179,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
     def updateLabelPosition(self) -> None:
         """Center the label on top of the current edge path."""
+        self._bounds_cache = None
         if not self.labelItem.isVisible():
             return
         try:
@@ -261,6 +269,10 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """
         self.posSource = [source[0], source[1]]
         self.posDestination = [destination[0], destination[1]]
+        # The route is a pure function of the endpoints, so a move is the only
+        # thing that invalidates the cached path.
+        self._path_cache = None
+        self._bounds_cache = None
         self.adoptGeometry()
 
     def adoptGeometry(self) -> None:
@@ -296,15 +308,21 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle (path united with label rect)."""
-        margin = self.strokeMargin()
-        base = self.shape().boundingRect().adjusted(-margin, -margin, margin, margin)
-        try:
-            if self.labelItem.isVisible():
-                label_rect = self.labelItem.boundingRect().translated(self.labelItem.pos())
-                return base.united(label_rect)
-        except Exception:
-            pass
-        return base
+        cached = self._bounds_cache
+        if cached is None:
+            margin = self.strokeMargin()
+            base = self.shape().boundingRect().adjusted(
+                -margin, -margin, margin, margin)
+            try:
+                if self.labelItem.isVisible():
+                    label_rect = self.labelItem.boundingRect().translated(
+                        self.labelItem.pos())
+                    base = base.united(label_rect)
+            except Exception:
+                pass
+            cached = base
+            self._bounds_cache = cached
+        return cached
 
     def refreshPath(self) -> None:
         """Adopt the current path and label position now.
@@ -371,5 +389,10 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
         :returns: ``QPainterPath`` of the edge connecting `source` and `destination`
         :rtype: ``QPainterPath``
+
+        The result is cached until ``setPositions()`` invalidates it when the
+        endpoints move.
         """
-        return self.pathCalculator.calcPath()
+        if self._path_cache is None:
+            self._path_cache = self.pathCalculator.calcPath()
+        return self._path_cache

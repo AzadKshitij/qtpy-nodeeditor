@@ -921,21 +921,29 @@ class Scene(Serializable):
         edges: List[dict] = []
         groups: List[dict] = []
         comments: List[dict] = []
+        seen_nodes = set()
         for node in self.nodes:
             new_node = node.serialize()
-            if not any(new_node['id'] == a['id'] for a in nodes):
+            if new_node['id'] not in seen_nodes:
+                seen_nodes.add(new_node['id'])
                 nodes.append(new_node)
+        seen_edges = set()
         for edge in self.edges:
             new_edge = edge.serialize()
-            if not any(new_edge['id'] == a['id'] for a in edges):
+            if new_edge['id'] not in seen_edges:
+                seen_edges.add(new_edge['id'])
                 edges.append(new_edge)
+        seen_groups = set()
         for group in self.groups:
             new_group = group.serialize()
-            if not any(new_group["id"] == a["id"] for a in groups):
+            if new_group["id"] not in seen_groups:
+                seen_groups.add(new_group["id"])
                 groups.append(new_group)
+        seen_comments = set()
         for comment in self.comments:
             new_comment = comment.serialize()
-            if not any(new_comment["id"] == a["id"] for a in comments):
+            if new_comment["id"] not in seen_comments:
+                seen_comments.add(new_comment["id"])
                 comments.append(new_comment)
         return OrderedDict(
             [
