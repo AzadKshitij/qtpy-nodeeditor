@@ -91,6 +91,7 @@ nav:
       - Node grouping (reference): guides/node-grouping.md
       - Multi-input nodes: guides/multi-input-nodes.md
       - Graph algorithms: guides/graph-algorithms.md
+      - Performance: performance.md
       - Socket shapes: guides/socket-shapes.md
       - Node labels: guides/node-labels.md
       - Edge labels: guides/edge-labels.md
