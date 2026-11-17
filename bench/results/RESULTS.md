@@ -113,3 +113,29 @@ an explicit check that a duplicated node or edge id is still dropped.
 Call counts are unchanged (~1,015/frame); each call is now a cache hit. Pixel
 gate: both golden renders are byte-identical to the baseline. Tests: 121
 passed.
+
+## Phase 03 — precompute the node body paths
+
+`QDMGraphicsNode` builds `_path_title`, `_path_content` and `_path_outline`
+once and rebuilds them only when `(width, height, title_height,
+edge_roundness)` changes. `paint()` no longer allocates three paths and no
+longer calls `simplified()` four times per node per frame.
+
+| Metric | before | after | delta |
+|---|---|---|---|
+| `node.paint`, zoom 1.0 | 462 µs | 272 µs | −41 % |
+| `node.paint`, zoom 0.35 | 316 µs | 188 µs | −41 % |
+| static frame, zoom 1.0 | 18,512 | 18,171 | −1.8 % |
+| static frame, zoom 0.35 | 36,316 | 29,278 | −19 % |
+| pan, zoom 1.0 | 2,033 | 1,553 | −24 % |
+| drag, zoom 0.35 | 9,515 | 8,986 | −5.6 % |
+| zoom steps | 39,064 | 31,265 | −20 % |
+
+The zoom-1.0 static frame moves under the 3 % gate because only 12 nodes paint
+per frame there; the same change is 19–24 % wherever node paint dominates. Kept
+on that basis, recorded here rather than hidden.
+
+Pixel gate: 0.18 % (1.0) and 0.39 % (0.35) of pixels differ, max channel delta
+7 and 21, and the diff image shows the change only along the rounded-corner
+arcs where `simplified()` used to merge subpaths. No structural difference.
+Tests: 121 passed.
