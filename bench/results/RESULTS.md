@@ -11,10 +11,6 @@ background CPU, so every headline number is the cleanest of three full suite
 runs (`--runs 3`); per-call numbers come from the `full` mode and are stable
 within a run.
 
-Raw data: `phase-00-baseline-1000-frame.json`,
-`phase-00-baseline-1000-full.json`, `phase-02-edge-cache-frame.json`,
-`phase-02-edge-cache-full.json`.
-
 ## Phase 00 — baseline (main, before any change)
 
 Frame totals, 1000 nodes:
@@ -198,8 +194,7 @@ Same-machine A/B, best-of-3:
 
 Only the zoom-1.0 case clears the gate; everything else ties or regresses.
 The 5.3 ms at zoom 0.35 is `drawLines` in C++, not the Python list building,
-so caching the list cannot reach it. **Reverted** per the 3 % rule. Raw:
-`phase-05-grid-cache-frame.json`, `phase-04-edge-bounds-frame-ab.json`.
+so caching the list cannot reach it. **Reverted** per the 3 % rule.
 
 ## Probed and not merged — device raster cache
 
