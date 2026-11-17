@@ -1,0 +1,1065 @@
+{
+  "phase": "00-baseline-1000",
+  "commit": "7b2034c",
+  "mode": "full",
+  "nodes": 1000,
+  "build_us": 3611241.6,
+  "env": {
+    "python": "3.12.10",
+    "qtpy_api": "PyQt6",
+    "qt": "6.11.2",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "machine": "AMD64",
+    "font": "",
+    "offscreen": "offscreen"
+  },
+  "micro": {
+    "python_call": 0.1455050000004121,
+    "QPointF": 1.1907150000297406,
+    "QRectF": 1.774569999997766,
+    "QLine": 1.7158149999886518,
+    "QColor": 2.3996750000151224,
+    "QPainterPath": 0.44725500001732144,
+    "path.addRoundedRect": 2.9636700000082783,
+    "path.simplified": 26.416940000035538,
+    "path.cubicTo": 5.431950000001962,
+    "math.sqrt": 0.20072500001333538
+  },
+  "scenarios": {
+    "static_zoom_1.0": {
+      "scene.drawBackground": {
+        "count": 18,
+        "total_us": 59077.1,
+        "mean_us": 3282.061,
+        "p50_us": 3158.0,
+        "p95_us": 4484.1,
+        "max_us": 4618.3
+      },
+      "node.paint": {
+        "count": 216,
+        "total_us": 167160.9,
+        "mean_us": 773.893,
+        "p50_us": 742.9,
+        "p95_us": 1357.2,
+        "max_us": 1768.6
+      },
+      "node.boundingRect": {
+        "count": 504,
+        "total_us": 5119.5,
+        "mean_us": 10.158,
+        "p50_us": 9.0,
+        "p95_us": 17.7,
+        "max_us": 98.2
+      },
+      "socket.paint": {
+        "count": 558,
+        "total_us": 31977.1,
+        "mean_us": 57.307,
+        "p50_us": 49.4,
+        "p95_us": 107.7,
+        "max_us": 544.5
+      },
+      "socket.shape": {
+        "count": 1710,
+        "total_us": 20579.6,
+        "mean_us": 12.035,
+        "p50_us": 8.4,
+        "p95_us": 35.9,
+        "max_us": 104.3
+      },
+      "socket.boundingRect": {
+        "count": 1710,
+        "total_us": 42611.8,
+        "mean_us": 24.919,
+        "p50_us": 17.8,
+        "p95_us": 70.9,
+        "max_us": 312.8
+      },
+      "edge.paint": {
+        "count": 144,
+        "total_us": 12368.8,
+        "mean_us": 85.894,
+        "p50_us": 79.1,
+        "p95_us": 169.8,
+        "max_us": 380.5
+      },
+      "edge.shape": {
+        "count": 18126,
+        "total_us": 152402.1,
+        "mean_us": 8.408,
+        "p50_us": 7.2,
+        "p95_us": 12.9,
+        "max_us": 380.0
+      },
+      "edge.boundingRect": {
+        "count": 18126,
+        "total_us": 343592.7,
+        "mean_us": 18.956,
+        "p50_us": 16.6,
+        "p95_us": 29.2,
+        "max_us": 659.7
+      },
+      "edge.calcPath": {
+        "count": 18270,
+        "total_us": 129014.7,
+        "mean_us": 7.062,
+        "p50_us": 6.0,
+        "p95_us": 10.8,
+        "max_us": 376.3
+      },
+      "scene.serialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 18,
+        "total_us": 847097.3,
+        "mean_us": 47060.961,
+        "p50_us": 46873.7,
+        "p95_us": 53931.3,
+        "max_us": 55091.0
+      },
+      "scenario_us": 855217.4
+    },
+    "pan_zoom_1.0": {
+      "scene.drawBackground": {
+        "count": 30,
+        "total_us": 8053.8,
+        "mean_us": 268.46,
+        "p50_us": 216.5,
+        "p95_us": 819.1,
+        "max_us": 1062.5
+      },
+      "node.paint": {
+        "count": 75,
+        "total_us": 34221.0,
+        "mean_us": 456.28,
+        "p50_us": 452.6,
+        "p95_us": 679.3,
+        "max_us": 791.3
+      },
+      "node.boundingRect": {
+        "count": 315,
+        "total_us": 2265.4,
+        "mean_us": 7.192,
+        "p50_us": 5.9,
+        "p95_us": 14.6,
+        "max_us": 38.5
+      },
+      "socket.paint": {
+        "count": 40,
+        "total_us": 1411.9,
+        "mean_us": 35.297,
+        "p50_us": 32.6,
+        "p95_us": 64.2,
+        "max_us": 89.3
+      },
+      "socket.shape": {
+        "count": 1000,
+        "total_us": 8319.0,
+        "mean_us": 8.319,
+        "p50_us": 6.2,
+        "p95_us": 21.8,
+        "max_us": 144.9
+      },
+      "socket.boundingRect": {
+        "count": 1000,
+        "total_us": 17452.8,
+        "mean_us": 17.453,
+        "p50_us": 13.4,
+        "p95_us": 44.9,
+        "max_us": 252.8
+      },
+      "edge.paint": {
+        "count": 76,
+        "total_us": 3058.7,
+        "mean_us": 40.246,
+        "p50_us": 28.8,
+        "p95_us": 84.9,
+        "max_us": 353.3
+      },
+      "edge.shape": {
+        "count": 556,
+        "total_us": 5189.9,
+        "mean_us": 9.334,
+        "p50_us": 7.3,
+        "p95_us": 23.2,
+        "max_us": 152.9
+      },
+      "edge.boundingRect": {
+        "count": 556,
+        "total_us": 11208.8,
+        "mean_us": 20.16,
+        "p50_us": 16.3,
+        "p95_us": 47.5,
+        "max_us": 206.6
+      },
+      "edge.calcPath": {
+        "count": 632,
+        "total_us": 4875.0,
+        "mean_us": 7.714,
+        "p50_us": 6.0,
+        "p95_us": 19.9,
+        "max_us": 146.2
+      },
+      "scene.serialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 30,
+        "total_us": 105427.0,
+        "mean_us": 3514.233,
+        "p50_us": 3521.5,
+        "p95_us": 5212.8,
+        "max_us": 5274.9
+      },
+      "scenario_us": 131710.7
+    },
+    "static_zoom_0.35": {
+      "scene.drawBackground": {
+        "count": 13,
+        "total_us": 109661.1,
+        "mean_us": 8435.469,
+        "p50_us": 8063.0,
+        "p95_us": 11273.6,
+        "max_us": 13112.9
+      },
+      "node.paint": {
+        "count": 780,
+        "total_us": 500234.5,
+        "mean_us": 641.326,
+        "p50_us": 493.8,
+        "p95_us": 1281.6,
+        "max_us": 14474.7
+      },
+      "node.boundingRect": {
+        "count": 1690,
+        "total_us": 33165.3,
+        "mean_us": 19.624,
+        "p50_us": 10.9,
+        "p95_us": 45.9,
+        "max_us": 1789.1
+      },
+      "socket.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.paint": {
+        "count": 780,
+        "total_us": 37720.6,
+        "mean_us": 48.36,
+        "p50_us": 37.7,
+        "p95_us": 106.0,
+        "max_us": 711.1
+      },
+      "edge.shape": {
+        "count": 13767,
+        "total_us": 144593.4,
+        "mean_us": 10.503,
+        "p50_us": 7.2,
+        "p95_us": 14.6,
+        "max_us": 2633.4
+      },
+      "edge.boundingRect": {
+        "count": 13767,
+        "total_us": 311878.6,
+        "mean_us": 22.654,
+        "p50_us": 16.5,
+        "p95_us": 32.5,
+        "max_us": 3312.0
+      },
+      "edge.calcPath": {
+        "count": 14547,
+        "total_us": 129142.7,
+        "mean_us": 8.878,
+        "p50_us": 6.0,
+        "p95_us": 12.0,
+        "max_us": 2625.6
+      },
+      "scene.serialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 13,
+        "total_us": 1244842.7,
+        "mean_us": 95757.131,
+        "p50_us": 85118.0,
+        "p95_us": 129346.5,
+        "max_us": 225613.9
+      },
+      "scenario_us": 1251990.1
+    },
+    "drag_zoom_0.35": {
+      "scene.drawBackground": {
+        "count": 30,
+        "total_us": 19487.1,
+        "mean_us": 649.57,
+        "p50_us": 234.8,
+        "p95_us": 5656.8,
+        "max_us": 7266.6
+      },
+      "node.paint": {
+        "count": 176,
+        "total_us": 84997.8,
+        "mean_us": 482.942,
+        "p50_us": 433.6,
+        "p95_us": 724.8,
+        "max_us": 3103.2
+      },
+      "node.boundingRect": {
+        "count": 518,
+        "total_us": 10975.8,
+        "mean_us": 21.189,
+        "p50_us": 11.0,
+        "p95_us": 30.8,
+        "max_us": 3801.0
+      },
+      "socket.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.shape": {
+        "count": 4240,
+        "total_us": 22682.9,
+        "mean_us": 5.35,
+        "p50_us": 4.4,
+        "p95_us": 8.8,
+        "max_us": 148.2
+      },
+      "socket.boundingRect": {
+        "count": 4240,
+        "total_us": 51034.6,
+        "mean_us": 12.036,
+        "p50_us": 10.2,
+        "p95_us": 19.8,
+        "max_us": 196.6
+      },
+      "edge.paint": {
+        "count": 176,
+        "total_us": 7382.5,
+        "mean_us": 41.946,
+        "p50_us": 28.9,
+        "p95_us": 98.9,
+        "max_us": 292.2
+      },
+      "edge.shape": {
+        "count": 30236,
+        "total_us": 197741.0,
+        "mean_us": 6.54,
+        "p50_us": 5.5,
+        "p95_us": 10.6,
+        "max_us": 777.9
+      },
+      "edge.boundingRect": {
+        "count": 30236,
+        "total_us": 465030.7,
+        "mean_us": 15.38,
+        "p50_us": 13.5,
+        "p95_us": 24.3,
+        "max_us": 835.5
+      },
+      "edge.calcPath": {
+        "count": 30472,
+        "total_us": 167907.9,
+        "mean_us": 5.51,
+        "p50_us": 4.6,
+        "p95_us": 9.0,
+        "max_us": 772.2
+      },
+      "scene.serialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 30,
+        "total_us": 719520.8,
+        "mean_us": 23984.027,
+        "p50_us": 20232.7,
+        "p95_us": 61316.4,
+        "max_us": 73814.1
+      },
+      "scenario_us": 824888.3
+    },
+    "zoom_steps": {
+      "scene.drawBackground": {
+        "count": 12,
+        "total_us": 65476.0,
+        "mean_us": 5456.333,
+        "p50_us": 5914.4,
+        "p95_us": 6523.4,
+        "max_us": 7378.0
+      },
+      "node.paint": {
+        "count": 514,
+        "total_us": 286780.6,
+        "mean_us": 557.939,
+        "p50_us": 477.7,
+        "p95_us": 1021.1,
+        "max_us": 4920.3
+      },
+      "node.boundingRect": {
+        "count": 1126,
+        "total_us": 13158.3,
+        "mean_us": 11.686,
+        "p50_us": 8.2,
+        "p95_us": 30.6,
+        "max_us": 383.1
+      },
+      "socket.paint": {
+        "count": 466,
+        "total_us": 27881.8,
+        "mean_us": 59.832,
+        "p50_us": 41.0,
+        "p95_us": 103.7,
+        "max_us": 4006.6
+      },
+      "socket.shape": {
+        "count": 5234,
+        "total_us": 40917.8,
+        "mean_us": 7.818,
+        "p50_us": 5.2,
+        "p95_us": 12.8,
+        "max_us": 2034.9
+      },
+      "socket.boundingRect": {
+        "count": 5234,
+        "total_us": 85253.4,
+        "mean_us": 16.288,
+        "p50_us": 11.5,
+        "p95_us": 28.7,
+        "max_us": 2072.8
+      },
+      "edge.paint": {
+        "count": 514,
+        "total_us": 24614.6,
+        "mean_us": 47.888,
+        "p50_us": 32.0,
+        "p95_us": 111.0,
+        "max_us": 996.0
+      },
+      "edge.shape": {
+        "count": 12502,
+        "total_us": 91673.4,
+        "mean_us": 7.333,
+        "p50_us": 6.2,
+        "p95_us": 11.3,
+        "max_us": 261.9
+      },
+      "edge.boundingRect": {
+        "count": 12502,
+        "total_us": 209466.4,
+        "mean_us": 16.755,
+        "p50_us": 14.5,
+        "p95_us": 25.9,
+        "max_us": 593.4
+      },
+      "edge.calcPath": {
+        "count": 13016,
+        "total_us": 80014.5,
+        "mean_us": 6.147,
+        "p50_us": 5.1,
+        "p95_us": 9.5,
+        "max_us": 258.2
+      },
+      "scene.serialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 12,
+        "total_us": 1001213.5,
+        "mean_us": 83434.458,
+        "p50_us": 77582.2,
+        "p95_us": 86066.5,
+        "max_us": 220127.4
+      },
+      "scenario_us": 1084941.5
+    },
+    "undo": {
+      "scene.drawBackground": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.boundingRect": {
+        "count": 28000,
+        "total_us": 360766.4,
+        "mean_us": 12.885,
+        "p50_us": 9.5,
+        "p95_us": 24.8,
+        "max_us": 10885.7
+      },
+      "socket.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.shape": {
+        "count": 4000,
+        "total_us": 44808.5,
+        "mean_us": 11.202,
+        "p50_us": 9.5,
+        "p95_us": 22.6,
+        "max_us": 228.2
+      },
+      "socket.boundingRect": {
+        "count": 4000,
+        "total_us": 93250.6,
+        "mean_us": 23.313,
+        "p50_us": 20.4,
+        "p95_us": 45.3,
+        "max_us": 278.9
+      },
+      "edge.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.calcPath": {
+        "count": 17982,
+        "total_us": 103988.5,
+        "mean_us": 5.783,
+        "p50_us": 4.6,
+        "p95_us": 10.5,
+        "max_us": 562.0
+      },
+      "scene.serialize": {
+        "count": 10,
+        "total_us": 2271024.3,
+        "mean_us": 227102.43,
+        "p50_us": 209476.7,
+        "p95_us": 336412.7,
+        "max_us": 336412.7
+      },
+      "scene.deserialize": {
+        "count": 9,
+        "total_us": 3756411.6,
+        "mean_us": 417379.067,
+        "p50_us": 381232.4,
+        "p95_us": 599982.7,
+        "max_us": 599982.7
+      },
+      "history.createHistoryStamp": {
+        "count": 10,
+        "total_us": 2271272.8,
+        "mean_us": 227127.28,
+        "p50_us": 209503.5,
+        "p95_us": 336440.1,
+        "max_us": 336440.1
+      },
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 6076540.4
+    },
+    "serialize": {
+      "scene.drawBackground": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.calcPath": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.serialize": {
+        "count": 5,
+        "total_us": 1218082.1,
+        "mean_us": 243616.42,
+        "p50_us": 226782.2,
+        "p95_us": 307560.2,
+        "max_us": 307560.2
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 1233109.4
+    },
+    "graph": {
+      "scene.drawBackground": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.calcPath": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.serialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 77753.7
+    },
+    "cut": {
+      "scene.drawBackground": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "node.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.shape": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "socket.boundingRect": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.paint": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "edge.shape": {
+        "count": 10,
+        "total_us": 123.2,
+        "mean_us": 12.32,
+        "p50_us": 11.6,
+        "p95_us": 17.9,
+        "max_us": 17.9
+      },
+      "edge.boundingRect": {
+        "count": 10,
+        "total_us": 433.3,
+        "mean_us": 43.33,
+        "p50_us": 43.8,
+        "p95_us": 59.4,
+        "max_us": 59.4
+      },
+      "edge.calcPath": {
+        "count": 1009,
+        "total_us": 4800.0,
+        "mean_us": 4.757,
+        "p50_us": 4.3,
+        "p95_us": 6.0,
+        "max_us": 48.6
+      },
+      "scene.serialize": {
+        "count": 1,
+        "total_us": 181718.5,
+        "mean_us": 181718.5,
+        "p50_us": 181718.5,
+        "p95_us": 181718.5,
+        "max_us": 181718.5
+      },
+      "scene.deserialize": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "history.createHistoryStamp": {
+        "count": 1,
+        "total_us": 181737.6,
+        "mean_us": 181737.6,
+        "p50_us": 181737.6,
+        "p95_us": 181737.6,
+        "max_us": 181737.6
+      },
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 257960.1
+    }
+  }
+}

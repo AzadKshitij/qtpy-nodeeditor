@@ -171,7 +171,7 @@ def commit() -> str:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", default="00-baseline")
-    parser.add_argument("--nodes", type=int, default=300)
+    parser.add_argument("--nodes", type=int, default=1000)
     parser.add_argument("--mode", choices=("frame", "full"), default="frame")
     parser.add_argument("--json", default="")
     parser.add_argument("--skip-micro", action="store_true")

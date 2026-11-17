@@ -6,9 +6,9 @@ here ships in the wheel (`pyproject.toml` names `nodeeditor` as the module).
 ## Run
 
 ```bash
-python -m bench.run_bench --phase 00-baseline --nodes 300 --mode frame \
+python -m bench.run_bench --phase 00-baseline --nodes 1000 --mode frame \
     --json bench/results/phase-00-baseline-frame.json
-python -m bench.run_bench --phase 00-baseline --nodes 300 --mode full \
+python -m bench.run_bench --phase 00-baseline --nodes 1000 --mode full \
     --json bench/results/phase-00-baseline-full.json
 ```
 

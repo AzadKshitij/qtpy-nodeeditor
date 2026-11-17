@@ -1,0 +1,129 @@
+{
+  "phase": "00-baseline-1000",
+  "commit": "7b2034c",
+  "mode": "frame",
+  "nodes": 1000,
+  "build_us": 2298794.0,
+  "env": {
+    "python": "3.12.10",
+    "qtpy_api": "PyQt6",
+    "qt": "6.11.2",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "machine": "AMD64",
+    "font": "",
+    "offscreen": "offscreen"
+  },
+  "micro": {
+    "python_call": 0.05619000003207475,
+    "QPointF": 0.7693099999414699,
+    "QRectF": 1.0827449999851524,
+    "QLine": 0.9573249999448308,
+    "QColor": 2.7136050000081013,
+    "QPainterPath": 0.5224749999797496,
+    "path.addRoundedRect": 2.5221849999979895,
+    "path.simplified": 22.95352000001003,
+    "path.cubicTo": 5.837884999982634,
+    "math.sqrt": 0.2757249999376654
+  },
+  "scenarios": {
+    "static_zoom_1.0": {
+      "view.paintEvent": {
+        "count": 18,
+        "total_us": 486686.3,
+        "mean_us": 27038.128,
+        "p50_us": 26779.3,
+        "p95_us": 28703.8,
+        "max_us": 28995.9
+      },
+      "scenario_us": 493402.5
+    },
+    "pan_zoom_1.0": {
+      "view.paintEvent": {
+        "count": 30,
+        "total_us": 77086.0,
+        "mean_us": 2569.533,
+        "p50_us": 2802.8,
+        "p95_us": 3404.9,
+        "max_us": 3869.2
+      },
+      "scenario_us": 95253.5
+    },
+    "static_zoom_0.35": {
+      "view.paintEvent": {
+        "count": 13,
+        "total_us": 589812.6,
+        "mean_us": 45370.2,
+        "p50_us": 44707.7,
+        "p95_us": 48944.9,
+        "max_us": 49215.7
+      },
+      "scenario_us": 594179.0
+    },
+    "drag_zoom_0.35": {
+      "view.paintEvent": {
+        "count": 30,
+        "total_us": 464318.9,
+        "mean_us": 15477.297,
+        "p50_us": 13993.9,
+        "p95_us": 45467.6,
+        "max_us": 46323.3
+      },
+      "scenario_us": 538548.2
+    },
+    "zoom_steps": {
+      "view.paintEvent": {
+        "count": 12,
+        "total_us": 686825.3,
+        "mean_us": 57235.442,
+        "p50_us": 51028.0,
+        "p95_us": 59440.2,
+        "max_us": 152707.0
+      },
+      "scenario_us": 737164.6
+    },
+    "undo": {
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 4852019.3
+    },
+    "serialize": {
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 1184633.9
+    },
+    "graph": {
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 84185.0
+    },
+    "cut": {
+      "view.paintEvent": {
+        "count": 0,
+        "total_us": 0.0,
+        "mean_us": 0.0,
+        "p50_us": 0.0,
+        "p95_us": 0.0,
+        "max_us": 0.0
+      },
+      "scenario_us": 212194.8
+    }
+  }
+}
