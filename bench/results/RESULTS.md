@@ -139,3 +139,40 @@ Pixel gate: 0.18 % (1.0) and 0.39 % (0.35) of pixels differ, max channel delta
 7 and 21, and the diff image shows the change only along the rounded-corner
 arcs where `simplified()` used to merge subpaths. No structural difference.
 Tests: 121 passed.
+
+## Phase 04 — cache the edge bounding rectangle
+
+`QDMGraphicsEdge.boundingRect()` now computes once and caches, invalidated by
+`setPositions()`, `setLabel()` and `updateLabelPosition()`. At 1,007–1,059
+calls per frame this is the hottest remaining item.
+
+Same-machine A/B: Phase 3 code vs Phase 4 code, both best-of-3 runs, 1000
+nodes.
+
+| Frame | Phase 3 | Phase 4 | delta |
+|---|---|---|---|
+| static, zoom 1.0 | 19,385 | 12,664 | −35 % |
+| static, zoom 0.35 | 32,042 | 24,854 | −22 % |
+| pan, zoom 1.0 | 1,773 | 1,728 | −2.5 % |
+| drag, zoom 0.35 | 8,564 | 2,584 | −70 % |
+| zoom steps | 35,922 | 28,276 | −21 % |
+
+| Per call | before | after |
+|---|---|---|
+| `edge.boundingRect` | 6.6 µs | 0.4 µs |
+
+Call counts are unchanged (~1,007/frame at 1.0, ~1,059 at 0.35). Pan barely
+moves because pan repaints few edges; drag improves most because every moved
+edge used to recompute its rectangle several times per step. Pixel gate:
+identical to Phase 3 (the only deltas remain the corner-antialiasing pixels
+introduced by Phase 3). Tests: 121 passed.
+
+### Cumulative after Phase 04
+
+| Frame | baseline | now | delta |
+|---|---|---|---|
+| static, zoom 1.0 | 25,398 | 12,664 | −50 % |
+| static, zoom 0.35 | 40,759 | 24,854 | −39 % |
+| pan, zoom 1.0 | 2,596 | 1,728 | −33 % |
+| drag, zoom 0.35 | 13,363 | 2,584 | −81 % |
+| zoom steps | 42,087 | 28,276 | −33 % |

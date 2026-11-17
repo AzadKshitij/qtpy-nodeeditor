@@ -68,6 +68,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.labelItem.setZValue(1)
         self.labelItem.setVisible(False)
 
+        #: Cached bounding rectangle; dropped when the path or label changes.
+        self._bounds_cache: Optional[QRectF] = None
+
         self.initAssets()
         self.initUI()
 
@@ -153,6 +156,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """
         self.labelItem.setText(text or "")
         self.labelItem.setVisible(bool(text))
+        self._bounds_cache = None
         self.updateLabelPosition()
         self.update()
 
@@ -175,6 +179,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
     def updateLabelPosition(self) -> None:
         """Center the label on top of the current edge path."""
+        self._bounds_cache = None
         if not self.labelItem.isVisible():
             return
         try:
@@ -267,6 +272,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         # The route is a pure function of the endpoints, so a move is the only
         # thing that invalidates the cached path.
         self._path_cache = None
+        self._bounds_cache = None
         self.adoptGeometry()
 
     def adoptGeometry(self) -> None:
@@ -302,15 +308,21 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
     def boundingRect(self) -> QRectF:
         """Defining Qt' bounding rectangle (path united with label rect)."""
-        margin = self.strokeMargin()
-        base = self.shape().boundingRect().adjusted(-margin, -margin, margin, margin)
-        try:
-            if self.labelItem.isVisible():
-                label_rect = self.labelItem.boundingRect().translated(self.labelItem.pos())
-                return base.united(label_rect)
-        except Exception:
-            pass
-        return base
+        cached = self._bounds_cache
+        if cached is None:
+            margin = self.strokeMargin()
+            base = self.shape().boundingRect().adjusted(
+                -margin, -margin, margin, margin)
+            try:
+                if self.labelItem.isVisible():
+                    label_rect = self.labelItem.boundingRect().translated(
+                        self.labelItem.pos())
+                    base = base.united(label_rect)
+            except Exception:
+                pass
+            cached = base
+            self._bounds_cache = cached
+        return cached
 
     def refreshPath(self) -> None:
         """Adopt the current path and label position now.

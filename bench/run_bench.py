@@ -168,11 +168,72 @@ def commit() -> str:
         return ""
 
 
+def run_suite(profiler: Profiler, args) -> tuple:
+    built = time.perf_counter_ns()
+    scene, nodes = build_scene(args.nodes)
+    build_us = (time.perf_counter_ns() - built) / 1000.0
+    results = {}
+
+    view = make_view(scene, 1.0, (390, 320))
+    try:
+        results["static_zoom_1.0"] = scenario(
+            profiler, lambda: static_render(view, 15))
+        results["pan_zoom_1.0"] = scenario(
+            profiler, lambda: pan_steps(view, 30))
+    finally:
+        close_view(view)
+
+    view = make_view(scene, 0.35, (1260, 800))
+    try:
+        results["static_zoom_0.35"] = scenario(
+            profiler, lambda: static_render(view, 10))
+        results["drag_zoom_0.35"] = scenario(
+            profiler, lambda: drag_steps(nodes[0], 30))
+    finally:
+        close_view(view)
+
+    view = make_view(scene, 1.0, (390, 320))
+    try:
+        results["zoom_steps"] = scenario(
+            profiler, lambda: zoom_steps(view, 12))
+    finally:
+        close_view(view)
+
+    results["undo"] = scenario(
+        profiler, lambda: undo_burst(scene, 10))
+    results["serialize"] = scenario(
+        profiler, lambda: serialize_repeatedly(scene, 5))
+    results["graph"] = scenario(
+        profiler, lambda: graph_repeatedly(scene, 20))
+
+    if not args.skip_cut:
+        cut_scene, _ = build_scene(args.nodes)
+        cut_view = make_view(cut_scene, 1.0, (390, 320))
+        try:
+            results["cut"] = scenario(
+                profiler, lambda: cut_once(cut_scene, cut_view))
+        finally:
+            close_view(cut_view)
+        cut_scene.clear()
+
+    return results, build_us
+
+
+def score(report: dict) -> float:
+    """Lower is better; prefer the frame p50, fall back to the scenario time."""
+    frame = report.get("view.paintEvent")
+    if frame:
+        return frame.get("p50_us", 0.0)
+    return report.get("scenario_us", 0.0)
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", default="00-baseline")
     parser.add_argument("--nodes", type=int, default=1000)
     parser.add_argument("--mode", choices=("frame", "full"), default="frame")
+    parser.add_argument("--runs", type=int, default=1,
+                        help="repeat the whole suite and keep the cleanest run per scenario")
     parser.add_argument("--json", default="")
     parser.add_argument("--skip-micro", action="store_true")
     parser.add_argument("--skip-cut", action="store_true")
@@ -180,64 +241,30 @@ def main(argv=None) -> int:
 
     app()
 
-    built = time.perf_counter_ns()
-    scene, nodes = build_scene(args.nodes)
-    build_us = (time.perf_counter_ns() - built) / 1000.0
-
     profiler = Profiler()
     profiler.install(args.mode)
-    results = {}
-
+    runs = []
+    builds = []
     try:
-        view = make_view(scene, 1.0, (390, 320))
-        try:
-            results["static_zoom_1.0"] = scenario(
-                profiler, lambda: static_render(view, 15))
-            results["pan_zoom_1.0"] = scenario(
-                profiler, lambda: pan_steps(view, 30))
-        finally:
-            close_view(view)
-
-        view = make_view(scene, 0.35, (1260, 800))
-        try:
-            results["static_zoom_0.35"] = scenario(
-                profiler, lambda: static_render(view, 10))
-            results["drag_zoom_0.35"] = scenario(
-                profiler, lambda: drag_steps(nodes[0], 30))
-        finally:
-            close_view(view)
-
-        view = make_view(scene, 1.0, (390, 320))
-        try:
-            results["zoom_steps"] = scenario(
-                profiler, lambda: zoom_steps(view, 12))
-        finally:
-            close_view(view)
-
-        results["undo"] = scenario(
-            profiler, lambda: undo_burst(scene, 10))
-        results["serialize"] = scenario(
-            profiler, lambda: serialize_repeatedly(scene, 5))
-        results["graph"] = scenario(
-            profiler, lambda: graph_repeatedly(scene, 20))
-
-        if not args.skip_cut:
-            cut_scene, _ = build_scene(args.nodes)
-            cut_view = make_view(cut_scene, 1.0, (390, 320))
-            try:
-                results["cut"] = scenario(
-                    profiler, lambda: cut_once(cut_scene, cut_view))
-            finally:
-                close_view(cut_view)
-            cut_scene.clear()
+        for _ in range(max(1, args.runs)):
+            results, build_us = run_suite(profiler, args)
+            runs.append(results)
+            builds.append(build_us)
     finally:
         profiler.restore()
+
+    results = {
+        name: min((run[name] for run in runs if name in run), key=score)
+        for name in runs[0]
+    }
+    build_us = min(builds)
 
     output = {
         "phase": args.phase,
         "commit": commit(),
         "mode": args.mode,
         "nodes": args.nodes,
+        "runs": len(runs),
         "build_us": round(build_us, 3),
         "env": environment(),
         "micro": {} if args.skip_micro else run_micro(),
