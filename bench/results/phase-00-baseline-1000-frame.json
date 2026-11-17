@@ -1,9 +1,9 @@
 {
-  "phase": "00-baseline-1000",
+  "phase": "00-baseline-1000-idle",
   "commit": "7b2034c",
   "mode": "frame",
   "nodes": 1000,
-  "build_us": 2298794.0,
+  "build_us": 1929394.2,
   "env": {
     "python": "3.12.10",
     "qtpy_api": "PyQt6",
@@ -14,72 +14,72 @@
     "offscreen": "offscreen"
   },
   "micro": {
-    "python_call": 0.05619000003207475,
-    "QPointF": 0.7693099999414699,
-    "QRectF": 1.0827449999851524,
-    "QLine": 0.9573249999448308,
-    "QColor": 2.7136050000081013,
-    "QPainterPath": 0.5224749999797496,
-    "path.addRoundedRect": 2.5221849999979895,
-    "path.simplified": 22.95352000001003,
-    "path.cubicTo": 5.837884999982634,
-    "math.sqrt": 0.2757249999376654
+    "python_call": 0.05573999997068313,
+    "QPointF": 0.7278300000507443,
+    "QRectF": 1.1898849999852246,
+    "QLine": 1.0225450000689307,
+    "QColor": 2.103759999954491,
+    "QPainterPath": 0.42230500002915505,
+    "path.addRoundedRect": 2.5287000000389526,
+    "path.simplified": 23.322790000020177,
+    "path.cubicTo": 4.376444999979867,
+    "math.sqrt": 0.19081499995081685
   },
   "scenarios": {
     "static_zoom_1.0": {
       "view.paintEvent": {
         "count": 18,
-        "total_us": 486686.3,
-        "mean_us": 27038.128,
-        "p50_us": 26779.3,
-        "p95_us": 28703.8,
-        "max_us": 28995.9
+        "total_us": 463054.1,
+        "mean_us": 25725.228,
+        "p50_us": 25397.6,
+        "p95_us": 28326.9,
+        "max_us": 29798.8
       },
-      "scenario_us": 493402.5
+      "scenario_us": 468478.1
     },
     "pan_zoom_1.0": {
       "view.paintEvent": {
         "count": 30,
-        "total_us": 77086.0,
-        "mean_us": 2569.533,
-        "p50_us": 2802.8,
-        "p95_us": 3404.9,
-        "max_us": 3869.2
+        "total_us": 79384.6,
+        "mean_us": 2646.153,
+        "p50_us": 2596.1,
+        "p95_us": 3781.7,
+        "max_us": 4066.7
       },
-      "scenario_us": 95253.5
+      "scenario_us": 97837.5
     },
     "static_zoom_0.35": {
       "view.paintEvent": {
         "count": 13,
-        "total_us": 589812.6,
-        "mean_us": 45370.2,
-        "p50_us": 44707.7,
-        "p95_us": 48944.9,
-        "max_us": 49215.7
+        "total_us": 529365.9,
+        "mean_us": 40720.454,
+        "p50_us": 40759.4,
+        "p95_us": 43456.3,
+        "max_us": 43810.6
       },
-      "scenario_us": 594179.0
+      "scenario_us": 533288.3
     },
     "drag_zoom_0.35": {
       "view.paintEvent": {
         "count": 30,
-        "total_us": 464318.9,
-        "mean_us": 15477.297,
-        "p50_us": 13993.9,
-        "p95_us": 45467.6,
-        "max_us": 46323.3
+        "total_us": 432867.3,
+        "mean_us": 14428.91,
+        "p50_us": 13363.3,
+        "p95_us": 39093.4,
+        "max_us": 40258.8
       },
-      "scenario_us": 538548.2
+      "scenario_us": 502022.2
     },
     "zoom_steps": {
       "view.paintEvent": {
         "count": 12,
-        "total_us": 686825.3,
-        "mean_us": 57235.442,
-        "p50_us": 51028.0,
-        "p95_us": 59440.2,
-        "max_us": 152707.0
+        "total_us": 576324.8,
+        "mean_us": 48027.067,
+        "p50_us": 42086.8,
+        "p95_us": 55690.4,
+        "max_us": 129538.1
       },
-      "scenario_us": 737164.6
+      "scenario_us": 621190.1
     },
     "undo": {
       "view.paintEvent": {
@@ -90,7 +90,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 4852019.3
+      "scenario_us": 3590923.5
     },
     "serialize": {
       "view.paintEvent": {
@@ -101,7 +101,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 1184633.9
+      "scenario_us": 763741.8
     },
     "graph": {
       "view.paintEvent": {
@@ -112,7 +112,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 84185.0
+      "scenario_us": 41491.9
     },
     "cut": {
       "view.paintEvent": {
@@ -123,7 +123,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 212194.8
+      "scenario_us": 188608.8
     }
   }
 }

@@ -1,9 +1,9 @@
 {
-  "phase": "00-baseline",
-  "commit": "7b2034c",
+  "phase": "02-edge-cache",
+  "commit": "e1b4539",
   "mode": "frame",
-  "nodes": 300,
-  "build_us": 523121.5,
+  "nodes": 1000,
+  "build_us": 1944130.4,
   "env": {
     "python": "3.12.10",
     "qtpy_api": "PyQt6",
@@ -14,72 +14,72 @@
     "offscreen": "offscreen"
   },
   "micro": {
-    "python_call": 0.054055000055086566,
-    "QPointF": 0.7069549999869196,
-    "QRectF": 1.3262550000035844,
-    "QLine": 1.0062000000289117,
-    "QColor": 2.0881399999780115,
-    "QPainterPath": 0.4336650000368536,
-    "path.addRoundedRect": 2.5037999999767635,
-    "path.simplified": 22.767879999992147,
-    "path.cubicTo": 4.8308499999620835,
-    "math.sqrt": 0.2085399999486981
+    "python_call": 0.06875500002934132,
+    "QPointF": 0.6590749999304535,
+    "QRectF": 1.093629999922996,
+    "QLine": 0.9578899999723944,
+    "QColor": 1.9057699999393662,
+    "QPainterPath": 0.39922000005390146,
+    "path.addRoundedRect": 2.427034999982425,
+    "path.simplified": 23.026674999982788,
+    "path.cubicTo": 4.295244999957504,
+    "math.sqrt": 0.19066999993810896
   },
   "scenarios": {
     "static_zoom_1.0": {
       "view.paintEvent": {
         "count": 18,
-        "total_us": 329169.4,
-        "mean_us": 18287.189,
-        "p50_us": 17867.0,
-        "p95_us": 20173.4,
-        "max_us": 20355.0
+        "total_us": 339804.8,
+        "mean_us": 18878.044,
+        "p50_us": 18511.9,
+        "p95_us": 21877.3,
+        "max_us": 22400.1
       },
-      "scenario_us": 334971.6
+      "scenario_us": 344778.0
     },
     "pan_zoom_1.0": {
       "view.paintEvent": {
         "count": 30,
-        "total_us": 174387.9,
-        "mean_us": 5812.93,
-        "p50_us": 6017.0,
-        "p95_us": 6867.3,
-        "max_us": 6887.5
+        "total_us": 62125.7,
+        "mean_us": 2070.857,
+        "p50_us": 2033.3,
+        "p95_us": 2954.2,
+        "max_us": 3115.4
       },
-      "scenario_us": 188341.9
+      "scenario_us": 77040.6
     },
     "static_zoom_0.35": {
       "view.paintEvent": {
         "count": 13,
-        "total_us": 441129.4,
-        "mean_us": 33933.031,
-        "p50_us": 33992.4,
-        "p95_us": 36236.1,
-        "max_us": 37214.4
+        "total_us": 473725.6,
+        "mean_us": 36440.431,
+        "p50_us": 36315.9,
+        "p95_us": 37650.2,
+        "max_us": 38950.7
       },
-      "scenario_us": 445205.4
+      "scenario_us": 477650.8
     },
     "drag_zoom_0.35": {
       "view.paintEvent": {
         "count": 30,
-        "total_us": 208668.2,
-        "mean_us": 6955.607,
-        "p50_us": 5033.0,
-        "p95_us": 31796.0,
-        "max_us": 33172.7
+        "total_us": 353845.0,
+        "mean_us": 11794.833,
+        "p50_us": 9515.1,
+        "p95_us": 36388.0,
+        "max_us": 52659.9
       },
-      "scenario_us": 238143.0
+      "scenario_us": 418227.3
     },
     "zoom_steps": {
       "view.paintEvent": {
         "count": 12,
-        "total_us": 444937.4,
-        "mean_us": 37078.117,
-        "p50_us": 36627.3,
-        "p95_us": 54753.8,
-        "max_us": 54935.5
+        "total_us": 538515.2,
+        "mean_us": 44876.267,
+        "p50_us": 39063.7,
+        "p95_us": 49725.0,
+        "max_us": 121137.2
       },
-      "scenario_us": 463638.8
+      "scenario_us": 583782.3
     },
     "undo": {
       "view.paintEvent": {
@@ -90,7 +90,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 839299.4
+      "scenario_us": 2167626.3
     },
     "serialize": {
       "view.paintEvent": {
@@ -101,7 +101,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 82835.7
+      "scenario_us": 125143.4
     },
     "graph": {
       "view.paintEvent": {
@@ -112,7 +112,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 9667.5
+      "scenario_us": 34872.6
     },
     "cut": {
       "view.paintEvent": {
@@ -123,7 +123,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 31850.5
+      "scenario_us": 62241.0
     }
   }
 }

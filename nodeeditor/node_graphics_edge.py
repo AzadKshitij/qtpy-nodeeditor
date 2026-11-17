@@ -49,6 +49,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.posSource: List[float] = [0, 0]
         self.posDestination: List[float] = [200, 100]
 
+        #: Cached path for the current endpoints; dropped whenever they move.
+        self._path_cache: Optional[QPainterPath] = None
+
         # code-settable, user-read-only label drawn on top of the edge path.
         # Never editable/selectable/movable: users cannot change it, code can
         # via QDMGraphicsEdge.setLabel() / Edge.label.
@@ -261,6 +264,9 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         """
         self.posSource = [source[0], source[1]]
         self.posDestination = [destination[0], destination[1]]
+        # The route is a pure function of the endpoints, so a move is the only
+        # thing that invalidates the cached path.
+        self._path_cache = None
         self.adoptGeometry()
 
     def adoptGeometry(self) -> None:
@@ -371,5 +377,10 @@ class QDMGraphicsEdge(QGraphicsPathItem):
 
         :returns: ``QPainterPath`` of the edge connecting `source` and `destination`
         :rtype: ``QPainterPath``
+
+        The result is cached until ``setPositions()`` invalidates it when the
+        endpoints move.
         """
-        return self.pathCalculator.calcPath()
+        if self._path_cache is None:
+            self._path_cache = self.pathCalculator.calcPath()
+        return self._path_cache

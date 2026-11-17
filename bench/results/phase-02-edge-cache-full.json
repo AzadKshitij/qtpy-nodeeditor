@@ -1,9 +1,9 @@
 {
-  "phase": "00-baseline",
-  "commit": "7b2034c",
+  "phase": "02-edge-cache",
+  "commit": "e1b4539",
   "mode": "full",
-  "nodes": 300,
-  "build_us": 568837.9,
+  "nodes": 1000,
+  "build_us": 2409073.8,
   "env": {
     "python": "3.12.10",
     "qtpy_api": "PyQt6",
@@ -14,98 +14,98 @@
     "offscreen": "offscreen"
   },
   "micro": {
-    "python_call": 0.05096499999126536,
-    "QPointF": 0.6405699999959324,
-    "QRectF": 1.1151549999340205,
-    "QLine": 0.9422400000403286,
-    "QColor": 1.9674699999995937,
-    "QPainterPath": 0.48016499995355844,
-    "path.addRoundedRect": 2.577575000032084,
-    "path.simplified": 22.85992500001157,
-    "path.cubicTo": 4.358680000041204,
-    "math.sqrt": 0.19340500002726912
+    "python_call": 0.0671199999487726,
+    "QPointF": 0.6639899999754562,
+    "QRectF": 1.1285200000202167,
+    "QLine": 0.959844999943016,
+    "QColor": 2.0325550000052317,
+    "QPainterPath": 0.3659700000753219,
+    "path.addRoundedRect": 2.5798549999308307,
+    "path.simplified": 22.718600000007427,
+    "path.cubicTo": 4.314150000027439,
+    "math.sqrt": 0.21493499998541665
   },
   "scenarios": {
     "static_zoom_1.0": {
       "scene.drawBackground": {
         "count": 18,
-        "total_us": 36480.9,
-        "mean_us": 2026.717,
-        "p50_us": 1935.0,
-        "p95_us": 2580.5,
-        "max_us": 2688.1
+        "total_us": 34782.2,
+        "mean_us": 1932.344,
+        "p50_us": 1814.2,
+        "p95_us": 2473.6,
+        "max_us": 2500.9
       },
       "node.paint": {
         "count": 216,
-        "total_us": 112409.3,
-        "mean_us": 520.413,
-        "p50_us": 530.1,
-        "p95_us": 737.5,
-        "max_us": 1064.4
+        "total_us": 109237.5,
+        "mean_us": 505.729,
+        "p50_us": 527.0,
+        "p95_us": 773.6,
+        "max_us": 1060.3
       },
       "node.boundingRect": {
         "count": 504,
-        "total_us": 3784.4,
-        "mean_us": 7.509,
-        "p50_us": 7.3,
-        "p95_us": 12.4,
-        "max_us": 40.1
+        "total_us": 3488.8,
+        "mean_us": 6.922,
+        "p50_us": 6.0,
+        "p95_us": 12.7,
+        "max_us": 86.7
       },
       "socket.paint": {
         "count": 558,
-        "total_us": 21600.6,
-        "mean_us": 38.711,
-        "p50_us": 36.2,
-        "p95_us": 66.0,
-        "max_us": 148.4
+        "total_us": 20315.3,
+        "mean_us": 36.407,
+        "p50_us": 34.0,
+        "p95_us": 61.3,
+        "max_us": 102.7
       },
       "socket.shape": {
         "count": 1710,
-        "total_us": 14213.5,
-        "mean_us": 8.312,
-        "p50_us": 6.4,
-        "p95_us": 21.1,
-        "max_us": 68.3
+        "total_us": 13329.9,
+        "mean_us": 7.795,
+        "p50_us": 5.8,
+        "p95_us": 21.2,
+        "max_us": 63.3
       },
       "socket.boundingRect": {
         "count": 1710,
-        "total_us": 30052.4,
-        "mean_us": 17.575,
-        "p50_us": 13.9,
-        "p95_us": 42.4,
-        "max_us": 203.2
+        "total_us": 27195.5,
+        "mean_us": 15.904,
+        "p50_us": 12.0,
+        "p95_us": 41.9,
+        "max_us": 101.1
       },
       "edge.paint": {
         "count": 144,
-        "total_us": 7086.2,
-        "mean_us": 49.21,
-        "p50_us": 47.5,
-        "p95_us": 86.4,
-        "max_us": 122.7
+        "total_us": 6747.8,
+        "mean_us": 46.86,
+        "p50_us": 44.0,
+        "p95_us": 76.8,
+        "max_us": 358.7
       },
       "edge.shape": {
-        "count": 5526,
-        "total_us": 26686.6,
-        "mean_us": 4.829,
-        "p50_us": 4.4,
-        "p95_us": 6.7,
-        "max_us": 69.4
+        "count": 18126,
+        "total_us": 19748.7,
+        "mean_us": 1.09,
+        "p50_us": 1.0,
+        "p95_us": 1.4,
+        "max_us": 95.2
       },
       "edge.boundingRect": {
-        "count": 5526,
-        "total_us": 64840.9,
-        "mean_us": 11.734,
-        "p50_us": 10.9,
-        "p95_us": 15.8,
-        "max_us": 125.9
+        "count": 18126,
+        "total_us": 125526.4,
+        "mean_us": 6.925,
+        "p50_us": 6.5,
+        "p95_us": 8.9,
+        "max_us": 150.0
       },
       "edge.calcPath": {
-        "count": 5670,
-        "total_us": 22699.4,
-        "mean_us": 4.003,
-        "p50_us": 3.7,
-        "p95_us": 5.5,
-        "max_us": 24.8
+        "count": 18270,
+        "total_us": 6551.2,
+        "mean_us": 0.359,
+        "p50_us": 0.3,
+        "p95_us": 0.5,
+        "max_us": 15.1
       },
       "scene.serialize": {
         "count": 0,
@@ -133,94 +133,94 @@
       },
       "view.paintEvent": {
         "count": 18,
-        "total_us": 365833.9,
-        "mean_us": 20324.106,
-        "p50_us": 19755.1,
-        "p95_us": 23906.7,
-        "max_us": 24013.3
+        "total_us": 438778.2,
+        "mean_us": 24376.567,
+        "p50_us": 24719.2,
+        "p95_us": 27219.4,
+        "max_us": 28533.3
       },
-      "scenario_us": 371308.7
+      "scenario_us": 444157.9
     },
     "pan_zoom_1.0": {
       "scene.drawBackground": {
         "count": 30,
-        "total_us": 5279.1,
-        "mean_us": 175.97,
-        "p50_us": 169.5,
-        "p95_us": 223.7,
-        "max_us": 310.9
+        "total_us": 5721.4,
+        "mean_us": 190.713,
+        "p50_us": 174.4,
+        "p95_us": 325.7,
+        "max_us": 333.0
       },
       "node.paint": {
         "count": 75,
-        "total_us": 29522.7,
-        "mean_us": 393.636,
-        "p50_us": 379.5,
-        "p95_us": 581.6,
-        "max_us": 716.3
+        "total_us": 28732.8,
+        "mean_us": 383.104,
+        "p50_us": 376.4,
+        "p95_us": 554.4,
+        "max_us": 697.9
       },
       "node.boundingRect": {
-        "count": 555,
-        "total_us": 3252.0,
-        "mean_us": 5.859,
-        "p50_us": 5.1,
-        "p95_us": 10.0,
-        "max_us": 20.7
+        "count": 315,
+        "total_us": 1882.9,
+        "mean_us": 5.977,
+        "p50_us": 5.4,
+        "p95_us": 10.4,
+        "max_us": 21.9
       },
       "socket.paint": {
         "count": 40,
-        "total_us": 1312.9,
-        "mean_us": 32.822,
-        "p50_us": 31.8,
-        "p95_us": 60.4,
-        "max_us": 67.9
+        "total_us": 1358.2,
+        "mean_us": 33.955,
+        "p50_us": 27.2,
+        "p95_us": 58.8,
+        "max_us": 161.1
       },
       "socket.shape": {
-        "count": 1960,
-        "total_us": 12101.7,
-        "mean_us": 6.174,
-        "p50_us": 4.9,
-        "p95_us": 11.2,
-        "max_us": 72.5
+        "count": 1000,
+        "total_us": 7451.6,
+        "mean_us": 7.452,
+        "p50_us": 5.9,
+        "p95_us": 15.5,
+        "max_us": 151.3
       },
       "socket.boundingRect": {
-        "count": 1960,
-        "total_us": 25948.4,
-        "mean_us": 13.239,
-        "p50_us": 10.8,
-        "p95_us": 23.3,
-        "max_us": 86.3
+        "count": 1000,
+        "total_us": 14905.4,
+        "mean_us": 14.905,
+        "p50_us": 12.3,
+        "p95_us": 30.4,
+        "max_us": 163.3
       },
       "edge.paint": {
         "count": 76,
-        "total_us": 1987.3,
-        "mean_us": 26.149,
-        "p50_us": 22.9,
-        "p95_us": 45.5,
-        "max_us": 63.7
+        "total_us": 1802.3,
+        "mean_us": 23.714,
+        "p50_us": 20.4,
+        "p95_us": 40.8,
+        "max_us": 81.7
       },
       "edge.shape": {
-        "count": 9046,
-        "total_us": 44919.5,
-        "mean_us": 4.966,
-        "p50_us": 4.5,
-        "p95_us": 6.9,
-        "max_us": 52.3
+        "count": 556,
+        "total_us": 921.4,
+        "mean_us": 1.657,
+        "p50_us": 1.4,
+        "p95_us": 3.8,
+        "max_us": 20.6
       },
       "edge.boundingRect": {
-        "count": 9046,
-        "total_us": 107960.0,
-        "mean_us": 11.935,
-        "p50_us": 10.8,
-        "p95_us": 16.2,
-        "max_us": 98.1
+        "count": 556,
+        "total_us": 5612.3,
+        "mean_us": 10.094,
+        "p50_us": 9.0,
+        "p95_us": 21.9,
+        "max_us": 53.6
       },
       "edge.calcPath": {
-        "count": 9122,
-        "total_us": 37695.8,
-        "mean_us": 4.132,
-        "p50_us": 3.7,
-        "p95_us": 5.7,
-        "max_us": 51.2
+        "count": 632,
+        "total_us": 334.6,
+        "mean_us": 0.529,
+        "p50_us": 0.4,
+        "p95_us": 0.9,
+        "max_us": 19.6
       },
       "scene.serialize": {
         "count": 0,
@@ -248,38 +248,38 @@
       },
       "view.paintEvent": {
         "count": 30,
-        "total_us": 220617.5,
-        "mean_us": 7353.917,
-        "p50_us": 7120.4,
-        "p95_us": 9416.6,
-        "max_us": 9637.4
+        "total_us": 81279.4,
+        "mean_us": 2709.313,
+        "p50_us": 2951.9,
+        "p95_us": 3757.5,
+        "max_us": 3802.0
       },
-      "scenario_us": 237014.6
+      "scenario_us": 98648.7
     },
     "static_zoom_0.35": {
       "scene.drawBackground": {
         "count": 13,
-        "total_us": 61735.0,
-        "mean_us": 4748.846,
-        "p50_us": 4326.6,
-        "p95_us": 6425.8,
-        "max_us": 7096.4
+        "total_us": 73520.8,
+        "mean_us": 5655.446,
+        "p50_us": 5293.4,
+        "p95_us": 6196.2,
+        "max_us": 10101.2
       },
       "node.paint": {
         "count": 780,
-        "total_us": 226658.2,
-        "mean_us": 290.587,
-        "p50_us": 253.6,
-        "p95_us": 455.2,
-        "max_us": 893.3
+        "total_us": 280922.8,
+        "mean_us": 360.157,
+        "p50_us": 339.3,
+        "p95_us": 530.7,
+        "max_us": 1216.6
       },
       "node.boundingRect": {
         "count": 1690,
-        "total_us": 12857.8,
-        "mean_us": 7.608,
-        "p50_us": 7.6,
-        "p95_us": 17.7,
-        "max_us": 144.3
+        "total_us": 17181.2,
+        "mean_us": 10.166,
+        "p50_us": 7.7,
+        "p95_us": 22.0,
+        "max_us": 80.4
       },
       "socket.paint": {
         "count": 0,
@@ -307,35 +307,35 @@
       },
       "edge.paint": {
         "count": 780,
-        "total_us": 18417.2,
-        "mean_us": 23.612,
-        "p50_us": 19.2,
-        "p95_us": 56.8,
-        "max_us": 80.0
+        "total_us": 18473.6,
+        "mean_us": 23.684,
+        "p50_us": 18.0,
+        "p95_us": 60.3,
+        "max_us": 153.4
       },
       "edge.shape": {
-        "count": 4667,
-        "total_us": 19938.6,
-        "mean_us": 4.272,
-        "p50_us": 4.0,
-        "p95_us": 5.4,
-        "max_us": 50.2
+        "count": 13767,
+        "total_us": 15517.1,
+        "mean_us": 1.127,
+        "p50_us": 1.0,
+        "p95_us": 1.4,
+        "max_us": 65.4
       },
       "edge.boundingRect": {
-        "count": 4667,
-        "total_us": 48188.5,
-        "mean_us": 10.325,
-        "p50_us": 9.8,
-        "p95_us": 12.6,
-        "max_us": 197.9
+        "count": 13767,
+        "total_us": 96668.8,
+        "mean_us": 7.022,
+        "p50_us": 6.6,
+        "p95_us": 8.8,
+        "max_us": 132.5
       },
       "edge.calcPath": {
-        "count": 5447,
-        "total_us": 19270.8,
-        "mean_us": 3.538,
-        "p50_us": 3.3,
-        "p95_us": 4.4,
-        "max_us": 55.7
+        "count": 14547,
+        "total_us": 5479.2,
+        "mean_us": 0.377,
+        "p50_us": 0.3,
+        "p95_us": 0.5,
+        "max_us": 53.1
       },
       "scene.serialize": {
         "count": 0,
@@ -363,38 +363,38 @@
       },
       "view.paintEvent": {
         "count": 13,
-        "total_us": 434432.3,
-        "mean_us": 33417.869,
-        "p50_us": 33034.5,
-        "p95_us": 37306.4,
-        "max_us": 37338.1
+        "total_us": 598103.4,
+        "mean_us": 46007.954,
+        "p50_us": 45532.8,
+        "p95_us": 51954.3,
+        "max_us": 54874.0
       },
-      "scenario_us": 438358.3
+      "scenario_us": 602384.1
     },
     "drag_zoom_0.35": {
       "scene.drawBackground": {
         "count": 30,
-        "total_us": 11730.5,
-        "mean_us": 391.017,
-        "p50_us": 130.6,
-        "p95_us": 3299.9,
-        "max_us": 4480.1
+        "total_us": 14672.0,
+        "mean_us": 489.067,
+        "p50_us": 223.8,
+        "p95_us": 3169.4,
+        "max_us": 5561.0
       },
       "node.paint": {
         "count": 176,
-        "total_us": 53221.0,
-        "mean_us": 302.392,
-        "p50_us": 270.4,
-        "p95_us": 458.2,
-        "max_us": 709.5
+        "total_us": 62387.9,
+        "mean_us": 354.477,
+        "p50_us": 311.0,
+        "p95_us": 531.2,
+        "max_us": 1197.2
       },
       "node.boundingRect": {
-        "count": 854,
-        "total_us": 4939.8,
-        "mean_us": 5.784,
-        "p50_us": 4.2,
-        "p95_us": 12.3,
-        "max_us": 30.6
+        "count": 518,
+        "total_us": 5121.7,
+        "mean_us": 9.887,
+        "p50_us": 9.5,
+        "p95_us": 20.6,
+        "max_us": 34.4
       },
       "socket.paint": {
         "count": 0,
@@ -405,52 +405,52 @@
         "max_us": 0.0
       },
       "socket.shape": {
-        "count": 1440,
-        "total_us": 6253.6,
-        "mean_us": 4.343,
-        "p50_us": 3.9,
-        "p95_us": 6.4,
-        "max_us": 46.0
+        "count": 4240,
+        "total_us": 20710.7,
+        "mean_us": 4.885,
+        "p50_us": 4.1,
+        "p95_us": 7.9,
+        "max_us": 82.4
       },
       "socket.boundingRect": {
-        "count": 1440,
-        "total_us": 13470.8,
-        "mean_us": 9.355,
-        "p50_us": 8.6,
-        "p95_us": 13.8,
-        "max_us": 85.5
+        "count": 4240,
+        "total_us": 45064.4,
+        "mean_us": 10.628,
+        "p50_us": 9.1,
+        "p95_us": 17.0,
+        "max_us": 109.1
       },
       "edge.paint": {
         "count": 176,
-        "total_us": 3931.2,
-        "mean_us": 22.336,
-        "p50_us": 18.8,
-        "p95_us": 52.3,
-        "max_us": 75.6
+        "total_us": 4041.3,
+        "mean_us": 22.962,
+        "p50_us": 17.1,
+        "p95_us": 52.7,
+        "max_us": 62.6
       },
       "edge.shape": {
-        "count": 9236,
-        "total_us": 40029.9,
-        "mean_us": 4.334,
-        "p50_us": 4.0,
-        "p95_us": 6.2,
-        "max_us": 78.5
+        "count": 30236,
+        "total_us": 37586.1,
+        "mean_us": 1.243,
+        "p50_us": 1.1,
+        "p95_us": 1.7,
+        "max_us": 120.2
       },
       "edge.boundingRect": {
-        "count": 9236,
-        "total_us": 96739.5,
-        "mean_us": 10.474,
-        "p50_us": 9.9,
-        "p95_us": 14.8,
-        "max_us": 85.4
+        "count": 30236,
+        "total_us": 238988.2,
+        "mean_us": 7.904,
+        "p50_us": 7.1,
+        "p95_us": 10.6,
+        "max_us": 174.8
       },
       "edge.calcPath": {
-        "count": 9472,
-        "total_us": 34399.5,
-        "mean_us": 3.632,
-        "p50_us": 3.4,
-        "p95_us": 5.2,
-        "max_us": 77.7
+        "count": 30472,
+        "total_us": 13005.8,
+        "mean_us": 0.427,
+        "p50_us": 0.4,
+        "p95_us": 0.6,
+        "max_us": 118.8
       },
       "scene.serialize": {
         "count": 0,
@@ -478,94 +478,94 @@
       },
       "view.paintEvent": {
         "count": 30,
-        "total_us": 205246.1,
-        "mean_us": 6841.537,
-        "p50_us": 4982.9,
-        "p95_us": 31953.4,
-        "max_us": 31955.1
+        "total_us": 414570.3,
+        "mean_us": 13819.01,
+        "p50_us": 12267.3,
+        "p95_us": 37702.6,
+        "max_us": 41505.1
       },
-      "scenario_us": 234673.9
+      "scenario_us": 500090.2
     },
     "zoom_steps": {
       "scene.drawBackground": {
         "count": 12,
-        "total_us": 39693.6,
-        "mean_us": 3307.8,
-        "p50_us": 2971.2,
-        "p95_us": 5677.3,
-        "max_us": 5784.4
+        "total_us": 43090.8,
+        "mean_us": 3590.9,
+        "p50_us": 3216.3,
+        "p95_us": 5734.2,
+        "max_us": 8159.0
       },
       "node.paint": {
         "count": 514,
-        "total_us": 200557.4,
-        "mean_us": 390.189,
-        "p50_us": 373.7,
-        "p95_us": 603.3,
-        "max_us": 811.1
+        "total_us": 204626.1,
+        "mean_us": 398.105,
+        "p50_us": 371.2,
+        "p95_us": 657.9,
+        "max_us": 986.2
       },
       "node.boundingRect": {
-        "count": 1258,
-        "total_us": 9862.9,
-        "mean_us": 7.84,
-        "p50_us": 6.4,
-        "p95_us": 15.8,
-        "max_us": 63.7
+        "count": 1126,
+        "total_us": 9440.4,
+        "mean_us": 8.384,
+        "p50_us": 7.1,
+        "p95_us": 19.1,
+        "max_us": 44.5
       },
       "socket.paint": {
         "count": 466,
-        "total_us": 14621.6,
-        "mean_us": 31.377,
-        "p50_us": 29.3,
-        "p95_us": 51.1,
-        "max_us": 86.7
+        "total_us": 14971.9,
+        "mean_us": 32.129,
+        "p50_us": 29.0,
+        "p95_us": 55.9,
+        "max_us": 132.0
       },
       "socket.shape": {
-        "count": 2722,
-        "total_us": 15361.1,
-        "mean_us": 5.643,
-        "p50_us": 4.6,
-        "p95_us": 12.1,
-        "max_us": 32.1
+        "count": 5234,
+        "total_us": 25138.1,
+        "mean_us": 4.803,
+        "p50_us": 3.9,
+        "p95_us": 8.6,
+        "max_us": 67.7
       },
       "socket.boundingRect": {
-        "count": 2722,
-        "total_us": 32572.8,
-        "mean_us": 11.966,
-        "p50_us": 10.1,
-        "p95_us": 24.1,
-        "max_us": 72.6
+        "count": 5234,
+        "total_us": 53922.5,
+        "mean_us": 10.302,
+        "p50_us": 8.4,
+        "p95_us": 18.1,
+        "max_us": 115.6
       },
       "edge.paint": {
         "count": 514,
-        "total_us": 12601.2,
-        "mean_us": 24.516,
-        "p50_us": 18.9,
-        "p95_us": 61.6,
-        "max_us": 92.5
+        "total_us": 12979.4,
+        "mean_us": 25.252,
+        "p50_us": 18.0,
+        "p95_us": 65.5,
+        "max_us": 151.6
       },
       "edge.shape": {
-        "count": 4102,
-        "total_us": 17383.9,
-        "mean_us": 4.238,
-        "p50_us": 4.0,
-        "p95_us": 5.7,
-        "max_us": 50.5
+        "count": 12502,
+        "total_us": 12739.6,
+        "mean_us": 1.019,
+        "p50_us": 0.9,
+        "p95_us": 1.3,
+        "max_us": 56.9
       },
       "edge.boundingRect": {
-        "count": 4102,
-        "total_us": 42167.3,
-        "mean_us": 10.28,
-        "p50_us": 9.7,
-        "p95_us": 13.5,
-        "max_us": 248.8
+        "count": 12502,
+        "total_us": 82968.8,
+        "mean_us": 6.636,
+        "p50_us": 6.3,
+        "p95_us": 8.5,
+        "max_us": 64.2
       },
       "edge.calcPath": {
-        "count": 4616,
-        "total_us": 16248.6,
-        "mean_us": 3.52,
-        "p50_us": 3.3,
-        "p95_us": 4.7,
-        "max_us": 49.8
+        "count": 13016,
+        "total_us": 4393.3,
+        "mean_us": 0.338,
+        "p50_us": 0.3,
+        "p95_us": 0.5,
+        "max_us": 32.7
       },
       "scene.serialize": {
         "count": 0,
@@ -593,13 +593,13 @@
       },
       "view.paintEvent": {
         "count": 12,
-        "total_us": 457027.3,
-        "mean_us": 38085.608,
-        "p50_us": 39245.5,
-        "p95_us": 47512.4,
-        "max_us": 56839.8
+        "total_us": 582236.0,
+        "mean_us": 48519.667,
+        "p50_us": 42297.7,
+        "p95_us": 67376.1,
+        "max_us": 123553.6
       },
-      "scenario_us": 477472.3
+      "scenario_us": 636448.4
     },
     "undo": {
       "scene.drawBackground": {
@@ -619,12 +619,12 @@
         "max_us": 0.0
       },
       "node.boundingRect": {
-        "count": 8400,
-        "total_us": 52207.8,
-        "mean_us": 6.215,
-        "p50_us": 6.0,
-        "p95_us": 8.3,
-        "max_us": 64.4
+        "count": 28000,
+        "total_us": 187434.9,
+        "mean_us": 6.694,
+        "p50_us": 6.4,
+        "p95_us": 9.1,
+        "max_us": 124.1
       },
       "socket.paint": {
         "count": 0,
@@ -635,20 +635,20 @@
         "max_us": 0.0
       },
       "socket.shape": {
-        "count": 1200,
-        "total_us": 5671.8,
-        "mean_us": 4.726,
-        "p50_us": 4.0,
-        "p95_us": 6.8,
-        "max_us": 44.6
+        "count": 4000,
+        "total_us": 20200.2,
+        "mean_us": 5.05,
+        "p50_us": 4.2,
+        "p95_us": 7.6,
+        "max_us": 88.6
       },
       "socket.boundingRect": {
-        "count": 1200,
-        "total_us": 12044.5,
-        "mean_us": 10.037,
-        "p50_us": 8.6,
-        "p95_us": 14.0,
-        "max_us": 54.2
+        "count": 4000,
+        "total_us": 41607.4,
+        "mean_us": 10.402,
+        "p50_us": 8.8,
+        "p95_us": 15.0,
+        "max_us": 110.9
       },
       "edge.paint": {
         "count": 0,
@@ -675,36 +675,36 @@
         "max_us": 0.0
       },
       "edge.calcPath": {
-        "count": 5382,
-        "total_us": 18310.3,
-        "mean_us": 3.402,
-        "p50_us": 3.2,
-        "p95_us": 4.5,
-        "max_us": 57.9
+        "count": 17982,
+        "total_us": 69195.7,
+        "mean_us": 3.848,
+        "p50_us": 3.6,
+        "p95_us": 5.3,
+        "max_us": 82.8
       },
       "scene.serialize": {
         "count": 10,
-        "total_us": 167482.7,
-        "mean_us": 16748.27,
-        "p50_us": 16683.2,
-        "p95_us": 17246.9,
-        "max_us": 17246.9
+        "total_us": 286086.8,
+        "mean_us": 28608.68,
+        "p50_us": 23819.6,
+        "p95_us": 60927.3,
+        "max_us": 60927.3
       },
       "scene.deserialize": {
         "count": 9,
-        "total_us": 549502.2,
-        "mean_us": 61055.8,
-        "p50_us": 58145.0,
-        "p95_us": 79895.2,
-        "max_us": 79895.2
+        "total_us": 1940243.0,
+        "mean_us": 215582.556,
+        "p50_us": 204908.3,
+        "p95_us": 277214.7,
+        "max_us": 277214.7
       },
       "history.createHistoryStamp": {
         "count": 10,
-        "total_us": 167603.8,
-        "mean_us": 16760.38,
-        "p50_us": 16693.3,
-        "p95_us": 17263.0,
-        "max_us": 17263.0
+        "total_us": 286253.1,
+        "mean_us": 28625.31,
+        "p50_us": 23835.5,
+        "p95_us": 60941.3,
+        "max_us": 60941.3
       },
       "view.paintEvent": {
         "count": 0,
@@ -714,7 +714,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 724665.7
+      "scenario_us": 2254910.1
     },
     "serialize": {
       "scene.drawBackground": {
@@ -799,11 +799,11 @@
       },
       "scene.serialize": {
         "count": 5,
-        "total_us": 81124.7,
-        "mean_us": 16224.94,
-        "p50_us": 16032.8,
-        "p95_us": 16759.7,
-        "max_us": 16759.7
+        "total_us": 116467.3,
+        "mean_us": 23293.46,
+        "p50_us": 22899.1,
+        "p95_us": 25865.5,
+        "max_us": 25865.5
       },
       "scene.deserialize": {
         "count": 0,
@@ -829,7 +829,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 82700.9
+      "scenario_us": 124895.5
     },
     "graph": {
       "scene.drawBackground": {
@@ -944,7 +944,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 9625.5
+      "scenario_us": 37078.9
     },
     "cut": {
       "scene.drawBackground": {
@@ -1005,35 +1005,35 @@
       },
       "edge.shape": {
         "count": 10,
-        "total_us": 71.2,
-        "mean_us": 7.12,
-        "p50_us": 6.6,
-        "p95_us": 12.6,
-        "max_us": 12.6
+        "total_us": 16.5,
+        "mean_us": 1.65,
+        "p50_us": 1.6,
+        "p95_us": 2.2,
+        "max_us": 2.2
       },
       "edge.boundingRect": {
         "count": 10,
-        "total_us": 175.8,
-        "mean_us": 17.58,
-        "p50_us": 15.7,
-        "p95_us": 30.3,
-        "max_us": 30.3
+        "total_us": 175.9,
+        "mean_us": 17.59,
+        "p50_us": 15.8,
+        "p95_us": 27.1,
+        "max_us": 27.1
       },
       "edge.calcPath": {
-        "count": 309,
-        "total_us": 1193.4,
-        "mean_us": 3.862,
-        "p50_us": 3.6,
-        "p95_us": 5.3,
-        "max_us": 10.7
+        "count": 1009,
+        "total_us": 504.8,
+        "mean_us": 0.5,
+        "p50_us": 0.4,
+        "p95_us": 0.5,
+        "max_us": 41.6
       },
       "scene.serialize": {
         "count": 1,
-        "total_us": 16685.4,
-        "mean_us": 16685.4,
-        "p50_us": 16685.4,
-        "p95_us": 16685.4,
-        "max_us": 16685.4
+        "total_us": 23434.1,
+        "mean_us": 23434.1,
+        "p50_us": 23434.1,
+        "p95_us": 23434.1,
+        "max_us": 23434.1
       },
       "scene.deserialize": {
         "count": 0,
@@ -1045,11 +1045,11 @@
       },
       "history.createHistoryStamp": {
         "count": 1,
-        "total_us": 16698.1,
-        "mean_us": 16698.1,
-        "p50_us": 16698.1,
-        "p95_us": 16698.1,
-        "max_us": 16698.1
+        "total_us": 23448.7,
+        "mean_us": 23448.7,
+        "p50_us": 23448.7,
+        "p95_us": 23448.7,
+        "max_us": 23448.7
       },
       "view.paintEvent": {
         "count": 0,
@@ -1059,7 +1059,7 @@
         "p95_us": 0.0,
         "max_us": 0.0
       },
-      "scenario_us": 27608.6
+      "scenario_us": 58628.8
     }
   }
 }
