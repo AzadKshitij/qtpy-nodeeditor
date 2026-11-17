@@ -9,7 +9,7 @@ __author__ = 'Azad Kshitij'
 try:
     __version__ = _dist_version("nodeeditor-qtpy")
 except PackageNotFoundError:  # running from a source checkout
-    __version__ = "0.8.3"
+    __version__ = "0.9.0"
 
 
 _QT_API_NAME, _QT_API_VERSION = None, None

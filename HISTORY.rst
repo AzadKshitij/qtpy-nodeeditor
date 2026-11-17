@@ -7,6 +7,34 @@ This file tracks releases of this project. For the pre-fork upstream
 `PyNodeEditor <https://github.com/benbyjones/PyQtNodeEditor>`_ lineage that
 this code started from, see `CHANGES.md <CHANGES.md>`_.
 
+0.9.0 - 2026-11-17
+------------------
+
+**Performance**
+
+- ``Scene.serialize()`` deduplicates ids with a set instead of a quadratic scan.
+- Edges cache their ``QPainterPath`` and their bounding rectangle until the
+  endpoints move.
+- Node body paths are built once instead of on every paint, removing four
+  ``QPainterPath.simplified()`` calls per node per frame.
+- Added a reproducible microsecond harness under ``bench/`` and the measured
+  results in ``bench/results/RESULTS.md``.
+
+Against the 0.8.3 baseline with 1000 nodes: static frame 22,476 -> 11,520 µs
+at zoom 1.0 (-49 %), 38,173 -> 22,726 µs at zoom 0.35 (-40 %), node drag
+11,893 -> 2,091 µs (-82 %), ``serialize()`` 143,274 -> 25,029 µs (-83 %).
+
+**Fixes**
+
+- The cut stroke clears on release, nodes declare the outline stroke they
+  paint, and an edge adopts both ends in one geometry change per move. These
+  remove the smears and ghost outlines left during drag, pan and zoom
+  (ported from TriggerEditor).
+
+**Tests**
+
+- The suite runs 123 tests, including the cut-line repaint contract.
+
 0.8.3 - 2026-11-15
 ------------------
 
