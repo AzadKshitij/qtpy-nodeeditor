@@ -6,7 +6,10 @@ noted. `--mode frame` numbers are per painted frame; `--mode full` numbers are
 from the per-method wrappers and include the observer's cost.
 
 Discipline: the baseline is re-run before a phase and must stay within ±5 %;
-a phase that cannot beat ±3 % gets reverted.
+a phase that cannot beat ±3 % gets reverted. This machine carries ~30 %
+background CPU, so every headline number is the cleanest of three full suite
+runs (`--runs 3`); per-call numbers come from the `full` mode and are stable
+within a run.
 
 Raw data: `phase-00-baseline-1000-frame.json`,
 `phase-00-baseline-1000-full.json`, `phase-02-edge-cache-frame.json`,
@@ -18,11 +21,11 @@ Frame totals, 1000 nodes:
 
 | Scenario | paints | p50 frame | p95 frame |
 |---|---|---|---|
-| static, zoom 1.0 | 18 | 25,398 | 28,327 |
-| static, zoom 0.35 | 13 | 40,759 | 43,456 |
-| pan, zoom 1.0 | 30 | 2,596 | 3,782 |
-| drag, zoom 0.35 | 30 | 13,363 | 39,093 |
-| zoom steps | 12 | 42,087 | 55,690 |
+| static, zoom 1.0 | 18 | 22,476 | 26,118 |
+| static, zoom 0.35 | 13 | 38,173 | 43,597 |
+| pan, zoom 1.0 | 30 | 2,185 | 2,596 |
+| drag, zoom 0.35 | 30 | 11,893 | 37,328 |
+| zoom steps | 12 | 42,389 | 54,492 |
 
 Item work per frame, and the cost per call (full run):
 
@@ -151,11 +154,11 @@ nodes.
 
 | Frame | Phase 3 | Phase 4 | delta |
 |---|---|---|---|
-| static, zoom 1.0 | 19,385 | 12,664 | −35 % |
-| static, zoom 0.35 | 32,042 | 24,854 | −22 % |
-| pan, zoom 1.0 | 1,773 | 1,728 | −2.5 % |
-| drag, zoom 0.35 | 8,564 | 2,584 | −70 % |
-| zoom steps | 35,922 | 28,276 | −21 % |
+| static, zoom 1.0 | 19,385 | 11,520 | −41 % |
+| static, zoom 0.35 | 32,042 | 22,726 | −29 % |
+| pan, zoom 1.0 | 1,773 | 1,366 | −23 % |
+| drag, zoom 0.35 | 8,564 | 2,091 | −76 % |
+| zoom steps | 35,922 | 25,253 | −30 % |
 
 | Per call | before | after |
 |---|---|---|
@@ -171,8 +174,54 @@ introduced by Phase 3). Tests: 121 passed.
 
 | Frame | baseline | now | delta |
 |---|---|---|---|
-| static, zoom 1.0 | 25,398 | 12,664 | −50 % |
-| static, zoom 0.35 | 40,759 | 24,854 | −39 % |
-| pan, zoom 1.0 | 2,596 | 1,728 | −33 % |
-| drag, zoom 0.35 | 13,363 | 2,584 | −81 % |
-| zoom steps | 42,087 | 28,276 | −33 % |
+| static, zoom 1.0 | 22,476 | 11,520 | −49 % |
+| static, zoom 0.35 | 38,173 | 22,726 | −40 % |
+| pan, zoom 1.0 | 2,185 | 1,366 | −37 % |
+| drag, zoom 0.35 | 11,893 | 2,091 | −82 % |
+| zoom steps | 42,389 | 25,253 | −40 % |
+
+## Phase 05 — grid line cache (rejected)
+
+`drawBackground()` spent 1,565 µs per frame at zoom 1.0 and 5,310 µs at 0.35.
+The candidate change cached the two `QLine` lists by
+`(left, right, top, bottom, step, major_step, draw_minor)`.
+
+Same-machine A/B, best-of-3:
+
+| Frame | no cache | with cache | delta |
+|---|---|---|---|
+| static, zoom 1.0 | 11,520 | 11,039 | −4.2 % |
+| static, zoom 0.35 | 22,726 | 22,936 | +0.9 % |
+| pan, zoom 1.0 | 1,366 | 1,403 | +2.7 % |
+| drag, zoom 0.35 | 2,091 | 2,270 | +8.6 % |
+| zoom steps | 25,253 | 24,513 | −2.9 % |
+
+Only the zoom-1.0 case clears the gate; everything else ties or regresses.
+The 5.3 ms at zoom 0.35 is `drawLines` in C++, not the Python list building,
+so caching the list cannot reach it. **Reverted** per the 3 % rule. Raw:
+`phase-05-grid-cache-frame.json`, `phase-04-edge-bounds-frame-ab.json`.
+
+## Probed and not merged — device raster cache
+
+`DeviceCoordinateCache` on every node was probed at runtime before touching
+the source. On a 60-node scene with a real `QLabel` inside each
+`QGraphicsProxyWidget`, the proxy widgets render correctly and frames drop
+from 13,378 to 10,321 µs at zoom 1.0 (−23 %) and from 16,352 to 9,011 µs at
+0.35 (−45 %). But 2.07 % of pixels differ, with a max channel delta of 88,
+spread along every node outline: the 2 px border is rasterized into the
+device cache and composited, so it loses its direct-draw antialiasing.
+Not merged; it would need an "interactive only" mode (cache during pan, drag
+and zoom, drop it on idle) to keep the resting frame crisp.
+
+## Where the time went
+
+| Item | before | after | change |
+|---|---|---|---|
+| frame, static 1.0 | 22,476 | 11,520 | −49 % |
+| frame, static 0.35 | 38,173 | 22,726 | −40 % |
+| frame, drag 0.35 | 11,893 | 2,091 | −82 % |
+| `serialize()` @1000 | 143,274 | 25,029 | −83 % |
+| one cut stroke | 191,448 | 62,241 | −67 % |
+| `edge.calcPath` per call | 3.4 µs | 0.3 µs | −91 % |
+| `edge.boundingRect` per call | 9.8 µs | 0.4 µs | −96 % |
+| `node.paint` per call @1.0 | 462 µs | 272 µs | −41 % |
