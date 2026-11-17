@@ -69,20 +69,21 @@ class TestLabelGeometry(unittest.TestCase):
         self.assertLess(self.gr_node.labelRect().top(), 0.0)
         self.assertLess(self.gr_node.boundingRect().top(), 0.0)
 
+    def body_with_outline(self):
+        """The body plus the stroke the node paints around it."""
+        margin = self.gr_node._outlineMargin()
+        return QRectF(
+            0.0, 0.0, self.gr_node.width, self.gr_node.height
+        ).normalized().adjusted(-margin, -margin, margin, margin)
+
     def test_a_hidden_label_leaves_the_body_alone(self):
         self.gr_node.setLabelVisible(False)
-        self.assertEqual(
-            self.gr_node.boundingRect(),
-            QRectF(0.0, 0.0, self.gr_node.width, self.gr_node.height).normalized(),
-        )
+        self.assertEqual(self.gr_node.boundingRect(), self.body_with_outline())
 
     def test_an_empty_label_is_not_declared(self):
         self.gr_node.setLabelText("")
         self.assertFalse(self.gr_node.isLabelVisible())
-        self.assertEqual(
-            self.gr_node.boundingRect(),
-            QRectF(0.0, 0.0, self.gr_node.width, self.gr_node.height).normalized(),
-        )
+        self.assertEqual(self.gr_node.boundingRect(), self.body_with_outline())
 
     def test_moving_the_node_dirties_the_plate_it_leaves(self):
         """What the scene repaints has to cover the plate's old place too."""
